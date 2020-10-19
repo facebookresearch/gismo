@@ -1,0 +1,22 @@
+{
+    "dataset": "recipe1m",
+    "image_model": "resnet50",
+    "model_name": "lstmset",
+    "loss_weight": [
+        1.0,
+        0.0,
+        0.001
+    ],
+    "tf_layers": 0,
+    "ff_layers": 0,
+    "embed_size": 256,
+    "n_att": 0,
+    "learning_rate": 0.001,
+    "scale_learning_rate_cnn": 0.01,
+    "batch_size": 32,
+    "dropout_encoder": 0.1,
+    "dropout_decoder": 0.1,
+    "weight_decay": 0.0,
+    "patience": 10,
+    "maxnumlabels": 21
+}

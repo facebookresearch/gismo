@@ -1,0 +1,22 @@
+{
+    "dataset": "recipe1m",
+    "image_model": "resnet50",
+    "model_name": "ff_td",
+    "loss_weight": [
+        1.0,
+        0.0,
+        0.0
+    ],
+    "tf_layers": 0,
+    "ff_layers": 3,
+    "embed_size": 1024,
+    "n_att": 0,
+    "learning_rate": 0.0001,
+    "scale_learning_rate_cnn": 0.1,
+    "batch_size": 32,
+    "dropout_encoder": 0.0,
+    "dropout_decoder": 0.0,
+    "weight_decay": 0.0001,
+    "patience": 10,
+    "maxnumlabels": 20
+}

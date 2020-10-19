@@ -1,0 +1,22 @@
+{
+    "dataset": "recipe1m",
+    "image_model": "resnext101_32x8d",
+    "model_name": "lstm",
+    "loss_weight": [
+        1.0,
+        0.0,
+        0.0
+    ],
+    "tf_layers": 0,
+    "ff_layers": 0,
+    "embed_size": 1024,
+    "n_att": 0,
+    "learning_rate": 0.0001,
+    "scale_learning_rate_cnn": 0.1,
+    "batch_size": 22,
+    "dropout_encoder": 0.1,
+    "dropout_decoder": 0.1,
+    "weight_decay": 0.0001,
+    "patience": 10,
+    "maxnumlabels": 21
+}
