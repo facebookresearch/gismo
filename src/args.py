@@ -65,7 +65,7 @@ def get_parser():
         '--dataset',
         type=str,
         default='voc',
-        choices=['coco', 'voc', 'nuswide', 'ade20k', 'recipe1m'])
+        choices=['recipe1m'])
     parser.add_argument(
         '--model_name',
         type=str,

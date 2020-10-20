@@ -18,7 +18,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def label2_k_hots(labels, pad_value, remove_eos=False):
     # labels is a list of (possibly variable length) lists.
     # labels are numpy array
-    if type(labels) == list:
+    if type(labels) == list or type(labels) == tuple:
         tmp = np.array([i + [pad_value]*(len(max(labels, key=len))-len(i)) for i in labels])
         labels = torch.from_numpy(tmp).to(device)
 

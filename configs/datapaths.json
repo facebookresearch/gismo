@@ -1,7 +1,3 @@
 {
-    "ade20k": "/path/to/ade20k/",
-    "coco": "/path/to/coco/",
-    "nuswide": "/path/to/nuswide/",
-    "voc": "/path/to/voc/",
-    "recipe1m": "/path/to/recipe1m/"
+    "recipe1m": "/datasets01/recipe1m/012319/"
 }

@@ -26,8 +26,16 @@ map_loc = None if torch.cuda.is_available() else 'cpu'
 
 def main(args):
 
-    # Get models to test from models_path
-    models_to_test = glob.glob(args.models_path + '/*.ckpt')
+    # Extract model to test
+    if len(args.which_models) > 0:
+        # Get models to test from which_models
+        models_to_test = [os.path.join(args.models_path, wm) for wm in args.which_models]
+        model_names = args.which_models
+    else:
+        # Get models to test from models_path
+        models_to_test = glob.glob(args.models_path + '/*.ckpt')
+        models_to_test = [m for m in models_to_test if args.dataset in m]
+        model_names = [re.split(r'[/]',m)[-1] for m in models_to_test]
 
     # To store results
     mat_f1 = np.zeros((len(models_to_test), ))
@@ -38,17 +46,13 @@ def main(args):
         os.makedirs(args.save_results_path)
 
     print('Results will be saved here: ' + args.save_results_path)
-
-    # Extract model names
-    models_to_test = [m for m in models_to_test if args.dataset in m]
-    model_names = [re.split(r'[/]',m)[-1] for m in models_to_test]
    
     # Iterate over models to test
     for k, m in enumerate(models_to_test):
         print('---------------------------------------------')
         print('Evaluating ' + model_names[k])
 
-        # Load model
+        # Load checkpoint
         checkpoint = torch.load(m, map_location=map_loc)
         model_args = checkpoint['args']
 
@@ -80,7 +84,7 @@ def main(args):
         print('Vocabulary size is {}'.format(vocab_size))
         print('Dataset {} split contains {} images'.format(args.eval_split, len(dataset)))
 
-        # Load model
+        # Build model and load model state
         model = get_model(model_args, vocab_size)
         model.load_state_dict(checkpoint['state_dict'])
 
@@ -105,6 +109,7 @@ def main(args):
         f1s_image = []
         card_accs = []
 
+        # for l, img_inputs, target in tqdm(enumerate(data_loader)):
         for l, (img_inputs, target) in tqdm(enumerate(data_loader)):
 
             img_inputs = img_inputs.to(device)
@@ -163,14 +168,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--dataset', type=str, default='voc')
+        '--dataset', type=str, default='recipe1m')
         
     parser.add_argument(
-        '--models_path', type=str, default='../checkpoints')
+        '--models_path', type=str, default='/checkpoint/adrianars/image-to-set-all/')
+    parser.add_argument(
+        '--which_models', type=str, nargs='+', default=['recipe1m_resnet50_ff_bce_cat_1235.ckpt'])        
     parser.add_argument('--save_results_path', type=str, default='../checkpoints/')
 
     parser.add_argument('--batch_size', type=int, default=100)
-    parser.add_argument('--eval_split', type=str, default='test', choices=['train', 'val', 'test'])
+    parser.add_argument('--eval_split', type=str, default='val', choices=['train', 'val', 'test'])
 
     args = parser.parse_args()
 

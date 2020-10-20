@@ -4,11 +4,11 @@ Code for inversecooking2.0: merges image-to-set prediction with previous inverse
 
 ### Installation
 
-This code uses Python 3.7.3 (Anaconda), PyTorch 1.1.0. and cuda version 10.0.130.
+This code uses Python 3.8.5 (Anaconda), PyTorch 1.6 and cuda version 10.2.
 
 - Installing pytorch:
 ```bash
-$ conda install pytorch torchvision cuda90 -c pytorch
+$ conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
 ```
 
 - Install dependencies
@@ -53,7 +53,7 @@ Training can be run as in the following example command:
 $ python train.py --save_dir ../checkpoints --resume --seed SEED --dataset DATASET \
 --image_model IMAGE_MODEL --model_name MODEL_NAME --use_json_config
 ```
-where DATASET is a dataset name (e.g. `voc`), IMAGE_MODEL and MODEL_NAME are among the models listed above (e.g. `resnet50` and `ff_bce`) and SEED is the value of a random seed (e.g. `1235`).
+where DATASET is a dataset name (e.g. `recipe1m`), IMAGE_MODEL and MODEL_NAME are among the models listed above (e.g. `resnet50` and `ff_bce_cat`) and SEED is the value of a random seed (e.g. `1235`).
 
 Check training progress with Tensorboard from ```../checkpoints```:
 ```bash
@@ -68,7 +68,7 @@ Calculate evaluation metrics as in the following example command:
 ```bash
 $ python eval.py --eval_split test --models_path PATH --dataset DATASET --batch_size 100
 ```
-where DATASET is a dataset name (e.g. `voc`) and PATH is the path to the saved models folder.
+where DATASET is a dataset name (e.g. `recipe1m`) and PATH is the path to the saved models folder.
 
 ### Pre-trained models
 TBD

@@ -14,49 +14,44 @@ from torch.nn.modules.loss import _WeightedLoss
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 map_loc = None if torch.cuda.is_available() else 'cpu'
 
+class MaskedCrossEntropyCriterion(_WeightedLoss):
 
-def DC(alphas, dataset='coco'):
+    def __init__(self, ignore_index=[-100], reduce=None):
+        super(MaskedCrossEntropyCriterion, self).__init__()
+        self.padding_idx = ignore_index
+        self.reduce = reduce
 
-    if dataset == 'coco':
-        cms = np.array([
-            703, 15100., 22519., 15179., 8853., 5334., 3025., 1803., 971., 541., 280., 145, 69, 32, 11,
-            7, 2, 0, 1, 0, 0
-        ])
+    def forward(self, outputs, targets):
+        lprobs = nn.functional.log_softmax(outputs, dim=-1)
+        lprobs = lprobs.view(-1, lprobs.size(-1))
 
-    elif dataset == 'voc':
-        cms = np.array(
-            [2538., 1479., 386., 91., 10., 4., 1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        for idx in self.padding_idx:
+            # remove padding idx from targets to allow gathering without error (padded entries will be suppressed later)
+            targets[targets == idx] = 0
 
-    elif dataset == 'ade20k':
-        cms = np.array([
-            104., 507., 1177., 1747., 1909., 1926., 1765., 1646., 1468., 1289., 1111, 874, 624, 579,
-            416, 258, 226, 159, 113, 95, 64, 48, 27, 21, 8, 9, 4, 1, 0, 0, 1
-        ])
+        nll_loss = -lprobs.gather(dim=-1, index=targets.unsqueeze(1))
+        if self.reduce:
+            nll_loss = nll_loss.sum()
 
-    elif dataset == 'recipe1m':
+        return nll_loss.squeeze()
+
+def DC(alphas, dataset='recipe1m'):
+
+    if dataset == 'recipe1m':
         cms = np.array([
             0.0000e+00, 1.1570e+04, 2.7383e+04, 4.5583e+04, 6.2422e+04, 7.2228e+04, 7.6909e+04,
             7.6319e+04, 7.0102e+04, 5.9216e+04, 4.6648e+04, 3.4192e+04, 2.3283e+04, 1.5590e+04,
             1.0079e+04, 6.2400e+03, 3.7690e+03, 2.2110e+03, 1.3430e+03, 2.7000e+01
         ])
 
-    else:
-        cms = np.array([
-            36340, 42824., 28406., 17843., 11093., 6550., 3564., 1768., 647., 164., 40., 3, 2, 0, 0, 0, 0,
-            0, 0, 0, 0
-        ])
-
     cms = cms[0:alphas.size(-1)]
     c = sum(cms)
 
     cms = torch.from_numpy(cms)
-
     cms = cms.unsqueeze(0).to(device).float()
 
     num = alphas + cms
-
     den = (torch.sum(alphas, dim=-1) + c).unsqueeze(1)
-
     dc_alphas = num / den
 
     return dc_alphas
