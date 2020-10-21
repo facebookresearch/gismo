@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
-from modules.encoder import EncoderCNN
 from modules.ff_decoder import FFDecoder
 from modules.transformer_decoder import DecoderTransformer
 from modules.rnn_decoder import DecoderRNN
@@ -124,13 +123,11 @@ def predictions_to_idxs(label_logits,
     return idxs_clone
 
 
-def get_model(args, vocab_size):
+def get_ingr_predictor(args, vocab_size):
 
-    # build image encoder
-    encoder_image = EncoderCNN(args.embed_size, args.dropout_encoder,
-                               args.image_model)
-
-    use_empty_set = (True if args.dataset in ['coco', 'nuswide'] else False)
+    ## build image encoder TODO: remove
+    # encoder_image = EncoderCNN(args.embed_size, args.dropout_encoder,
+    #                           args.image_model)
 
     # build set predictor
     if args.decoder == 'ff':
@@ -148,8 +145,7 @@ def get_model(args, vocab_size):
             dropout=args.dropout_decoder,
             pred_cardinality=args.pred_cardinality,
             nobjects=args.maxnumlabels,
-            n_layers=args.ff_layers,
-            use_empty_set=use_empty_set)
+            n_layers=args.ff_layers)
 
     elif args.decoder == 'lstm':
         print(
@@ -183,7 +179,7 @@ def get_model(args, vocab_size):
             pos_embeddings=False,
             num_layers=args.tf_layers,
             learned=False,
-            normalize_before=True)
+            # fore=True)
 
     # label and eos loss
     label_losses = {
@@ -214,52 +210,47 @@ def get_model(args, vocab_size):
         print('Using no cardinality loss.', flush=True)
         cardinality_loss = None
 
-    model = SetPred(
+    model = IngredientsPredictor(
         decoder,
-        encoder_image,
         args.maxnumlabels,
         crit=label_loss,
         crit_eos=eos_loss,
         crit_cardinality=cardinality_loss,
         pad_value=pad_value,
         perminv=args.perminv,
-        decoder_ff=True if args.decoder == 'ff' else False,
+        is_decoder_ff=True if args.decoder == 'ff' else False,
         th=args.th,
         loss_label=args.label_loss,
-        replacement=args.replacement,
         card_type=args.pred_cardinality,
         dataset=args.dataset,
-        U=args.U,
-        use_empty_set=use_empty_set)
+        U=args.U)
 
     return model
 
 
-class SetPred(nn.Module):
+class IngredientsPredictor(nn.Module):
 
     def __init__(self,
                  decoder,
-                 image_encoder,
                  maxnumlabels,
                  crit=None,
                  crit_eos=None,
                  crit_cardinality=None,
                  pad_value=0,
                  perminv=True,
-                 decoder_ff=False,
+                 is_decoder_ff=False,
                  th=0.5,
                  loss_label='bce',
-                 replacement=False,
+                 replacement=False,  # this is set to False because it is the ingredient prediction model
                  card_type='none',
-                 dataset='voc',
+                 dataset='recipe1m',
                  U=2.36,
                  use_empty_set=False,
                  eps=1e-8):
 
-        super(SetPred, self).__init__()
-        self.image_encoder = image_encoder
+        super(IngredientsPredictor, self).__init__()
         self.decoder = decoder
-        self.decoder_ff = decoder_ff
+        self.is_decoder_ff = is_decoder_ff
         self.maxnumlabels = maxnumlabels
         self.crit = crit
         self.th = th
@@ -271,11 +262,11 @@ class SetPred(nn.Module):
         self.replacement = replacement
         self.card_type = card_type
         self.dataset = dataset
-        self.u_term = math.log(U)
+        self.u_term = math.log(U)  # TODO: this may not be used at all in this code
         self.eps = eps
         self.use_empty_set = use_empty_set
 
-    def forward(self, img_inputs, label_target=None, maxnumlabels=0, keep_cnn_gradients=False, compute_losses=False, compute_predictions=False):
+    def forward(self, img_features, label_target=None, maxnumlabels=0, compute_losses=False, compute_predictions=False):
 
         losses = {}
         predictions = None
@@ -285,10 +276,10 @@ class SetPred(nn.Module):
         if not compute_losses and not compute_predictions:
             return losses, predictions
 
-        # encode image
-        img_features = self.image_encoder(img_inputs, keep_cnn_gradients)
+        ## encode image TODO: remove
+        # img_features = self.image_encoder(img_inputs, keep_cnn_gradients)
 
-        if self.decoder_ff:
+        if self.is_decoder_ff:
             # use ff decoder to predict set of labels and cardinality
             label_logits, cardinality_logits = self.decoder(img_features)
 

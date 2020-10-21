@@ -8,12 +8,14 @@ import torch.nn as nn
 import random
 import numpy as np
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-class EncoderCNN(nn.Module):
+
+class ImageEncoder(nn.Module):
 
     def __init__(self, embed_size, dropout=0.5, image_model='resnet50', pretrained=True):
         """Load the pretrained model and replace top fc layer."""
-        super(EncoderCNN, self).__init__()
+        super(ImageEncoder, self).__init__()
 
         pretrained_net = globals()[image_model](pretrained=pretrained)
 

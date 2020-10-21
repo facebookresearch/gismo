@@ -16,6 +16,7 @@ from modules.multihead_attention import MultiheadAttention
 from modules.layers import make_positions, LearnedPositionalEmbedding
 from scipy.stats import entropy
 import numpy as np
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -90,15 +91,16 @@ class TransformerDecoderLayer(nn.Module):
         self.dropout = dropout
         self.relu_dropout = dropout
         self.normalize_before = normalize_before
-        num_layer_norm = 3
+        # num_layer_norm = 3
 
-        # self-attention on generated recipe
+        # self attention 
         self.self_attn = MultiheadAttention(
             self.embed_dim,
             n_att,
             dropout=dropout,
         )
 
+        # encoder attention
         self.encoder_attn = MultiheadAttention(
             self.embed_dim,
             n_att,
@@ -107,13 +109,21 @@ class TransformerDecoderLayer(nn.Module):
 
         self.fc1 = Linear(self.embed_dim, self.embed_dim)
         self.fc2 = Linear(self.embed_dim, self.embed_dim)
-        self.layer_norms = nn.ModuleList([LayerNorm(self.embed_dim) for i in range(num_layer_norm)])
+
+        # layer normalizations
+        self.layer_norms = {
+            'encoder_attn': LayerNorm(self.embed_dim),
+            'self_attn': LayerNorm(self.embed_dim),
+            'final': LayerNorm(self.embed_dim)  
+        }
+        # self.layer_norms = nn.ModuleList([LayerNorm(self.embed_dim) for i in range(num_layer_norm)])
+        # TODO: check which layer norms go in every place
 
     def forward(self, x, encoder_out, encoder_padding_mask, incremental_state):
 
         # self attention
         residual = x
-        x = self.maybe_layer_norm(0, x, before=True)
+        x = self.maybe_layer_norm('self_attn', x, before=True)
         x, _ = self.self_attn(
             query=x,
             key=x,
@@ -124,11 +134,11 @@ class TransformerDecoderLayer(nn.Module):
         )
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm(0, x, after=True)
+        x = self.maybe_layer_norm('self_attn', x, after=True)
 
+        # encoder attention
         residual = x
-        x = self.maybe_layer_norm(1, x, before=True)
-
+        x = self.maybe_layer_norm('encoder_attn', x, before=True)
         x, attn = self.encoder_attn(
             query=x,
             key=encoder_out,
@@ -137,25 +147,25 @@ class TransformerDecoderLayer(nn.Module):
             incremental_state=incremental_state,
             static_kv=True,
         )
-
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm(1, x, after=True)
+        x = self.maybe_layer_norm('encoder_attn', x, after=True)
 
+        # final operations
         residual = x
-        x = self.maybe_layer_norm(-1, x, before=True)
+        x = self.maybe_layer_norm('final', x, before=True)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=self.relu_dropout, training=self.training)
         x = self.fc2(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm(-1, x, after=True)
+        x = self.maybe_layer_norm('final', x, after=True)
         return x
 
-    def maybe_layer_norm(self, i, x, before=False, after=False):
+    def maybe_layer_norm(self, which_layer_norm, x, before=False, after=False):
         assert before ^ after
         if after ^ self.normalize_before:
-            return self.layer_norms[i](x)
+            return self.layer_norms[which_layer_norm](x)
         else:
             return x
 
@@ -178,6 +188,7 @@ class DecoderTransformer(nn.Module):
         self.dropout = dropout
         self.seq_length = seq_length * num_instrs
         self.embed_tokens = Embedding(vocab_size, embed_size, padding_idx=vocab_size - 1)
+
         if pos_embeddings:
             self.embed_positions = PositionalEmbedding(
                 1024, embed_size, 0, left_pad=False, learned=learned)
@@ -197,7 +208,7 @@ class DecoderTransformer(nn.Module):
 
         self.linear = Linear(embed_size, vocab_size - 1)
 
-    def forward(self, features, mask, captions, incremental_state=None):
+    def forward(self, features, mask, captions, other_features=None, incremental_state=None):
 
         if features is not None:
             features = features.permute(0, 2, 1)
@@ -242,6 +253,7 @@ class DecoderTransformer(nn.Module):
     def sample(self,
                features,
                mask,
+               other_features=None,
                greedy=True,
                temperature=1.0,
                first_token_value=0,
