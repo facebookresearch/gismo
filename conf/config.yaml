@@ -1,0 +1,13 @@
+defaults:
+  - dataset: recipe1m
+  - image_encoder: resnext101_32x8d
+  - ingr_predictor: ff
+
+optim:
+  - learning_rate: 0.0001
+  - scale_learning_rate_cnn: 0.1
+  - weight_decay: 0.0001
+  - patience: 10
+  - label_loss: 1.0
+  - cardinality_loss: 0.001
+  - eos_loss: 0.0

@@ -1,0 +1,5 @@
+image_encoder:
+  - model: "resnext101_32x8d"
+  - dropout: 0.3
+  - finetune: True
+  

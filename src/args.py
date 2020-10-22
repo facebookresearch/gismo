@@ -24,7 +24,7 @@ def set_default_model_flags(args):
     setattr(args, 'decoder', 'tf')
     setattr(args, 'perminv', False)
     setattr(args, 'shuffle_labels', False)
-    setattr(args, 'replacement', False)
+    setattr(args, 'replacement', False)  ## TODO: this only makes sense for ingredient prediction, no recipes!
     return args
 
 
@@ -41,6 +41,7 @@ def set_flags_for_model(args):
             setattr(args, 'pred_cardinality', tokens[2])
     else:
         setattr(args, 'decoder', 'tf' if 'tf' in args.model_name else 'lstm')
+        setattr(args, 'maxnumlabels', getattr(args, 'maxnumlabels')+1)  # need an extra position for 'eos' token
         if 'set' in args.model_name:
             setattr(args, 'perminv', True)
             setattr(args, 'label_loss', 'bce')
