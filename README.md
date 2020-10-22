@@ -4,16 +4,16 @@ Code for inversecooking2.0: merges image-to-set prediction with previous inverse
 
 ### Installation
 
-This code uses Python 3.8.5 (Anaconda), PyTorch 1.6 and cuda version 10.2.
+This code uses Python 3.8.5 (Anaconda), PyTorch 1.6 and cuda version 10.1.
 
 - Installing pytorch:
 ```bash
-$ conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+$ conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
 ```
 
 - Install dependencies
 ```bash
-$ pip install -r requirements.txt
+$ pip install -r requirements.txt --upgrade
 ```
 
 ### Datasets

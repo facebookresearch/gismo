@@ -3,3 +3,5 @@ tqdm
 spicy
 lmdb
 nltk
+hydra-core
+hydra-submitit-launcher
