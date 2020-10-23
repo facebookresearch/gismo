@@ -6,6 +6,8 @@ import lmdb
 import numpy as np
 import os
 import pickle
+import hydra
+
 import torch
 import torch.utils.data as data
 
@@ -200,7 +202,9 @@ def get_loader(dataset,
                checkpoint=None):
 
     # reads the file with ids to use for this split
-    perm_file = os.path.join('../data/splits/', dataset, split + '.txt')
+    orig_cwd = hydra.utils.get_original_cwd()
+    parent_orig_cwd = os.path.abspath(os.path.join(orig_cwd, os.pardir))
+    perm_file = os.path.join(parent_orig_cwd, 'data/splits/', dataset, split + '.txt')
     with open(perm_file, 'r') as f:
         perm = np.array([int(line.rstrip('\n')) for line in f])
 

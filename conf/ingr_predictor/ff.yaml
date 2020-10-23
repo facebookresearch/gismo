@@ -1,6 +1,6 @@
-    ingr_predictor:
-      - model: "ff_bce_cat"
-      - embed_size: 512
-      - layers: 0
-      - dropout: 0.3
-      - maxnumlabels: 20
+    # @package _group_
+    
+    model: "ff_bce_cat"
+    embed_size: 2048
+    layers: 3
+    dropout: 0.1

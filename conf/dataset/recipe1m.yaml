@@ -1,4 +1,5 @@
-dataset:
-  - name: "recipe1m"
-  - path: "/datasets01/recipe1m/012319/"
-  - maxnumlabels: 20
+# @package _group_
+
+name: "recipe1m"
+path: "/datasets01/recipe1m/012319/"
+maxnumlabels: 20

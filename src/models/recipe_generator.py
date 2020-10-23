@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 import random
 import numpy as np
-from modules.encoder import EncoderCNN, EncoderLabels
-from modules.transformer_decoder import DecoderTransformer
-from modules.multihead_attention import MultiheadAttention
+from models.image_encoder import ImageEncoder
+from models.ingredients_encoder import IngredientsEncoder
+from models.modules.transformer_decoder import DecoderTransformer
+from models.modules.multihead_attention import MultiheadAttention
 from utils.metrics import softIoU, MaskedCrossEntropyCriterion
 import pickle
 import os

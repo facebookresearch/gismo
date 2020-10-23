@@ -6,9 +6,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
-from modules.ff_decoder import FFDecoder
-from modules.transformer_decoder import DecoderTransformer
-from modules.rnn_decoder import DecoderRNN
+from models.modules.ff_decoder import FFDecoder
+from models.modules.transformer_decoder import DecoderTransformer
+from models.modules.rnn_decoder import DecoderRNN
 from utils.metrics import softIoU, softIoULoss, DCLoss, DC, targetDistLoss
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -179,7 +179,7 @@ def get_ingr_predictor(args, vocab_size):
             pos_embeddings=False,
             num_layers=args.tf_layers,
             learned=False,
-            # fore=True)
+            normalize_before=True)
 
     # label and eos loss
     label_losses = {

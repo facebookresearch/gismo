@@ -13,7 +13,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class ImageEncoder(nn.Module):
 
-    def __init__(self, embed_size, dropout=0.5, image_model='resnet50', pretrained=True):
+    def __init__(self, embed_size=512, dropout=0.5, image_model='resnet50', pretrained=True):
         """Load the pretrained model and replace top fc layer."""
         super(ImageEncoder, self).__init__()
 

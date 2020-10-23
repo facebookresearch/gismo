@@ -1,6 +1,7 @@
-ingr_predictor:
-  - model: "tf"
-  - layers: 0
-  - embed_size: 2048
-  - n_att: 8
-  - dropout: 0.3
+# @package _group_
+
+model: "tf"
+layers: 0
+embed_size: 2048
+n_att: 8
+dropout: 0.3

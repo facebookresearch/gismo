@@ -1,4 +1,5 @@
-ingr_predictor:    
-  - model: "lstm_shuffle"
-  - embed_size: 2048
-  - dropout: 0.1
+# @package _group_
+
+model: "lstm_shuffle"
+embed_size: 2048
+dropout: 0.1
