@@ -4,6 +4,7 @@ defaults:
 
 image_encoder:
   model: "resnet50"
+  pretrained: True
   dropout: 0.1
   # finetune: True
   finetune_after: 0

@@ -11,41 +11,35 @@ import json
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import hydra
+
+from omegaconf import DictConfig, OmegaConf
 
 import torch
 from torchvision import transforms
 
-from model import get_model, label2_k_hots
-from data_loader import get_loader
+from models.im2ingr import Im2Ingr
+from models.ingredients_predictor import label2_k_hots
+from loaders.recipe1m import get_loader
 from utils.metrics import update_error_counts, compute_metrics
 from utils.recipe1m_utils import Vocabulary
+from utils.config_utils import set_flags_for_ingr_predictor
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 map_loc = None if torch.cuda.is_available() else 'cpu'
 
+@hydra.main(config_path="../conf", config_name="config")
+def main(cfg: DictConfig) -> None:
 
-def main(args):
+    set_flags_for_ingr_predictor(cfg)
 
-    # Extract model to test
-    if len(args.which_models) > 0:
-        # Get models to test from which_models
-        models_to_test = [os.path.join(args.models_path, wm) for wm in args.which_models]
-        model_names = args.which_models
-    else:
-        # Get models to test from models_path
-        models_to_test = glob.glob(args.models_path + '/*.ckpt')
-        models_to_test = [m for m in models_to_test if args.dataset in m]
-        model_names = [re.split(r'[/]',m)[-1] for m in models_to_test]
+    model_names = [cfg.ingr_predictor.model]
+    models_to_test = [os.path.join(cfg.checkpoint.dir, cfg.dataset.name + '_' + cfg.image_encoder.model + '_' +  cfg.ingr_predictor.model + '_' + str(cfg.misc.seed) + '.ckpt')]
 
     # To store results
     mat_f1 = np.zeros((len(models_to_test), ))
     mat_f1_c = np.zeros((len(models_to_test), ))
     mat_f1_i = np.zeros((len(models_to_test), ))
-
-    if not os.path.exists(args.save_results_path):
-        os.makedirs(args.save_results_path)
-
-    print('Results will be saved here: ' + args.save_results_path)
    
     # Iterate over models to test
     for k, m in enumerate(models_to_test):
@@ -54,39 +48,36 @@ def main(args):
 
         # Load checkpoint
         checkpoint = torch.load(m, map_location=map_loc)
-        model_args = checkpoint['args']
 
         # Image pre-processing
         transforms_list = []
-        transforms_list.append(transforms.Resize(model_args.image_size))
-        transforms_list.append(transforms.CenterCrop(model_args.crop_size))
+        transforms_list.append(transforms.Resize(cfg.preprocessing.im_resize))
+        transforms_list.append(transforms.CenterCrop(cfg.preprocessing.crop_size))
         transforms_list.append(transforms.ToTensor())
         transforms_list.append(
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)))
         transform = transforms.Compose(transforms_list)
 
         # Load data
-        datapaths = json.load(open('../configs/datapaths.json'))
-        dataset_root = datapaths[model_args.dataset]
         data_loader, dataset = get_loader(
-            dataset=model_args.dataset,
-            dataset_root=dataset_root,
-            split=args.eval_split,
+            dataset=cfg.dataset.name,
+            dataset_root=cfg.dataset.path,
+            split='val',
             transform=transform,
-            batch_size=args.batch_size,
-            include_eos=(model_args.decoder != 'ff'),
+            batch_size=cfg.optim.batch_size,
+            include_eos=(cfg.ingr_predictor.type != 'ff'),
             shuffle=False,
-            num_workers=8,
+            num_workers=cfg.misc.num_workers,
             drop_last=False,
             shuffle_labels=False)
 
-        vocab_size = len(dataset.get_vocab())
-        print('Vocabulary size is {}'.format(vocab_size))
-        print('Dataset {} split contains {} images'.format(args.eval_split, len(dataset)))
+        ingr_vocab_size = len(dataset.get_vocab())
+        print('Vocabulary size is {}'.format(ingr_vocab_size))
+        print('Dataset {} split contains {} images'.format('val', len(dataset)))
 
         # Build model and load model state
-        model = get_model(model_args, vocab_size)
-        model.load_state_dict(checkpoint['state_dict'])
+        model = Im2Ingr(cfg.image_encoder, cfg.ingr_predictor, ingr_vocab_size, cfg.dataset.name, cfg.dataset.maxnumlabels)
+        # model.load_state_dict(checkpoint['state_dict'])
 
         # Eval
         model.eval()
@@ -121,12 +112,12 @@ def main(args):
                 # or a list of sublists, where each sublist contains the integer labels of an image
                 # and len(list) = batch_size and len(sublist) is variable
                 _, predictions = model(
-                    img_inputs, maxnumlabels=model_args.maxnumlabels, compute_predictions=True)
+                    img_inputs, maxnumlabels=cfg.dataset.maxnumlabels, compute_predictions=True)
                 # convert model predictions and targets to k-hots
                 pred_k_hots = label2_k_hots(
-                    predictions, vocab_size - 1, remove_eos=(model_args.decoder != 'ff'))
+                    predictions, ingr_vocab_size - 1, remove_eos=(cfg.ingr_predictor.type != 'ff'))
                 target_k_hots = label2_k_hots(
-                    target, vocab_size - 1, remove_eos=(model_args.decoder != 'ff'))
+                    target, ingr_vocab_size - 1, remove_eos=(cfg.ingr_predictor.type != 'ff'))
                 # update overall and per class error counts
                 update_error_counts(overall_error_counts, pred_k_hots, target_k_hots)
 
@@ -158,27 +149,6 @@ def main(args):
         mat_f1_c[k] = overall_metrics['c_f1']
         mat_f1_i[k] = overall_metrics['f1_i']
 
-    print('Saving results...')
-    data = {'Model':model_names, 'f1':mat_f1, 'f1_c':mat_f1_c, 'f1_i':mat_f1_i} 
-    df = pd.DataFrame(data)
-    df.to_csv(os.path.join(args.save_results_path, 'results.csv'))
-
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        '--dataset', type=str, default='recipe1m')
-        
-    parser.add_argument(
-        '--models_path', type=str, default='/checkpoint/adrianars/image-to-set-all/')
-    parser.add_argument(
-        '--which_models', type=str, nargs='+', default=['recipe1m_resnet50_ff_bce_cat_1235.ckpt'])        
-    parser.add_argument('--save_results_path', type=str, default='../checkpoints/')
-
-    parser.add_argument('--batch_size', type=int, default=100)
-    parser.add_argument('--eval_split', type=str, default='val', choices=['train', 'val', 'test'])
-
-    args = parser.parse_args()
-
-    main(args)
+    main()

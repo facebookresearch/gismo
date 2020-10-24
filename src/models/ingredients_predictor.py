@@ -123,87 +123,83 @@ def predictions_to_idxs(label_logits,
     return idxs_clone
 
 
-def get_ingr_predictor(args, vocab_size):
+def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
 
-    ## build image encoder TODO: remove
-    # encoder_image = EncoderCNN(args.embed_size, args.dropout_encoder,
-    #                           args.image_model)
-
-    # build set predictor
-    if args.decoder == 'ff':
+    # build ingredients predictor
+    if args.type == 'ff':
         print(
             'Building feed-forward decoder. Embed size {} / Dropout {} / '
             'Cardinality Prediction {} / Max. Num. Labels {} / Num. Layers {}'.format(
-                args.embed_size, args.dropout_decoder, args.pred_cardinality, args.maxnumlabels,
-                args.ff_layers),
+                args.embed_size, args.dropout, args.cardinality_pred, maxnumlabels,
+                args.layers),
             flush=True)
 
         decoder = FFDecoder(
             args.embed_size,
             vocab_size,
             args.embed_size,
-            dropout=args.dropout_decoder,
-            pred_cardinality=args.pred_cardinality,
-            nobjects=args.maxnumlabels,
-            n_layers=args.ff_layers)
+            dropout=args.dropout,
+            pred_cardinality=args.cardinality_pred,
+            nobjects=maxnumlabels,
+            n_layers=args.layers)
 
-    elif args.decoder == 'lstm':
+    elif args.type == 'lstm':
         print(
             'Building LSTM decoder. Embed size {} / Dropout {} / Max. Num. Labels {}. '.format(
-                args.embed_size, args.dropout_decoder, args.maxnumlabels),
+                args.embed_size, args.dropout, maxnumlabels),
             flush=True)
 
         decoder = DecoderRNN(
             args.embed_size,
             args.embed_size,
             vocab_size,
-            dropout=args.dropout_decoder,
-            seq_length=args.maxnumlabels,
+            dropout=args.dropout,
+            seq_length=maxnumlabels,
             num_instrs=1)
 
-    elif args.decoder == 'tf':
+    elif args.type == 'tf':
         print(
             'Building Transformer decoder. Embed size {} / Dropout {} / Max. Num. Labels {} / '
             'Num. Attention Heads {} / Num. Layers {}.'.format(
-                args.embed_size, args.dropout_decoder, args.maxnumlabels, args.n_att,
-                args.tf_layers),
+                args.embed_size, args.dropout, maxnumlabels, args.n_att,
+                args.layers),
             flush=True)
 
         decoder = DecoderTransformer(
             args.embed_size,
             vocab_size,
-            dropout=args.dropout_decoder,
-            seq_length=args.maxnumlabels,
+            dropout=args.dropout,
+            seq_length=maxnumlabels,
             num_instrs=1,
             attention_nheads=args.n_att,
             pos_embeddings=False,
-            num_layers=args.tf_layers,
+            num_layers=args.layers,
             learned=False,
             normalize_before=True)
 
     # label and eos loss
     label_losses = {
-        'bce': nn.BCEWithLogitsLoss(reduction='mean') if args.decoder == 'ff' else nn.BCELoss(reduction='mean'), 
+        'bce': nn.BCEWithLogitsLoss(reduction='mean') if args.type == 'ff' else nn.BCELoss(reduction='mean'), 
         'iou': softIoULoss(reduction='mean'),
         'td': targetDistLoss(reduction='mean'), 
     }
     pad_value = vocab_size - 1
-    print('Using {} loss.'.format(args.label_loss), flush=True)
-    if args.decoder == 'ff':
-        label_loss = label_losses[args.label_loss]
+    print('Using {} loss.'.format(args.loss), flush=True)
+    if args.type == 'ff':
+        label_loss = label_losses[args.loss]
         eos_loss = None
-    elif args.decoder in ['tf', 'lstm'] and args.perminv:
-        label_loss = label_losses[args.label_loss]
+    elif args.type in ['tf', 'lstm'] and args.perminv:
+        label_loss = label_losses[args.loss]
         eos_loss = nn.BCELoss(reduction='mean')
     else:
         label_loss = nn.CrossEntropyLoss(ignore_index=pad_value, reduction='mean')
         eos_loss = None
 
     # cardinality loss
-    if args.pred_cardinality == 'dc':
+    if args.cardinality_pred == 'dc':
         print('Using Dirichlet-Categorical cardinality loss.', flush=True)
-        cardinality_loss = DCLoss(U=args.U, dataset=args.dataset, reduction='mean')
-    elif args.pred_cardinality == 'cat':
+        cardinality_loss = DCLoss(U=args.U, dataset=dataset, reduction='mean')
+    elif args.cardinality_pred == 'cat':
         print('Using categorical cardinality loss.', flush=True)
         cardinality_loss = nn.CrossEntropyLoss(reduction='mean')
     else:
@@ -212,18 +208,16 @@ def get_ingr_predictor(args, vocab_size):
 
     model = IngredientsPredictor(
         decoder,
-        args.maxnumlabels,
+        maxnumlabels,
         crit=label_loss,
         crit_eos=eos_loss,
         crit_cardinality=cardinality_loss,
         pad_value=pad_value,
         perminv=args.perminv,
-        is_decoder_ff=True if args.decoder == 'ff' else False,
-        th=args.th,
-        loss_label=args.label_loss,
-        card_type=args.pred_cardinality,
-        dataset=args.dataset,
-        U=args.U)
+        is_decoder_ff=True if args.type == 'ff' else False,
+        loss_label=args.loss,
+        card_type=args.cardinality_pred,
+        dataset=dataset)
 
     return model
 
@@ -275,9 +269,6 @@ class IngredientsPredictor(nn.Module):
 
         if not compute_losses and not compute_predictions:
             return losses, predictions
-
-        ## encode image TODO: remove
-        # img_features = self.image_encoder(img_inputs, keep_cnn_gradients)
 
         if self.is_decoder_ff:
             # use ff decoder to predict set of labels and cardinality

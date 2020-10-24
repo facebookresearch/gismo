@@ -13,16 +13,16 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class ImageEncoder(nn.Module):
 
-    def __init__(self, embed_size=512, dropout=0.5, image_model='resnet50', pretrained=True):
+    def __init__(self, embed_size, dropout=0.5, model='resnet50', pretrained=True):
         """Load the pretrained model and replace top fc layer."""
         super(ImageEncoder, self).__init__()
 
-        pretrained_net = globals()[image_model](pretrained=pretrained)
+        pretrained_net = globals()[model](pretrained=pretrained)
 
-        if 'resnet' in image_model or 'resnext' in image_model:
+        if 'resnet' in model or 'resnext' in model:
             modules = list(pretrained_net.children())[:-2]  # delete avg pooling and last fc layer
         else:
-            raise ValueError('Invalid image_model {}'.format(image_model))
+            raise ValueError('Invalid image model {}'.format(model))
 
         self.pretrained_net = nn.Sequential(*modules)
         in_dim = pretrained_net.fc.in_features
