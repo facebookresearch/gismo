@@ -3,8 +3,6 @@
 import torch
 import torch.nn as nn
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 class IngredientsEncoder(nn.Module):
     def __init__(self, embed_size, num_classes, dropout=0.5, embed_weights=None, scale_grad=False):
 

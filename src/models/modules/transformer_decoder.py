@@ -17,8 +17,6 @@ from models.modules.layers import make_positions, LearnedPositionalEmbedding
 from scipy.stats import entropy
 import numpy as np
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
 class SinusoidalPositionalEmbedding(nn.Module):
     """This module produces sinusoidal positional embeddings of any length.
@@ -265,7 +263,7 @@ class DecoderTransformer(nn.Module):
         fs = features.size(0)
         first_word = torch.ones(fs) * first_token_value
 
-        first_word = first_word.to(device).long()
+        first_word = first_word.long()
         sampled_ids = [first_word]
         logits = []
         for i in range(self.seq_length):
@@ -275,7 +273,7 @@ class DecoderTransformer(nn.Module):
             if not replacement:
                 # predicted mask
                 if i == 0:
-                    predicted_mask = torch.zeros(outputs.shape).float().to(device)
+                    predicted_mask = torch.zeros(outputs.shape).float()
                 else:
                     batch_ind = [j for j in range(fs) if sampled_ids[i][j] != 0]
                     sampled_ids_new = sampled_ids[i][batch_ind]

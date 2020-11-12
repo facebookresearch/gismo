@@ -5,3 +5,4 @@ lmdb
 nltk
 hydra-core
 hydra-submitit-launcher
+pytorch-lightning

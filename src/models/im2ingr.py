@@ -9,8 +9,6 @@ from models.image_encoder import ImageEncoder
 from models.ingredients_predictor import get_ingr_predictor
 from models.recipe_generator import get_recipe_generator
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
 class Im2Ingr(nn.Module):
 
@@ -24,6 +22,8 @@ class Im2Ingr(nn.Module):
 
         super(Im2Ingr, self).__init__()
 
+        self.ingr_vocab_size = ingr_vocab_size
+
         self.image_encoder = ImageEncoder(ingrpred_args.embed_size, im_args)
 
         self.ingr_predictor = get_ingr_predictor(ingrpred_args, vocab_size=ingr_vocab_size, 
@@ -34,8 +34,7 @@ class Im2Ingr(nn.Module):
 
         img_features = self.image_encoder(img)
 
-        losses, predictions = self.ingr_predictor(img_features, label_target=None, 
-                                                  maxnumlabels=maxnumlabels, 
+        losses, predictions = self.ingr_predictor(img_features, label_target=label_target, 
                                                   compute_losses=compute_losses, 
                                                   compute_predictions=compute_predictions)
 

@@ -6,27 +6,25 @@ image_encoder:
   model: "resnet50"
   pretrained: True
   dropout: 0.1
-  # finetune: True
-  finetune_after: 0
+  freeze_pretrained: False
 
 optim:
-  batch_size: 32
   lr: 0.001
-  scale_lr_cnn: 0.01
-  lr_decay: False
+  scale_lr_pretrained: 0.01
   lr_decay_rate: 0.99
   lr_decay_every: 1
   weight_decay: 0.0
   max_epochs: 400
   patience: 10
   ingr_prediction_loss_weights:
-    - label_loss: 1.0
-    - cardinality_loss: 0.001
-    - eos_loss: 0.0
+    label_loss: 1.0
+    cardinality_loss: 0.001
+    eos_loss: 0.0
 
 checkpoint:
-  dir: '/checkpoint/adrianars/image-to-set-all/'
-  metric: 'o_f1'
+  dir: '/checkpoint/adrianars/inversecooking2.0/debug'
+  es_metric: 'o_f1'
+  resume_from: None
 
 preprocessing:
   crop_size: 448
@@ -34,10 +32,7 @@ preprocessing:
 
 misc:
   seed: 1235
-  log_step: 10
+  batch_size: 32
   num_workers: 8
-  tensorboard: True
-  resume: True
-
 
 

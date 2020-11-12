@@ -1,6 +1,6 @@
     # @package _group_
     
-    model: "ff_bce_cat"
+    model: "ff_bce"
     embed_size: 2048
     layers: 3
     dropout: 0.1

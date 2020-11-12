@@ -14,7 +14,7 @@ class FFDecoder(nn.Module):
                  hidden_size,
                  dropout=0.0,
                  pred_cardinality='none',
-                 nobjects=10,
+                 nobjects=10,  ## for cardinality prediction only
                  n_layers=1,
                  use_empty_set=False):
         super(FFDecoder, self).__init__()
@@ -41,7 +41,7 @@ class FFDecoder(nn.Module):
 
         self.pred_cardinality = pred_cardinality
         if self.pred_cardinality != 'none':
-            if use_empty_set:
+            if use_empty_set:  ## TODO: may not be needed at all, do we have empty sets here?
                 # This is to account for 0 when using cardinality prediction and dealing with datasets with empty sets
                 nobjects += 1
             self.fc_cardinality = nn.Sequential(nn.Linear(hidden_size, nobjects))

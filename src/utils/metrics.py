@@ -11,8 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.loss import _WeightedLoss
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-map_loc = None if torch.cuda.is_available() else 'cpu'
+
 
 class MaskedCrossEntropyCriterion(_WeightedLoss):
 
@@ -48,7 +47,7 @@ def DC(alphas, dataset='recipe1m'):
     c = sum(cms)
 
     cms = torch.from_numpy(cms)
-    cms = cms.unsqueeze(0).to(device).float()
+    cms = cms.unsqueeze(0).float()
 
     num = alphas + cms
     den = (torch.sum(alphas, dim=-1) + c).unsqueeze(1)
@@ -123,7 +122,7 @@ class targetDistLoss(nn.Module):
         # create flat distribution
         flat_target = 1 / label_target.size(-1)
         flat_target = torch.FloatTensor(
-                        np.array(flat_target)).to(device).unsqueeze(-1).unsqueeze(-1)
+                        np.array(flat_target)).unsqueeze(-1).unsqueeze(-1)
 
         # divide target by number of elements and add equal prob to all elements for the empty sets
         target_distribution = label_target.float() / (
@@ -139,28 +138,35 @@ class targetDistLoss(nn.Module):
         return loss
 
 
-def update_error_counts(error_counts, y_pred, y_true):
+def update_error_counts(error_counts, y_pred, y_true, which_metrics):
 
-    error_counts['tp_c'] += (y_pred * y_true).sum(0).cpu().data.numpy()
-    error_counts['fp_c'] += (y_pred * (1 - y_true)).sum(0).cpu().data.numpy()
-    error_counts['fn_c'] += ((1 - y_pred) * y_true).sum(0).cpu().data.numpy()
-    error_counts['tn_c'] += ((1 - y_pred) * (1 - y_true)).sum(0).cpu().data.numpy()
+    if 'o_f1' in which_metrics:
+        error_counts['tp_all'] += (y_pred * y_true).sum().item()
+        error_counts['fp_all'] += (y_pred * (1 - y_true)).sum().item()
+        error_counts['fn_all'] += ((1 - y_pred) * y_true).sum().item()
 
-    error_counts['tp_all'] += (y_pred * y_true).sum().item()
-    error_counts['fp_all'] += (y_pred * (1 - y_true)).sum().item()
-    error_counts['fn_all'] += ((1 - y_pred) * y_true).sum().item()
+    if 'c_f1' in which_metrics:
+        error_counts['tp_c'] += (y_pred * y_true).sum(0).cpu().data.numpy()
+        error_counts['fp_c'] += (y_pred * (1 - y_true)).sum(0).cpu().data.numpy()
+        error_counts['fn_c'] += ((1 - y_pred) * y_true).sum(0).cpu().data.numpy()
+        error_counts['tn_c'] += ((1 - y_pred) * (1 - y_true)).sum(0).cpu().data.numpy()
+
+    if 'i_f1' in which_metrics:
+        error_counts['tp_i'] = (y_pred * y_true).sum(1).cpu().data.numpy()
+        error_counts['fp_i'] = (y_pred * (1 - y_true)).sum(1).cpu().data.numpy()
+        error_counts['fn_i'] = ((1 - y_pred) * y_true).sum(1).cpu().data.numpy()   
 
 
 def compute_metrics(error_counts, which_metrics, eps=1e-8, weights=None):
 
     ret_metrics = {}
 
-    if 'f1' in which_metrics:
+    if 'o_f1' in which_metrics:
         pre = (error_counts['tp_all'] + eps) / (error_counts['tp_all'] + error_counts['fp_all'] + eps)
         rec = (error_counts['tp_all'] + eps) / (error_counts['tp_all'] + error_counts['fn_all'] + eps)
 
-        f1 = 2 * (pre * rec) / (pre + rec)
-        ret_metrics['f1'] = f1
+        o_f1 = 2 * (pre * rec) / (pre + rec)
+        ret_metrics['o_f1'] = o_f1
 
     if 'c_f1' in which_metrics:
         pre = (error_counts['tp_c'] + eps) / (error_counts['tp_c'] + error_counts['fp_c'] + eps)
@@ -170,5 +176,11 @@ def compute_metrics(error_counts, which_metrics, eps=1e-8, weights=None):
         f1_perclass_avg = np.average(f1_perclass, weights=weights)
         ret_metrics['c_f1'] = f1_perclass_avg
 
+    if 'i_f1' in which_metrics:
+        pre = (error_counts['tp_i'] + eps) / (error_counts['tp_i'] + error_counts['fp_i'] + eps)
+        rec = (error_counts['tp_i'] + eps) / (error_counts['tp_i'] + error_counts['fn_i'] + eps)
+
+        f1_i = 2 * (pre * rec) / (pre + rec)  ## TODO: check this should be of size batch_sizex1
+        ret_metrics['i_f1'] = f1_i    
 
     return ret_metrics

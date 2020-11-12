@@ -9,7 +9,6 @@ import torch
 import torch.nn as nn
 import random
 import numpy as np
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class AttentionLayer(nn.Module):
@@ -67,8 +66,8 @@ class LSTMAtt(nn.Module):
     def forward(self, input_feat, features, prev_word, states):
 
         if states is None:
-            states = (torch.zeros(input_feat.size(0), self.hidden_size).cuda(),
-                      torch.zeros(input_feat.size(0), self.hidden_size).cuda())
+            states = (torch.zeros(input_feat.size(0), self.hidden_size),
+                      torch.zeros(input_feat.size(0), self.hidden_size))
 
         input = torch.cat((input_feat, prev_word), 1)
         states = self.lstmcell(input, states)
@@ -138,7 +137,7 @@ class DecoderRNN(nn.Module):
         inputs = avg_feats
         states = None
         fs = features.size(0)
-        prev_word = torch.ones(fs, 1).cuda().long() * first_token_value
+        prev_word = torch.ones(fs, 1).long() * first_token_value
         sampled_ids = [prev_word]
         prev_word = self.embed(prev_word).squeeze(1)
         for i in range(self.seq_length):
@@ -150,7 +149,7 @@ class DecoderRNN(nn.Module):
             if not replacement:
                 # predicted mask
                 if i == 0:
-                    predicted_mask = torch.zeros(outputs.shape).float().to(device)
+                    predicted_mask = torch.zeros(outputs.shape).float()
                 else:
                     batch_ind = [j for j in range(fs) if sampled_ids[i][j] != 0]
                     sampled_ids_new = sampled_ids[i][batch_ind]

@@ -10,7 +10,6 @@ from utils.metrics import softIoU, MaskedCrossEntropyCriterion
 import pickle
 import os
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def get_recipe_generator(args, ingr_vocab_size, instrs_vocab_size):
 
