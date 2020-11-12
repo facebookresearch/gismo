@@ -48,7 +48,8 @@ def main(cfg: DictConfig) -> None:
     # checkpointing
     checkpoint_callback = ModelCheckpoint(monitor='val_o_f1',
                                           dirpath=cfg.checkpoint.dir,
-                                          filename='',
+                                          filename='im2ingr-'+cfg.ingr_predictor.model+'{epoch:02d}-{val_o_f1:.2f}',
+                                          save_last=True,
                                           mode='max')
 
     # trainer
@@ -69,7 +70,7 @@ def main(cfg: DictConfig) -> None:
         weights_save_path=cfg.checkpoint.dir,
         callbacks=[checkpoint_callback],  # need to overwrite ModelCheckpoint callback
         logger=tb_logger,
-        # limit_train_batches=300,
+        limit_train_batches=100,
         fast_dev_run=False  # set to true for debugging
     )
 
