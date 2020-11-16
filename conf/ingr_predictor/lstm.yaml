@@ -1,5 +1,5 @@
 # @package _group_
 
-model: "lstm_shuffle"
+model: "lstmset"
 embed_size: 2048
 dropout: 0.1

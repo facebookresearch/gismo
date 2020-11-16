@@ -19,7 +19,7 @@ def main(cfg: DictConfig) -> None:
     seed_everything(cfg.misc.seed)
 
     # data module
-    shuffle_labels = False if ('ff' in  cfg.ingr_predictor.model or ('ff' not in  cfg.ingr_predictor.model and not cfg.ingr_predictor.shuffle_labels)) else True
+    shuffle_labels = True if 'shuffle' in  cfg.ingr_predictor.model else False
     include_eos = False if 'ff' in  cfg.ingr_predictor.model else True
 
     dm = Recipe1MDataModule(data_dir=cfg.dataset.path,
@@ -48,13 +48,13 @@ def main(cfg: DictConfig) -> None:
     # checkpointing
     checkpoint_callback = ModelCheckpoint(monitor='val_o_f1',
                                           dirpath=cfg.checkpoint.dir,
-                                          filename='im2ingr-'+cfg.ingr_predictor.model+'{epoch:02d}-{val_o_f1:.2f}',
+                                          filename='im2ingr-'+cfg.ingr_predictor.model+'{epoch:02d}-{val_o_f1:.2f}',  ## TODO adapt
                                           save_last=True,
                                           mode='max')
 
     # trainer
     trainer = pl.Trainer(
-        gpus=1,
+        gpus=2,
         num_nodes=1,
         accelerator='ddp',
         benchmark=True,  # increases speed for fixed image sizes
@@ -70,7 +70,7 @@ def main(cfg: DictConfig) -> None:
         weights_save_path=cfg.checkpoint.dir,
         callbacks=[checkpoint_callback],  # need to overwrite ModelCheckpoint callback
         logger=tb_logger,
-        limit_train_batches=100,
+        # limit_train_batches=100,
         fast_dev_run=False  # set to true for debugging
     )
 
@@ -83,5 +83,4 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == '__main__':
-    # TRAIN
     main()

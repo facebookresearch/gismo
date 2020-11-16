@@ -42,10 +42,13 @@ class LitInverseCooking(pl.LightningModule):
     total_loss = 0
 
     if 'label_loss' in losses.keys():
+      self.log('label_loss', losses['label_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
       total_loss += (losses['label_loss'] * self.ingr_prediction_loss_weights['label_loss'])
     if 'cardinality_loss' in losses.keys():
+      self.log('cardinality_loss', losses['cardinality_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
       total_loss += (losses['cardinality_loss'] * self.ingr_prediction_loss_weights['cardinality_loss'])
     if 'eos_loss' in losses.keys():
+      self.log('eos_loss', losses['eos_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
       total_loss += (losses['eos_loss'] * self.ingr_prediction_loss_weights['eos_loss'])
 
     self.log('train_loss', total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -85,9 +88,6 @@ class LitInverseCooking(pl.LightningModule):
     metrics = compute_metrics(self.overall_error_counts, which_metrics=['i_f1'])
 
     return metrics
-
-  # def on_training_epoch_end(self, train_step_outputs):
-  #   self.log('train_loss', valid_step_outputs[k].mean())  
     
   def validation_epoch_end(self, valid_step_outputs):
     self.eval_epoch_end(valid_step_outputs, 'val')
@@ -122,19 +122,6 @@ class LitInverseCooking(pl.LightningModule):
 
     return valid_step_outputs
 
-    # valid_step_outputs = {}
-    
-    # # average metric across mini-batches (note that last mini-batch may be smaller)
-    # for k in metrics.keys():
-    #   valid_step_outputs[k] = metrics[k].sum()
-
-    # valid_step_outputs['n_samples'] = metrics[k].shape[0] 
-
-    # # reset per sample error counts
-    # self._reset_error_counts(perimage=True)
-      
-    # return valid_step_outputs
-
   def test_step_end(self, metrics):
     test_step_outputs = self._shared_eval_step_end(metrics)
     
@@ -143,7 +130,7 @@ class LitInverseCooking(pl.LightningModule):
   def _shared_eval_step_end(self, metrics):
     eval_step_outputs = {}
     
-    # average metric across mini-batches (note that last mini-batch may be smaller)
+    # sum metric within mini-batches
     for k in metrics.keys():
       eval_step_outputs[k] = metrics[k].sum()
 

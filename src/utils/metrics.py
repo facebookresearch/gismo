@@ -46,8 +46,8 @@ def DC(alphas, dataset='recipe1m'):
     cms = cms[0:alphas.size(-1)]
     c = sum(cms)
 
-    cms = torch.from_numpy(cms)
-    cms = cms.unsqueeze(0).float()
+    cms = torch.from_numpy(cms).type_as(alphas)
+    cms = cms.unsqueeze(0)
 
     num = alphas + cms
     den = (torch.sum(alphas, dim=-1) + c).unsqueeze(1)
@@ -122,7 +122,7 @@ class targetDistLoss(nn.Module):
         # create flat distribution
         flat_target = 1 / label_target.size(-1)
         flat_target = torch.FloatTensor(
-                        np.array(flat_target)).unsqueeze(-1).unsqueeze(-1)
+                        np.array(flat_target)).unsqueeze(-1).unsqueeze(-1).type_as(cardinality_target)
 
         # divide target by number of elements and add equal prob to all elements for the empty sets
         target_distribution = label_target.float() / (

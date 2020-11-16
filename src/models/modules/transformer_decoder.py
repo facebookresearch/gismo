@@ -261,19 +261,19 @@ class DecoderTransformer(nn.Module):
 
         # create dummy previous word
         fs = features.size(0)
-        first_word = torch.ones(fs) * first_token_value
+        first_word = torch.ones(fs).type_as(features) * first_token_value
 
         first_word = first_word.long()
         sampled_ids = [first_word]
         logits = []
         for i in range(self.seq_length):
             # forward
-            outputs = self.forward(features, mask, torch.stack(sampled_ids, 1), incremental_state)
+            outputs = self.forward(features=features, mask=mask, captions=torch.stack(sampled_ids, 1), incremental_state=incremental_state)
             outputs = outputs.squeeze(1)
             if not replacement:
                 # predicted mask
                 if i == 0:
-                    predicted_mask = torch.zeros(outputs.shape).float()
+                    predicted_mask = torch.zeros(outputs.shape).type_as(outputs)
                 else:
                     batch_ind = [j for j in range(fs) if sampled_ids[i][j] != 0]
                     sampled_ids_new = sampled_ids[i][batch_ind]

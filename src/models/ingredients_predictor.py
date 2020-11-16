@@ -21,8 +21,7 @@ def label2_k_hots(labels, pad_value, remove_eos=False):
 
     # input labels to one hot vector
     inp_ = torch.unsqueeze(labels, 2)
-    k_hots = torch.FloatTensor(labels.size(0), labels.size(1), pad_value + 1).zero_()
-    k_hots = k_hots.type_as(inp_)
+    k_hots = torch.zeros(labels.size(0), labels.size(1), pad_value + 1).type_as(inp_)
     k_hots.scatter_(2, inp_, 1)
     k_hots, _ = k_hots.max(dim=1)
 
@@ -38,8 +37,8 @@ def label2_k_hots(labels, pad_value, remove_eos=False):
 
 
 def mask_from_eos(prediction, eos_value, mult_before=True):
-    mask = torch.ones(prediction.size()).byte().type_as(prediction)
-    mask_aux = torch.ones(prediction.size(0)).byte().type_as(prediction)
+    mask = torch.ones(prediction.size()).type_as(prediction).byte()
+    mask_aux = torch.ones(prediction.size(0)).type_as(prediction).byte()
 
     # find eos in label prediction
     for idx in range(prediction.size(1)):
@@ -77,7 +76,7 @@ def predictions_to_idxs(label_logits,
     # mask to identify elements within the top-maxnumlabel ones which satisfy the threshold th
     if which_loss == 'td':
         # cumulative threshold
-        mask = torch.ones(probs.size()).byte()
+        mask = torch.ones(probs.size()).type_as(probs).byte()
         for idx in range(probs.size(1)):
             mask_step = torch.sum(probs[:, 0:idx], dim=-1) < th
             mask[:, idx] = mask[:, idx] * mask_step
@@ -100,8 +99,8 @@ def predictions_to_idxs(label_logits,
         # select cardinality
         _, card_idx = torch.max(cardinality_prediction, dim=-1)
 
-        mask = torch.ones(probs.size()).byte()
-        aux_mask = torch.ones(mask.size(0)).byte()
+        mask = torch.ones(probs.size()).type_as(probs).byte()
+        aux_mask = torch.ones(mask.size(0)).type_as(probs).byte()
 
         for i in range(mask.size(-1)):
             # If the cardinality prediction is higher than i, it means that from this point
@@ -128,13 +127,13 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
     cardinality_pred = 'cat' if 'cat' in args.model else cardinality_pred
     
     # build ingredients predictor
-    if 'ff' in args.model:
+    if 'ff' in args.model and not 'shuffle' in args.model:
         print(
             'Building feed-forward decoder {}. Embed size {} / Dropout {} / '
             ' Max. Num. Labels {} / Num. Layers {}'.format(
                 args.model, args.embed_size, args.dropout, maxnumlabels,
                 args.layers),
-            flush=True)
+                flush=True)
         decoder = FFDecoder(
             args.embed_size,
             vocab_size,
@@ -149,8 +148,8 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
         maxnumlabels += 1 ## TODO: check +1 (required for EOS token)
 
         print(
-            'Building LSTM decoder. Embed size {} / Dropout {} / Max. Num. Labels {}. '.format(
-                args.embed_size, args.dropout, maxnumlabels),
+            'Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. '.format(
+                args.model, args.embed_size, args.dropout, maxnumlabels),
             flush=True)
 
         decoder = DecoderRNN(
@@ -166,9 +165,9 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
         maxnumlabels += 1 ## TODO: check +1 (required for EOS token)
 
         print(
-            'Building Transformer decoder. Embed size {} / Dropout {} / Max. Num. Labels {} / '
+            'Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / '
             'Num. Attention Heads {} / Num. Layers {}.'.format(
-                args.embed_size, args.dropout, maxnumlabels,
+                args.model, args.embed_size, args.dropout, maxnumlabels,
                 args.n_att, args.layers),
             flush=True)
 
@@ -186,20 +185,22 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
 
     # label and eos loss
     label_losses = {
-        'bce': nn.BCEWithLogitsLoss(reduction='mean') if 'ff' in args.model else nn.BCELoss(reduction='mean'), 
+        'bce': nn.BCEWithLogitsLoss(reduction='mean') if ('ff' in args.model and not 'shuffle' in args.model) else nn.BCELoss(reduction='mean'), 
         'iou': softIoULoss(reduction='mean'),
         'td': targetDistLoss(reduction='mean'), 
     }
     pad_value = vocab_size - 1
-    loss_key = {k for k in label_losses.keys() if k in args.model}.pop()
-    print('Using {} loss.'.format(loss_key), flush=True)
-    if 'ff' in args.model:
+    
+    if 'ff' in args.model and not 'shuffle' in args.model:
+        loss_key = {k for k in label_losses.keys() if k in args.model}.pop()
         label_loss = label_losses[loss_key]
         eos_loss = None
     elif 'set' in args.model:
-        label_loss = label_losses[loss_key]
-        eos_loss = nn.BCELoss(reduction='mean')
+        loss_key = 'bce'
+        label_loss = label_losses['bce']
+        eos_loss = nn.BCELoss(reduction='none')
     else:
+        loss_key = 'cross-entropy'
         label_loss = nn.CrossEntropyLoss(ignore_index=pad_value, reduction='mean')
         eos_loss = None
 
@@ -217,12 +218,13 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
     model = IngredientsPredictor(
         decoder,
         maxnumlabels,
+        vocab_size,
         crit=label_loss,
         crit_eos=eos_loss,
         crit_cardinality=cardinality_loss,
         pad_value=pad_value,
         perminv=('set' in args.model),
-        is_decoder_ff=True if 'ff' in args.model else False,
+        is_decoder_ff=True if ('ff' in args.model and not 'shuffle' in args.model) else False,
         loss_label=loss_key,
         card_type=cardinality_pred,
         dataset=dataset)
@@ -235,6 +237,7 @@ class IngredientsPredictor(nn.Module):
     def __init__(self,
                  decoder,
                  maxnumlabels,
+                 vocab_size,
                  crit=None,
                  crit_eos=None,
                  crit_cardinality=None,
@@ -267,6 +270,7 @@ class IngredientsPredictor(nn.Module):
         self.u_term = math.log(U)  # TODO: this may not be used at all in this code
         self.eps = eps
         self.use_empty_set = use_empty_set  # TODO: this may not be used at all in this code
+        self.vocab_size = vocab_size
 
     def forward(self, img_features, label_target=None, compute_losses=False, compute_predictions=False):
 
@@ -299,7 +303,7 @@ class IngredientsPredictor(nn.Module):
                     # otherwise, 1st label corresponds to 1
                     offset = 0 if self.use_empty_set else 1
                     losses['cardinality_loss'] = self.crit_cardinality(
-                        cardinality_logits, (cardinality_target.squeeze() - offset).long())
+                        cardinality_logits, (cardinality_target.squeeze() - offset).long()) 
 
             if compute_predictions:
                 # consider cardinality
@@ -308,7 +312,7 @@ class IngredientsPredictor(nn.Module):
                     cardinality = torch.log(DC(cardinality_logits, dataset=self.dataset))
                     u_term = np.array(list(range(cardinality.size(-1)))) + offset
                     u_term = u_term * self.u_term
-                    u_term = torch.from_numpy(u_term).unsqueeze(0).float()
+                    u_term = torch.from_numpy(u_term).unsqueeze(0).type_as(cardinality)
                     cardinality = cardinality + u_term
                 elif self.card_type == 'cat':
                     cardinality = torch.nn.functional.log_softmax(cardinality_logits + self.eps, dim=-1)
@@ -349,9 +353,16 @@ class IngredientsPredictor(nn.Module):
                 predictions[sample_mask == 0] = self.pad_value
 
             if compute_losses:
+                # adapt label_target by adding pad_value to match maxnumlabel length
+                label_target = [
+                    sublist + [self.vocab_size - 1] * (self.maxnumlabels - len(sublist))
+                    for sublist in label_target
+                ]
+                label_target = torch.tensor(label_target).type_as(predictions)
+
                 # add dummy first word to sequence and remove last
-                first_word = torch.zeros(label_target.size(0))
-                shift_target = torch.cat([first_word.unsqueeze(-1).long(), label_target],
+                first_word = torch.zeros(len(label_target)).type_as(label_target)
+                shift_target = torch.cat([first_word.unsqueeze(-1), label_target],
                                          -1)[:, :-1]
                 if self.perminv:
                     # autoregressive mode for decoder when training with permutation invariant objective
@@ -376,16 +387,17 @@ class IngredientsPredictor(nn.Module):
 
                     # compute label loss
                     target_k_hot = label2_k_hots(label_target, self.pad_value, remove_eos=True)
-                    loss = self.crit(label_probs[:, 1:], target_k_hot)
+                    loss = self.crit(label_probs[:, 1:], target_k_hot.float())
                     losses['label_loss'] = loss
 
                     # compute eos loss
                     eos_loss = self.crit_eos(eos, eos_target.float())
                     # eos loss is computed for all timesteps <= eos in gt and
                     # equally penalizes the head (all 0s) and the true eos position (1)
-                    losses['eos_loss'] = 0.5 * (eos_loss * eos_pos.float()).sum(1) + \
+                    losses['eos_loss'] = (0.5 * (eos_loss * eos_pos.float()).sum(1) / (
+                                            eos_pos.float().sum(1) + self.eps) + \
                                     0.5 * (eos_loss * eos_head.float()).sum(1) / (
-                                            eos_head.float().sum(1) + self.eps)
+                                            eos_head.float().sum(1) + self.eps)).mean()
 
                 else:
                     # other autoregressive models
