@@ -17,7 +17,13 @@ from loaders.recipe1m_preprocess import Vocabulary
 @hydra.main(config_path="../conf", config_name="config")
 def main(cfg: DictConfig) -> None:
 
+    # fix seed
     seed_everything(cfg.misc.seed)
+
+    # checkpointing
+    checkpoint_dir = os.path.join(cfg.checkpoint.dir, 'im2ingr-'+cfg.ingr_predictor.model)
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
 
     # data module
     shuffle_labels = True if 'shuffle' in  cfg.ingr_predictor.model else False
@@ -45,16 +51,15 @@ def main(cfg: DictConfig) -> None:
                               dm.ingr_vocab_size)
 
     # logger
-    tb_logger = pl_loggers.TensorBoardLogger(os.path.join(cfg.checkpoint.dir, 'logs/'))
-
-    filename = 'im2ingr-'+cfg.ingr_predictor.model+'-{epoch:02d}-{val_o_f1:.2f}'
+    tb_logger = pl_loggers.TensorBoardLogger(os.path.join(cfg.checkpoint.dir, 'logs/'), name='im2ingr-'+cfg.ingr_predictor.model)
 
     # checkpointing
     checkpoint_callback = ModelCheckpoint(monitor='val_o_f1',
-                                          dirpath=cfg.checkpoint.dir,
-                                          filename=filename,  ## TODO adapt
+                                          dirpath=checkpoint_dir,
+                                          filename='best',
                                           save_last=True,
-                                          mode='max')
+                                          mode='max',
+                                          save_top_k=1)
 
     # trainer
     trainer = pl.Trainer(
@@ -72,7 +77,7 @@ def main(cfg: DictConfig) -> None:
         precision=32,
         # resume_from_checkpoint=cfg.checkpoint.resume_from,
         # sync_batchnorm=True,
-        weights_save_path=cfg.checkpoint.dir,
+        # weights_save_path=checkpoint_dir,
         callbacks=[checkpoint_callback],  # need to overwrite ModelCheckpoint callback? check loader/iterator state
         logger=tb_logger,
         # limit_train_batches=10,
@@ -88,4 +93,5 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == '__main__':
+
     main()
