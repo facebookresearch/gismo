@@ -47,7 +47,7 @@ def main(cfg: DictConfig) -> None:
     # logger
     tb_logger = pl_loggers.TensorBoardLogger(os.path.join(cfg.checkpoint.dir, 'logs/'))
 
-    filename = 'im2ingr-'+cfg.ingr_predictor.model+'{epoch:02d}-{val_o_f1:.2f}'
+    filename = 'im2ingr-'+cfg.ingr_predictor.model+'-{epoch:02d}-{val_o_f1:.2f}'
 
     # checkpointing
     checkpoint_callback = ModelCheckpoint(monitor='val_o_f1',
@@ -75,7 +75,7 @@ def main(cfg: DictConfig) -> None:
         weights_save_path=cfg.checkpoint.dir,
         callbacks=[checkpoint_callback],  # need to overwrite ModelCheckpoint callback? check loader/iterator state
         logger=tb_logger,
-        # limit_train_batches=100,
+        # limit_train_batches=10,
         fast_dev_run=False  # set to true for debugging
     )
 

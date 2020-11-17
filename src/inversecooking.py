@@ -65,13 +65,13 @@ class LitInverseCooking(pl.LightningModule):
         remove_eos=not self.model.ingr_predictor.is_decoder_ff)
     target_k_hots = label2_k_hots(
         y, self.model.ingr_vocab_size - 1, remove_eos=not self.model.ingr_predictor.is_decoder_ff)
-    target_k_hots = target_k_hots.type_as(pred_k_hots)
 
     # update overall and per class error counts
     update_error_counts(self.overall_error_counts, pred_k_hots, target_k_hots, which_metrics=['o_f1', 'c_f1', 'i_f1'])
 
-    # compute i_f1 metric
+    # compute i_f1 metric and save n_samples
     metrics = compute_metrics(self.overall_error_counts, which_metrics=['i_f1'])
+    metrics['n_samples'] = pred_k_hots.shape[0]    
 
     return metrics
     
@@ -141,9 +141,7 @@ class LitInverseCooking(pl.LightningModule):
     
     # sum metric within mini-batches
     for k in metrics.keys():
-      eval_step_outputs[k] = metrics[k].sum()
-
-    eval_step_outputs['n_samples'] = metrics[k].shape[0] 
+      eval_step_outputs[k] = sum(metrics[k])
 
     # reset per sample error counts
     self._reset_error_counts(perimage=True)
@@ -154,22 +152,22 @@ class LitInverseCooking(pl.LightningModule):
     # reset all error counts (done at the end of each epoch)
     if overall:
       self.overall_error_counts = {
-          'tp_c': 0,
-          'fp_c': 0,
-          'fn_c': 0,
-          'tn_c': 0,
-          'tp_all': 0,
-          'fp_all': 0,
-          'fn_all': 0,
-          'tp_i': 0,
-          'fp_i': 0,
-          'fn_i': 0
+          'c_tp': 0,
+          'c_fp': 0,
+          'c_fn': 0,
+          'c_tn': 0,
+          'o_tp': 0,
+          'o_fp': 0,
+          'o_fn': 0,
+          'i_tp': 0,
+          'i_fp': 0,
+          'i_fn': 0
       }
     # reset per sample error counts (done at the end of each iteration)
     if perimage:
-      self.overall_error_counts['tp_i'] = 0
-      self.overall_error_counts['fp_i'] = 0
-      self.overall_error_counts['fn_i'] = 0
+      self.overall_error_counts['i_tp'] = 0
+      self.overall_error_counts['i_fp'] = 0
+      self.overall_error_counts['i_fn'] = 0
 
   def configure_optimizers(self):  ## TODO: adapt to all scenarios -- e.g. pretrained parts: lr*scale_lr_pretrained
 

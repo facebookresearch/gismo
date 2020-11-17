@@ -141,20 +141,20 @@ class targetDistLoss(nn.Module):
 def update_error_counts(error_counts, y_pred, y_true, which_metrics):
 
     if 'o_f1' in which_metrics:
-        error_counts['tp_all'] += (y_pred * y_true).sum().item()
-        error_counts['fp_all'] += (y_pred * (1 - y_true)).sum().item()
-        error_counts['fn_all'] += ((1 - y_pred) * y_true).sum().item()
+        error_counts['o_tp'] += (y_pred * y_true).sum().item()
+        error_counts['o_fp'] += (y_pred * (1 - y_true)).sum().item()
+        error_counts['o_fn'] += ((1 - y_pred) * y_true).sum().item()
 
     if 'c_f1' in which_metrics:
-        error_counts['tp_c'] += (y_pred * y_true).sum(0).cpu().data.numpy()
-        error_counts['fp_c'] += (y_pred * (1 - y_true)).sum(0).cpu().data.numpy()
-        error_counts['fn_c'] += ((1 - y_pred) * y_true).sum(0).cpu().data.numpy()
-        error_counts['tn_c'] += ((1 - y_pred) * (1 - y_true)).sum(0).cpu().data.numpy()
+        error_counts['c_tp'] += (y_pred * y_true).sum(0).cpu().data.numpy()
+        error_counts['c_fp'] += (y_pred * (1 - y_true)).sum(0).cpu().data.numpy()
+        error_counts['c_fn'] += ((1 - y_pred) * y_true).sum(0).cpu().data.numpy()
+        error_counts['c_tn'] += ((1 - y_pred) * (1 - y_true)).sum(0).cpu().data.numpy()
 
     if 'i_f1' in which_metrics:
-        error_counts['tp_i'] = (y_pred * y_true).sum(1).cpu().data.numpy()
-        error_counts['fp_i'] = (y_pred * (1 - y_true)).sum(1).cpu().data.numpy()
-        error_counts['fn_i'] = ((1 - y_pred) * y_true).sum(1).cpu().data.numpy()   
+        error_counts['i_tp'] = (y_pred * y_true).sum(1).cpu().data.numpy()
+        error_counts['i_fp'] = (y_pred * (1 - y_true)).sum(1).cpu().data.numpy()
+        error_counts['i_fn'] = ((1 - y_pred) * y_true).sum(1).cpu().data.numpy()   
 
 
 def compute_metrics(error_counts, which_metrics, eps=1e-8, weights=None):
@@ -162,25 +162,25 @@ def compute_metrics(error_counts, which_metrics, eps=1e-8, weights=None):
     ret_metrics = {}
 
     if 'o_f1' in which_metrics:
-        pre = (error_counts['tp_all'] + eps) / (error_counts['tp_all'] + error_counts['fp_all'] + eps)
-        rec = (error_counts['tp_all'] + eps) / (error_counts['tp_all'] + error_counts['fn_all'] + eps)
+        pre = (error_counts['o_tp'] + eps) / (error_counts['o_tp'] + error_counts['o_fp'] + eps)
+        rec = (error_counts['o_tp'] + eps) / (error_counts['o_tp'] + error_counts['o_fn'] + eps)
 
         o_f1 = 2 * (pre * rec) / (pre + rec)
         ret_metrics['o_f1'] = o_f1
 
     if 'c_f1' in which_metrics:
-        pre = (error_counts['tp_c'] + eps) / (error_counts['tp_c'] + error_counts['fp_c'] + eps)
-        rec = (error_counts['tp_c'] + eps) / (error_counts['tp_c'] + error_counts['fn_c'] + eps)
+        pre = (error_counts['c_tp'] + eps) / (error_counts['c_tp'] + error_counts['c_fp'] + eps)
+        rec = (error_counts['c_tp'] + eps) / (error_counts['c_tp'] + error_counts['c_fn'] + eps)
 
         f1_perclass = 2 * (pre * rec) / (pre + rec)
         f1_perclass_avg = np.average(f1_perclass, weights=weights)
         ret_metrics['c_f1'] = f1_perclass_avg
 
     if 'i_f1' in which_metrics:
-        pre = (error_counts['tp_i'] + eps) / (error_counts['tp_i'] + error_counts['fp_i'] + eps)
-        rec = (error_counts['tp_i'] + eps) / (error_counts['tp_i'] + error_counts['fn_i'] + eps)
+        pre = (error_counts['i_tp'] + eps) / (error_counts['i_tp'] + error_counts['i_fp'] + eps)
+        rec = (error_counts['i_tp'] + eps) / (error_counts['i_tp'] + error_counts['i_fn'] + eps)
 
-        f1_i = 2 * (pre * rec) / (pre + rec)  ## TODO: check this should be of size batch_sizex1
-        ret_metrics['i_f1'] = f1_i    
+        f1_i = 2 * (pre * rec) / (pre + rec)
+        ret_metrics['i_f1'] = f1_i.sum()  
 
     return ret_metrics
