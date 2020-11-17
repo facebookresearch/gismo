@@ -13,11 +13,6 @@ from utils.metrics import softIoU, softIoULoss, DCLoss, DC, targetDistLoss
 
 
 def label2_k_hots(labels, pad_value, remove_eos=False):
-    # labels is a list of (possibly variable length) lists.
-    # labels are numpy array
-    if type(labels) == list or type(labels) == tuple:  ## TODO: check whether types are ok or need to go "to device"
-        tmp = np.array([i + [pad_value]*(len(max(labels, key=len))-len(i)) for i in labels])
-        labels = torch.from_numpy(tmp)
 
     # input labels to one hot vector
     inp_ = torch.unsqueeze(labels, 2)
@@ -353,12 +348,12 @@ class IngredientsPredictor(nn.Module):
                 predictions[sample_mask == 0] = self.pad_value
 
             if compute_losses:
-                # adapt label_target by adding pad_value to match maxnumlabel length
-                label_target = [
-                    sublist + [self.vocab_size - 1] * (self.maxnumlabels - len(sublist))
-                    for sublist in label_target
-                ]
-                label_target = torch.tensor(label_target).type_as(predictions)
+                # # adapt label_target by adding pad_value to match maxnumlabel length
+                # label_target = [
+                #     sublist + [self.vocab_size - 1] * (self.maxnumlabels - len(sublist))
+                #     for sublist in label_target
+                # ]
+                # label_target = torch.tensor(label_target).type_as(predictions)
 
                 # add dummy first word to sequence and remove last
                 first_word = torch.zeros(len(label_target)).type_as(label_target)

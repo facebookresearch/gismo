@@ -1,5 +1,6 @@
 import os
 
+import torch
 import hydra
 import pytorch_lightning as pl
 
@@ -20,9 +21,10 @@ def main(cfg: DictConfig) -> None:
 
     # data module
     shuffle_labels = True if 'shuffle' in  cfg.ingr_predictor.model else False
-    include_eos = False if 'ff' in  cfg.ingr_predictor.model else True
+    include_eos = False if 'ff' in  cfg.ingr_predictor.model and not 'shuffle' in cfg.ingr_predictor else True
 
     dm = Recipe1MDataModule(data_dir=cfg.dataset.path,
+                            maxnumlabels=cfg.dataset.maxnumlabels,
                             batch_size=cfg.misc.batch_size,
                             num_workers=cfg.misc.num_workers,
                             shuffle_labels=shuffle_labels,
@@ -45,18 +47,21 @@ def main(cfg: DictConfig) -> None:
     # logger
     tb_logger = pl_loggers.TensorBoardLogger(os.path.join(cfg.checkpoint.dir, 'logs/'))
 
+    filename = 'im2ingr-'+cfg.ingr_predictor.model+'{epoch:02d}-{val_o_f1:.2f}'
+
     # checkpointing
     checkpoint_callback = ModelCheckpoint(monitor='val_o_f1',
                                           dirpath=cfg.checkpoint.dir,
-                                          filename='im2ingr-'+cfg.ingr_predictor.model+'{epoch:02d}-{val_o_f1:.2f}',  ## TODO adapt
+                                          filename=filename,  ## TODO adapt
                                           save_last=True,
                                           mode='max')
 
     # trainer
     trainer = pl.Trainer(
         gpus=2,
-        num_nodes=1,
-        accelerator='ddp',
+        # auto_select_gpus=True,
+        # num_nodes=1,
+        accelerator='dp',
         benchmark=True,  # increases speed for fixed image sizes
         check_val_every_n_epoch=1,
         checkpoint_callback=True,
@@ -66,9 +71,9 @@ def main(cfg: DictConfig) -> None:
         num_sanity_val_steps=0,  # to debug validation without training
         precision=32,
         # resume_from_checkpoint=cfg.checkpoint.resume_from,
-        sync_batchnorm=False,  ## TODO
+        # sync_batchnorm=True,
         weights_save_path=cfg.checkpoint.dir,
-        callbacks=[checkpoint_callback],  # need to overwrite ModelCheckpoint callback
+        callbacks=[checkpoint_callback],  # need to overwrite ModelCheckpoint callback? check loader/iterator state
         logger=tb_logger,
         # limit_train_batches=100,
         fast_dev_run=False  # set to true for debugging

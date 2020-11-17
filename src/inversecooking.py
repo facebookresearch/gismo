@@ -39,21 +39,7 @@ class LitInverseCooking(pl.LightningModule):
     x, y = batch
     losses, _ = self(x, y, compute_losses=True)
 
-    total_loss = 0
-
-    if 'label_loss' in losses.keys():
-      self.log('label_loss', losses['label_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
-      total_loss += (losses['label_loss'] * self.ingr_prediction_loss_weights['label_loss'])
-    if 'cardinality_loss' in losses.keys():
-      self.log('cardinality_loss', losses['cardinality_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
-      total_loss += (losses['cardinality_loss'] * self.ingr_prediction_loss_weights['cardinality_loss'])
-    if 'eos_loss' in losses.keys():
-      self.log('eos_loss', losses['eos_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
-      total_loss += (losses['eos_loss'] * self.ingr_prediction_loss_weights['eos_loss'])
-
-    self.log('train_loss', total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-    
-    return total_loss
+    return losses
 
   def validation_step(self, batch, batch_idx):
     metrics = self._shared_eval(batch, batch_idx, 'val')
@@ -116,6 +102,29 @@ class LitInverseCooking(pl.LightningModule):
     self.log(f'{split}_c_f1', overall_metrics['c_f1'])
 
     self._reset_error_counts(overall=True)
+
+  def training_step_end(self, losses):
+
+    total_loss = 0
+
+    # avg losses across gpus
+    for k in losses.keys():
+      losses[k] = losses[k].mean()
+
+    if 'label_loss' in losses.keys():
+      self.log('label_loss', losses['label_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
+      total_loss += (losses['label_loss'] * self.ingr_prediction_loss_weights['label_loss'])
+    if 'cardinality_loss' in losses.keys():
+      self.log('cardinality_loss', losses['cardinality_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
+      total_loss += (losses['cardinality_loss'] * self.ingr_prediction_loss_weights['cardinality_loss'])
+    if 'eos_loss' in losses.keys():
+      self.log('eos_loss', losses['eos_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
+      total_loss += (losses['eos_loss'] * self.ingr_prediction_loss_weights['eos_loss'])
+
+    self.log('train_loss', total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+    return total_loss
+    
     
   def validation_step_end(self, metrics):
     valid_step_outputs = self._shared_eval_step_end(metrics)
