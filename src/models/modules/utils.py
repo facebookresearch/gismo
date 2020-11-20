@@ -17,6 +17,12 @@ import traceback
 from torch.serialization import default_restore_location
 
 
+def freeze_fn(model):
+    for child in model.children():
+        for param in child.parameters():
+            param.requires_grad = False
+
+
 def torch_persistent_save(*args, **kwargs):
     for i in range(3):
         try:

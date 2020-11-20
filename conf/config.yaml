@@ -1,16 +1,13 @@
 hydra:
   run:
-    dir: ${checkpoint.dir}/im2ingr-${ingr_predictor.model}
+    dir: ${checkpoint.dir}/${task}-${ingr_predictor.model}
 
 defaults:
   - dataset: recipe1m
+  - image_encoder: resnet50
   - ingr_predictor: ff
 
-image_encoder:
-  model: "resnet50"
-  pretrained: True
-  dropout: 0.0
-  freeze_pretrained: False
+task: "im2ingr"
 
 optim:
   lr: 0.001
@@ -26,7 +23,7 @@ optim:
     eos_loss: 0.0
 
 checkpoint:
-  dir: '/checkpoint/adrianars/inversecooking2.0/'
+  dir: '/checkpoint/adrianars/inversecooking2.0/debug/'
   es_metric: 'o_f1'
   resume_from: None
 

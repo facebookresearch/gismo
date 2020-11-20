@@ -8,10 +8,12 @@ import torch.nn as nn
 import random
 import numpy as np
 
+from models.modules.utils import freeze_fn 
+
 
 class ImageEncoder(nn.Module):
 
-    def __init__(self, embed_size, dropout=0.5, model='resnet50', pretrained=True, freeze_pretrained=0):
+    def __init__(self, embed_size, dropout=0.5, model='resnet50', pretrained=True, freeze='none'):
         """Load the pretrained model and replace top fc layer."""
         super(ImageEncoder, self).__init__()
 
@@ -25,15 +27,20 @@ class ImageEncoder(nn.Module):
         self.pretrained_net = nn.Sequential(*modules)
         in_dim = pretrained_net.fc.in_features
 
-        if freeze_pretrained:
-            self.pretrained_net.freeze()
-
         if in_dim == embed_size:
             self.last_module = None
         else:
             self.last_module = nn.Sequential(
                 nn.Conv2d(in_dim, embed_size, kernel_size=1, padding=0, bias=False),
                 nn.Dropout(dropout), nn.BatchNorm2d(embed_size, momentum=0.01), nn.ReLU())
+
+        # eventually freeze image encoder
+        if freeze == 'pretrained':
+            freeze_fn(self.pretrained_net)
+        elif freeze == 'all':
+            freeze_fn(self.pretrained_net)
+            if self.last_module is not None:
+                freeze_fn(self.last_module)
 
     def forward(self, images, keep_cnn_gradients=False):
         """Extract feature vectors from input images."""
@@ -59,3 +66,4 @@ class ImageEncoder(nn.Module):
         features = features.view(features.size(0), features.size(1), -1)
 
         return features
+            

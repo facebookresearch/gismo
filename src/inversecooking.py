@@ -21,7 +21,8 @@ class LitInverseCooking(pl.LightningModule):
 
     self.model = Im2Ingr(im_args, ingrpred_args, ingr_vocab_size, dataset_name, maxnumlabels)
 
-    self.freeze_image_encoder = im_args.freeze_pretrained
+    self.pretrained_imenc = im_args.pretrained
+    self.pretrained_ingrpred = ingrpred_args.load_pretrained_from != 'None'
     self.lr = optim_args.lr
     self.scale_lr_pretrained = optim_args.scale_lr_pretrained
     self.lr_decay_rate = optim_args.lr_decay_rate
@@ -31,13 +32,12 @@ class LitInverseCooking(pl.LightningModule):
 
     self._reset_error_counts(overall=True)
 
-  def forward(self, img, label_target=None, compute_losses=False, compute_predictions=False):
-    losses, predictions = self.model(img, label_target, compute_losses=compute_losses, compute_predictions=compute_predictions)
+  def forward(self, img, ingr_gt=None, compute_losses=False, compute_predictions=False):
+    losses, predictions = self.model(img, ingr_gt, compute_losses=compute_losses, compute_predictions=compute_predictions)
     return losses, predictions
 
   def training_step(self, batch, batch_idx):
-    x, y = batch
-    losses, _ = self(x, y, compute_losses=True)
+    losses, _ = self(compute_losses=True, **batch)
 
     return losses
 
@@ -50,21 +50,20 @@ class LitInverseCooking(pl.LightningModule):
     return metrics
 
   def _shared_eval(self, batch, batch_idx, prefix):
-    x, y = batch
 
     # get model predictions
     # predictions format can either be a matrix of size batch_size x maxnumlabels, where
     # each row contains the integer labels of an image, followed by pad_value
     # or a list of sublists, where each sublist contains the integer labels of an image
     # and len(list) = batch_size and len(sublist) is variable
-    _, predictions = self(x, compute_predictions=True)
+    _, predictions = self(batch['img'], compute_predictions=True)
 
     # convert model predictions and targets to k-hots
     pred_k_hots = label2_k_hots(
         predictions, self.model.ingr_vocab_size - 1, 
         remove_eos=not self.model.ingr_predictor.is_decoder_ff)
     target_k_hots = label2_k_hots(
-        y, self.model.ingr_vocab_size - 1, remove_eos=not self.model.ingr_predictor.is_decoder_ff)
+        batch['ingr_gt'], self.model.ingr_vocab_size - 1, remove_eos=not self.model.ingr_predictor.is_decoder_ff)
 
     # update overall and per class error counts
     update_error_counts(self.overall_error_counts, pred_k_hots, target_k_hots, which_metrics=['o_f1', 'c_f1', 'i_f1'])
@@ -170,14 +169,32 @@ class LitInverseCooking(pl.LightningModule):
       self.overall_error_counts['i_fn'] = 0
 
   def configure_optimizers(self):  ## TODO: adapt to all scenarios -- e.g. pretrained parts: lr*scale_lr_pretrained
+    params_imenc = filter(lambda p: p.requires_grad, self.model.image_encoder.parameters())
+    num_params_imenc = sum([p.numel() for p in params_imenc])
+    params_ingrpred = filter(lambda p: p.requires_grad, self.model.ingr_predictor.parameters())
+    num_params_ingrpred = sum([p.numel() for p in params_ingrpred])
+
+    print(f'Number of trainable parameters in the image encoder is {num_params_imenc}.')
+    print(f'Number of trainable parameters in the ingredient predictor is {num_params_ingrpred}.')
+
+    pretrained_lr = self.lr*self.scale_lr_pretrained
+
+    opt_arguments = []
+
+    if num_params_imenc > 0:
+      opt_arguments += [{
+        'params': params_imenc, 
+        'lr': pretrained_lr if self.pretrained_imenc else self.lr
+      }]
+    
+    if num_params_ingrpred > 0:
+       opt_arguments += [{
+        'params': params_ingrpred, 
+        'lr': pretrained_lr if self.pretrained_ingrpred else self.lr
+      }] 
 
     optimizer = torch.optim.Adam(
-      [{
-          'params': self.model.ingr_predictor.parameters()
-      }, {
-          'params': self.model.image_encoder.parameters(),
-          'lr': self.lr*self.scale_lr_pretrained
-      }],
+      opt_arguments,
       lr=self.lr,
       weight_decay=self.weight_decay)
 

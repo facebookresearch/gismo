@@ -37,6 +37,8 @@ def main(cfg: DictConfig) -> None:
                             include_eos=include_eos,
                             seed=cfg.misc.seed,
                             preprocessing=cfg.preprocessing,
+                            return_img=True,
+                            return_ingr=True,
                             # checkpoint=None ## TODO: check how this would work
                             )
     dm.prepare_data()
@@ -93,5 +95,4 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == '__main__':
-
     main()

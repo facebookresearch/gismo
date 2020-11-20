@@ -12,6 +12,8 @@ from torchvision import transforms as tf
 import pytorch_lightning as pl
 
 from loaders.recipe1m_preprocess import Vocabulary
+# from recipe1m_preprocess import Vocabulary
+
 
 # from utils import RandomSamplerWithState
 
@@ -23,6 +25,11 @@ class Recipe1M(data.Dataset):
                  split,
                  maxnumims,
                  maxnumlabels,
+                 maxnuminstrs=10,
+                 maxseqlen=15,
+                 return_img=False,
+                 return_ingr=False,
+                 return_recipe=False,
                  transform=None,
                  use_lmdb=False,
                  shuffle_labels=False,
@@ -34,16 +41,39 @@ class Recipe1M(data.Dataset):
         self.split = split
         self.maxnumims = maxnumims
         self.maxnumlabels = maxnumlabels
+        self.maxseqlen = maxseqlen * maxnuminstrs
+        self.return_img = return_img
+        self.return_ingr = return_ingr
+        self.return_recipe = return_recipe
         self.transform = transform
         self.use_lmdb = use_lmdb
         self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
 
-        # load ingredient voc and dataset
-        self.ingrs_vocab = pickle.load(
-            open(os.path.join(self.aux_data_dir, 'final_recipe1m_vocab_ingrs.pkl'), 'rb'))
-        self.dataset = pickle.load(
-            open(os.path.join(self.aux_data_dir, 'final_recipe1m_' + split + '.pkl'), 'rb'))    
+        self.ingrs_vocab = []
+        self.instrs_vocab = []
+        self.dataset = []
+
+        # load ingredient voc
+        if self.return_ingr:
+            self.ingrs_vocab = pickle.load(
+                open(os.path.join(self.aux_data_dir, 'final_recipe1m_vocab_ingrs.pkl'), 'rb'))
+            # remove eos from vocabulary list if not needed
+            if not self.include_eos:
+                self.ingrs_vocab.remove_eos()
+
+        # load recipe instructions voc
+        if self.return_recipe:
+            self.instrs_vocab = pickle.load(
+                open(os.path.join(self.aux_data_dir, 'final_recipe1m_vocab_toks.pkl'), 'rb'))
+
+        # load dataset
+        if self.return_img or self.return_ingr or self.return_recipe:
+            self.dataset = pickle.load(
+                open(os.path.join(self.aux_data_dir, 'final_recipe1m_' + split + '.pkl'), 'rb'))   
+        else:
+            raise ValueError("""Dataset loader asked to not return images, nor ingredients, nor recipes. 
+                                Please set either return_images, return_ingr or return_recipe to true.""") 
         
         if use_lmdb:
             # open lmdb file
@@ -54,10 +84,6 @@ class Recipe1M(data.Dataset):
                 lock=False,
                 readahead=False,
                 meminit=False)
-
-        # remove eos from vocabulary list if not needed
-        if not self.include_eos:
-            self.ingrs_vocab.remove_eos()
 
         # get pad_value
         self.pad_value = self.get_ingr_vocab_size() - 1
@@ -75,56 +101,89 @@ class Recipe1M(data.Dataset):
         
 
     def __getitem__(self, index):
-        """Returns one data pair (image and caption)."""
+        """Returns one triplet (image, ingredients, recipe)."""
 
+        ret_img = None
+        ret_ingr = None
+        ret_rec = None
+
+        # get dataset sample
         sample = self.dataset[index]
-        img_id = sample['id']
-        paths = sample['images'][0:self.maxnumims]
-        labels = self.dataset[index]['ingredients']
 
-        # ingredients to idx
-        true_ingr_idxs = []
-        for i in range(len(labels)):
-            true_ingr_idxs.append(self.ingrs_vocab(labels[i]))
-        true_ingr_idxs = list(set(true_ingr_idxs))
+        # get set of ingredients
+        if self.return_ingr:
+            ingr = self.dataset[index]['ingredients']
 
-        if self.shuffle_labels:
-            np.random.shuffle(true_ingr_idxs)
+            # ingredients to idx
+            true_ingr_idxs = []
+            for i in range(len(ingr)):
+                true_ingr_idxs.append(self.ingrs_vocab(ingr[i]))
+            true_ingr_idxs = list(set(true_ingr_idxs))
 
-        if self.include_eos:
-            true_ingr_idxs.append(self.ingrs_vocab('<end>'))
+            if self.shuffle_labels:
+                np.random.shuffle(true_ingr_idxs)
 
-        if len(paths) == 0:
-            path = None
-            image_input = torch.zeros((3, 224, 224))
-        else:
-            if self.split == 'train':
-                img_idx = np.random.randint(0, len(paths))
+            if self.include_eos:
+                true_ingr_idxs.append(self.ingrs_vocab('<end>'))
+
+            ret_ingr = true_ingr_idxs + [self.pad_value] * (self.maxnumlabels+self.include_eos - len(true_ingr_idxs))      
+      
+        # get image
+        if self.return_img:
+            img_id = sample['id']
+            paths = sample['images'][0:self.maxnumims]
+
+            # images
+            if len(paths) == 0:
+                path = None
+                ret_img = torch.zeros((3, 224, 224))  # TODO: ???
             else:
-                img_idx = 0
-            path = paths[img_idx]
-            impath = os.path.join(self.root, path[0], path[1], path[2], path[3], path)
+                if self.split == 'train':
+                    img_idx = np.random.randint(0, len(paths))
+                else:
+                    img_idx = 0
+                path = paths[img_idx]
+                impath = os.path.join(self.root, path[0], path[1], path[2], path[3], path)
 
-            if self.use_lmdb:
-                try:
-                    with self.image_file.begin(write=False) as txn:
-                        image = txn.get(path.encode())
-                        image = np.frombuffer(image, dtype=np.uint8)
-                        image = np.reshape(image, (256, 256, 3))
-                    image = Image.fromarray(image.astype('uint8'), 'RGB')
-                except:
-                    print("Image id not found in lmdb. Loading jpeg file...")
+                if self.use_lmdb:
+                    try:
+                        with self.image_file.begin(write=False) as txn:
+                            image = txn.get(path.encode())
+                            image = np.frombuffer(image, dtype=np.uint8)
+                            image = np.reshape(image, (256, 256, 3))
+                        image = Image.fromarray(image.astype('uint8'), 'RGB')
+                    except:
+                        print("Image id not found in lmdb. Loading jpeg file...")
+                        image = Image.open(impath).convert('RGB')
+                else:
                     image = Image.open(impath).convert('RGB')
-            else:
-                image = Image.open(impath).convert('RGB')
 
-            if self.transform is not None:
-                image = self.transform(image)
-            image_input = image
+                if self.transform is not None:
+                    image = self.transform(image)
+                ret_img = image
 
-            target = true_ingr_idxs + [self.pad_value] * (self.maxnumlabels+self.include_eos - len(true_ingr_idxs))
+        # get recipe (title and instructions)
+        if self.return_recipe:
+            title = sample['title']
+            instructions = sample['tokenized']
+
+            tokens = []
+            tokens.extend(title)
+            # add fake token to separate title from recipe
+            tokens.append('<eoi>')
+            for i in instructions:
+                tokens.extend(i)
+                tokens.append('<eoi>')
+
+            # Convert recipe (string) to word ids.
+            ret_rec = []
+            ret_rec = self.recipe_to_idxs(tokens, ret_rec)
+            ret_rec.append(self.instrs_vocab('<end>'))
+
+            ret_rec = ret_rec[0:self.maxseqlen]
+            ret_rec = ret_rec + [self.pad_value] * (self.maxseqlen - len(ret_rec))  
   
-        return image_input, target
+        return ret_img, ret_ingr, ret_rec
 
     def __len__(self):
         return len(self.dataset)
@@ -138,6 +197,18 @@ class Recipe1M(data.Dataset):
     def get_ingr_vocab_size(self):
         return len(self.get_ingr_vocab())
 
+    def get_instrs_vocab(self):
+        return self.instrs_vocab
+
+    def get_instrs_vocab_size(self):
+        return len(self.get_instrs_vocab())
+
+    def recipe_to_idxs(self, tokens, recipe):
+        recipe.append(self.instrs_vocab('<start>'))
+        for token in tokens:
+            recipe.append(self.instrs_vocab(token))
+        return recipe
+
 
 class Recipe1MDataModule(pl.LightningDataModule):
 
@@ -146,15 +217,20 @@ class Recipe1MDataModule(pl.LightningDataModule):
                  maxnumlabels,
                  batch_size,
                  num_workers,
+                 maxnuminstrs=10,
                  shuffle_labels=False,
                  preprocessing=None,
                  include_eos=False,
                  seed=1234,
-                 checkpoint=None):
+                 checkpoint=None,
+                 return_img=False,
+                 return_ingr=False,
+                 return_recipe=False):
         super().__init__()
 
         self.data_dir = data_dir
         self.maxnumlabels = maxnumlabels
+        self.maxnuminstrs = maxnuminstrs
         self.batch_size = batch_size
         self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
@@ -162,6 +238,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.checkpoint = checkpoint  ## TODO: check how checkpoint is performed in lightning
         self.preprocessing = preprocessing
+        self.return_img = return_img
+        self.return_ingr = return_ingr
+        self.return_recipe = return_recipe
         
     def prepare_data(self):
         if not os.path.isdir(os.path.join(self.data_dir, 'preprocessed')):
@@ -241,11 +320,15 @@ class Recipe1MDataModule(pl.LightningDataModule):
             stage,
             maxnumims=5,
             maxnumlabels=self.maxnumlabels,
+            maxnuminstrs=self.maxnuminstrs,
             transform=transform,
             use_lmdb=True,  ## TODO: true at least for recipe1m
             shuffle_labels=self.shuffle_labels,
             split_data=split_data,
-            include_eos=self.include_eos)
+            include_eos=self.include_eos,
+            return_img=self.return_img,
+            return_ingr=self.return_ingr,
+            return_recipe=self.return_recipe)
 
         return dataset
 
@@ -270,14 +353,21 @@ class Recipe1MDataModule(pl.LightningDataModule):
 
 def _collate_fn(data):
 
-    img, target = zip(*data)
+    img, ingr, recipe = zip(*data)
 
-    # Merge images and targets (from tuple of N-D tensor to (N+1)-D tensor)
-    img = torch.stack(img, 0)
-    target = torch.tensor(target)
+    ret = {}
 
-    return img, target
+    # Merge images, ingredients and recipes in minibatch
+    if img[0] is not None:
+        ret['img'] = torch.stack(img, 0)
 
+    if ingr[0] is not None:
+        ret['ingr_gt'] = torch.tensor(ingr)
+
+    if recipe[0] is not None:
+        ret['recipe_gt'] = torch.tensor(recipe)
+
+    return ret
 
 
 # if __name__ == '__main__':
@@ -304,19 +394,22 @@ def _collate_fn(data):
 #         use_lmdb=True,  ## TODO: true at least for recipe1m
 #         shuffle_labels=False,
 #         split_data=split_data,
-#         include_eos=False)
+#         include_eos=False,
+#         return_img=False,
+#         return_ingr=True,
+#         return_recipe=True)
 
 #     data_loader = torch.utils.data.DataLoader(
 #         dataset=dataset,
 #         batch_size=100,
 #         shuffle=False,
-#         num_workers=8,
+#         num_workers=0,
 #         drop_last=False,
 #         pin_memory=True,
 #         collate_fn=_collate_fn)
 
 #     for info in data_loader:
-#         img_inputs, gt = info
+#         inputs = info
 
 
 

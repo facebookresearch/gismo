@@ -10,6 +10,7 @@ from models.modules.ff_decoder import FFDecoder
 from models.modules.transformer_decoder import DecoderTransformer
 from models.modules.rnn_decoder import DecoderRNN
 from utils.metrics import softIoU, softIoULoss, DCLoss, DC, targetDistLoss
+from models.modules.utils import freeze_fn
 
 
 def label2_k_hots(labels, pad_value, remove_eos=False):
@@ -223,6 +224,9 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
         loss_label=loss_key,
         card_type=cardinality_pred,
         dataset=dataset)
+
+    if args.freeze:
+        freeze_fn(model)
 
     return model
 
