@@ -117,7 +117,7 @@ def predictions_to_idxs(label_logits,
     return idxs_clone
 
 
-def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
+def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
         
     cardinality_pred = 'dc' if 'dc' in args.model else 'none'
     cardinality_pred = 'cat' if 'cat' in args.model else cardinality_pred
@@ -153,8 +153,7 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
             args.embed_size,
             vocab_size,
             dropout=args.dropout,
-            seq_length=maxnumlabels,
-            num_instrs=1)
+            seq_length=maxnumlabels)
 
     elif 'tf' in args.model:
 
@@ -172,7 +171,6 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
             vocab_size,
             dropout=args.dropout,
             seq_length=maxnumlabels,
-            num_instrs=1,
             attention_nheads=args.n_att,
             pos_embeddings=False,
             num_layers=args.layers,
@@ -219,6 +217,7 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels):
         crit_eos=eos_loss,
         crit_cardinality=cardinality_loss,
         pad_value=pad_value,
+        eos_value=eos_value,
         perminv=('set' in args.model),
         is_decoder_ff=True if ('ff' in args.model and not 'shuffle' in args.model) else False,
         loss_label=loss_key,
@@ -241,6 +240,7 @@ class IngredientsPredictor(nn.Module):
                  crit_eos=None,
                  crit_cardinality=None,
                  pad_value=0,
+                 eos_value=0,
                  perminv=True,
                  is_decoder_ff=False,
                  th=0.5,
@@ -260,6 +260,7 @@ class IngredientsPredictor(nn.Module):
         self.th = th
         self.perminv = perminv
         self.pad_value = pad_value
+        self.eos_value = eos_value
         self.crit_eos = crit_eos
         self.crit_cardinality = crit_cardinality
         self.loss_label = loss_label
@@ -348,17 +349,10 @@ class IngredientsPredictor(nn.Module):
 
             if compute_predictions:
                 # mask labels after finding eos (cardinality)
-                sample_mask = mask_from_eos(predictions, eos_value=0, mult_before=False)
+                sample_mask = mask_from_eos(predictions, eos_value=self.eos_value, mult_before=False)
                 predictions[sample_mask == 0] = self.pad_value
 
             if compute_losses:
-                # # adapt label_target by adding pad_value to match maxnumlabel length
-                # label_target = [
-                #     sublist + [self.vocab_size - 1] * (self.maxnumlabels - len(sublist))
-                #     for sublist in label_target
-                # ]
-                # label_target = torch.tensor(label_target).type_as(predictions)
-
                 # add dummy first word to sequence and remove last
                 first_word = torch.zeros(len(label_target)).type_as(label_target)
                 shift_target = torch.cat([first_word.unsqueeze(-1), label_target],
@@ -371,11 +365,11 @@ class IngredientsPredictor(nn.Module):
                     label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
                     # find idxs for eos label
-                    # eos probability is the one assigned to the first position of the softmax
+                    # eos probability is the one assigned to the position self.eos_value of the softmax
                     # this is used with bce loss only
-                    eos = label_probs[:, :, 0]
-                    eos_pos = (label_target == 0)  # all zeros except position where eos is in the gt
-                    eos_head = ((label_target != self.pad_value) & (label_target != 0))  # 1s for gt label positions, 0s starting from eos position in the gt
+                    eos = label_probs[:, :, self.eos_value]
+                    eos_pos = (label_target == self.eos_value)  # all zeros except position where eos is in the gt
+                    eos_head = ((label_target != self.pad_value) & (label_target != self.eos_value))  # 1s for gt label positions, 0s starting from eos position in the gt
                     eos_target = ~eos_head  # 0s for gt label positions, 1s starting from eos position in the gt
 
                     # select transformer steps to pool (steps corresponding to set elements, i.e. labels)

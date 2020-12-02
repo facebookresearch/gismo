@@ -7,7 +7,7 @@ import os
 
 from models.image_encoder import ImageEncoder
 from models.ingredients_predictor import get_ingr_predictor
-from models.recipe_generator import get_recipe_generator
+
 
 class Im2Ingr(nn.Module):
 
@@ -17,6 +17,7 @@ class Im2Ingr(nn.Module):
                  ingr_vocab_size,
                  dataset,
                  maxnumlabels,
+                 ingr_eos_value,
                  eps=1e-8):
 
         super(Im2Ingr, self).__init__()
@@ -29,11 +30,12 @@ class Im2Ingr(nn.Module):
         self.image_encoder = ImageEncoder(ingrpred_args.embed_size, **im_args)
 
         self.ingr_predictor = get_ingr_predictor(ingrpred_args, vocab_size=ingr_vocab_size, 
-                                                 dataset=dataset, maxnumlabels=maxnumlabels)
+                                                 dataset=dataset, maxnumlabels=maxnumlabels,
+                                                 eos_value=ingr_eos_value)
 
 
 
-    def forward(self, img, label_target=None, maxnumlabels=0, compute_losses=False, compute_predictions=False):
+    def forward(self, img, label_target=None, compute_losses=False, compute_predictions=False):
 
         img_features = self.image_encoder(img)
 

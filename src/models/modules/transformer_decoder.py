@@ -89,7 +89,6 @@ class TransformerDecoderLayer(nn.Module):
         self.dropout = dropout
         self.relu_dropout = dropout
         self.normalize_before = normalize_before
-        # num_layer_norm = 3
 
         # self attention 
         self.self_attn = MultiheadAttention(
@@ -108,20 +107,14 @@ class TransformerDecoderLayer(nn.Module):
         self.fc1 = Linear(self.embed_dim, self.embed_dim)
         self.fc2 = Linear(self.embed_dim, self.embed_dim)
 
-        # layer normalizations
-        self.layer_norms = {
-            'encoder_attn': LayerNorm(self.embed_dim),
-            'self_attn': LayerNorm(self.embed_dim),
-            'final': LayerNorm(self.embed_dim)  
-        }
-        # self.layer_norms = nn.ModuleList([LayerNorm(self.embed_dim) for i in range(num_layer_norm)])
-        # TODO: check which layer norms go in every place
+        # layer normalizations: we have one for the encoder attn, one for the self attn and one for the final module
+        self.layer_norms = nn.ModuleList([LayerNorm(self.embed_dim) for i in range(3)])
 
-    def forward(self, x, encoder_out, encoder_padding_mask, incremental_state):
+    def forward(self, x, encoder_out, encoder_padding_mask, incremental_state, other_encoder_out=None):
 
         # self attention
         residual = x
-        x = self.maybe_layer_norm('self_attn', x, before=True)
+        x = self.maybe_layer_norm(0, x, before=True)
         x, _ = self.self_attn(
             query=x,
             key=x,
@@ -132,32 +125,48 @@ class TransformerDecoderLayer(nn.Module):
         )
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm('self_attn', x, after=True)
+        x = self.maybe_layer_norm(0, x, after=True)
 
         # encoder attention
         residual = x
-        x = self.maybe_layer_norm('encoder_attn', x, before=True)
-        x, attn = self.encoder_attn(
-            query=x,
-            key=encoder_out,
-            value=encoder_out,
-            key_padding_mask=encoder_padding_mask,
-            incremental_state=incremental_state,
-            static_kv=True,
-        )
+        x = self.maybe_layer_norm(1, x, before=True)
+
+        if other_encoder_out is None:
+            # attention on encoder's output (only composed of ingredients features)
+            x, attn = self.encoder_attn(
+                query=x,
+                key=encoder_out,
+                value=encoder_out,
+                key_padding_mask=encoder_padding_mask,
+                incremental_state=incremental_state,
+                static_kv=True,
+            )
+        else:
+            # attention on encoder's outputs (composed of ingredient and image features)
+            kv = torch.cat((other_encoder_out, encoder_out), 0)
+            mask = torch.cat((torch.zeros(other_encoder_out.shape[1], other_encoder_out.shape[0]).type_as(encoder_padding_mask),
+                              encoder_padding_mask), 1)
+            x, _ = self.encoder_attn(query=x,
+                                     key=kv,
+                                     value=kv,
+                                     key_padding_mask=mask,
+                                     incremental_state=incremental_state,
+                                     static_kv=True,
+            )
+
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm('encoder_attn', x, after=True)
+        x = self.maybe_layer_norm(1, x, after=True)
 
         # final operations
         residual = x
-        x = self.maybe_layer_norm('final', x, before=True)
+        x = self.maybe_layer_norm(2, x, before=True)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=self.relu_dropout, training=self.training)
         x = self.fc2(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm('final', x, after=True)
+        x = self.maybe_layer_norm(2, x, after=True)
         return x
 
     def maybe_layer_norm(self, which_layer_norm, x, before=False, after=False):
@@ -176,7 +185,6 @@ class DecoderTransformer(nn.Module):
                  vocab_size,
                  dropout=0.5,
                  seq_length=20,
-                 num_instrs=15,
                  attention_nheads=16,
                  pos_embeddings=True,
                  num_layers=8,
@@ -184,7 +192,7 @@ class DecoderTransformer(nn.Module):
                  normalize_before=True):
         super(DecoderTransformer, self).__init__()
         self.dropout = dropout
-        self.seq_length = seq_length * num_instrs
+        self.seq_length = seq_length
         self.embed_tokens = Embedding(vocab_size, embed_size, padding_idx=vocab_size - 1)
 
         if pos_embeddings:
@@ -194,8 +202,6 @@ class DecoderTransformer(nn.Module):
             self.embed_positions = None
 
         self.embed_scale = math.sqrt(embed_size)
-
-        self.layer_norm = LayerNorm(embed_size)
 
         self.layers = nn.ModuleList([])
         self.layers.extend([
@@ -211,10 +217,13 @@ class DecoderTransformer(nn.Module):
         if features is not None:
             features = features.permute(0, 2, 1)
             features = features.transpose(0, 1)
-            features = self.layer_norm(features)
 
         if mask is not None:
-            mask = (1 - mask.squeeze(1)).byte()
+            mask = (1 - mask.squeeze(1)).bool()
+
+        if other_features is not None:
+            other_features = other_features.permute(0, 2, 1)
+            other_features = other_features.transpose(0, 1)
 
         # embed positions
         if self.embed_positions is not None:
@@ -236,7 +245,11 @@ class DecoderTransformer(nn.Module):
 
         # decoder layers
         for layer in self.layers:
-            x = layer(x, features, mask, incremental_state)
+            x = layer(x, 
+                      features, 
+                      mask, 
+                      incremental_state, 
+                      other_features)
         # T x B x C -> B x T x C
         x = x.transpose(0, 1)
 
@@ -268,7 +281,9 @@ class DecoderTransformer(nn.Module):
         logits = []
         for i in range(self.seq_length):
             # forward
-            outputs = self.forward(features=features, mask=mask, captions=torch.stack(sampled_ids, 1), incremental_state=incremental_state)
+            outputs = self.forward(features=features, mask=mask, 
+                                   captions=torch.stack(sampled_ids, 1), 
+                                   other_features=other_features, incremental_state=incremental_state)
             outputs = outputs.squeeze(1)
             if not replacement:
                 # predicted mask

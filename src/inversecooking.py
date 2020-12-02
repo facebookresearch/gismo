@@ -5,41 +5,66 @@ from torch.optim.lr_scheduler import ExponentialLR
 import pytorch_lightning as pl
 
 from models.im2ingr import Im2Ingr
+from models.im2recipe import Im2Recipe
 from models.ingredients_predictor import label2_k_hots
 from utils.metrics import update_error_counts, compute_metrics
+
 
 class LitInverseCooking(pl.LightningModule):
 
   def __init__(self,
+               task,
                im_args,
                ingrpred_args,
+               recipegen_args,
                optim_args,
                dataset_name,  ## TODO: check if needed at all
                maxnumlabels,
-               ingr_vocab_size):
+               maxrecipelen,
+               ingr_vocab_size,
+               instr_vocab_size,
+               ingr_eos_value):
     super().__init__()
 
-    self.model = Im2Ingr(im_args, ingrpred_args, ingr_vocab_size, dataset_name, maxnumlabels)
+    if task == 'im2ingr':
+      self.model = Im2Ingr(im_args, ingrpred_args, ingr_vocab_size, dataset_name, maxnumlabels, ingr_eos_value)
+    elif task == 'im2recipe':
+      self.model = Im2Recipe(im_args, ingrpred_args, recipegen_args, 
+                             ingr_vocab_size, instr_vocab_size, dataset_name, 
+                             maxnumlabels, maxrecipelen, ingr_eos_value)
+    elif task == 'ingr2recipe':
+      raise NotImplementedError('ingr2recipe is not implemented yet')
 
+    self.task = task
     self.pretrained_imenc = im_args.pretrained
-    self.pretrained_ingrpred = ingrpred_args.load_pretrained_from != 'None'
+    self.pretrained_ingrpred = (ingrpred_args.load_pretrained_from != 'None')  ## TODO: load model when pretrained
     self.lr = optim_args.lr
     self.scale_lr_pretrained = optim_args.scale_lr_pretrained
     self.lr_decay_rate = optim_args.lr_decay_rate
     self.lr_decay_every = optim_args.lr_decay_every
     self.weight_decay = optim_args.weight_decay
-    self.ingr_prediction_loss_weights = optim_args.ingr_prediction_loss_weights
+    self.loss_weights = optim_args.loss_weights
 
     self._reset_error_counts(overall=True)
 
-  def forward(self, img, ingr_gt=None, compute_losses=False, compute_predictions=False):
-    losses, predictions = self.model(img, ingr_gt, compute_losses=compute_losses, compute_predictions=compute_predictions)
-    return losses, predictions
+  def forward(self, img, split, ingr_gt=None, recipe_gt=None, compute_losses=False, compute_predictions=False):
+    if self.task == 'im2ingr':
+      out = self.model(img=img, label_target=ingr_gt,
+                       compute_losses=compute_losses, 
+                       compute_predictions=compute_predictions)
+    elif self.task == 'im2recipe':
+      out = self.model(img=img, recipe_gt=recipe_gt, 
+                       ingr_gt=ingr_gt, 
+                       use_ingr_pred = True if split == 'test' else False,
+                       compute_losses=compute_losses, 
+                       compute_predictions=compute_predictions)
+
+    return out[0], out[1:]
 
   def training_step(self, batch, batch_idx):
-    losses, _ = self(compute_losses=True, **batch)
+    out = self(compute_losses=True, split='train', **batch)
 
-    return losses
+    return out[0]
 
   def validation_step(self, batch, batch_idx):
     metrics = self._shared_eval(batch, batch_idx, 'val')
@@ -51,26 +76,38 @@ class LitInverseCooking(pl.LightningModule):
 
   def _shared_eval(self, batch, batch_idx, prefix):
 
-    # get model predictions
-    # predictions format can either be a matrix of size batch_size x maxnumlabels, where
-    # each row contains the integer labels of an image, followed by pad_value
-    # or a list of sublists, where each sublist contains the integer labels of an image
-    # and len(list) = batch_size and len(sublist) is variable
-    _, predictions = self(batch['img'], compute_predictions=True)
+    metrics = {}
 
-    # convert model predictions and targets to k-hots
-    pred_k_hots = label2_k_hots(
-        predictions, self.model.ingr_vocab_size - 1, 
-        remove_eos=not self.model.ingr_predictor.is_decoder_ff)
-    target_k_hots = label2_k_hots(
-        batch['ingr_gt'], self.model.ingr_vocab_size - 1, remove_eos=not self.model.ingr_predictor.is_decoder_ff)
+    # get model outputs
+    if self.task == 'im2ingr':
+      out = self(batch['img'], split=prefix, compute_predictions=True)
+    elif self.task == 'im2recipe':  
+      if prefix == 'val':
+        out = self(**batch, split=prefix, compute_predictions=False, compute_losses=True)
+      elif prefix == 'test':
+        out = self(**batch, split=prefix, compute_predictions=False, compute_losses=True)
 
-    # update overall and per class error counts
-    update_error_counts(self.overall_error_counts, pred_k_hots, target_k_hots, which_metrics=['o_f1', 'c_f1', 'i_f1'])
+    # compute ingredient metrics
+    if out[1][0] is not None:
+      # convert model predictions and targets to k-hots
+      pred_k_hots = label2_k_hots(
+          out[1][0], self.model.ingr_vocab_size - 1, 
+          remove_eos=not self.model.ingr_predictor.is_decoder_ff)
+      target_k_hots = label2_k_hots(
+          batch['ingr_gt'], self.model.ingr_vocab_size - 1, remove_eos=not self.model.ingr_predictor.is_decoder_ff)
 
-    # compute i_f1 metric and save n_samples
-    metrics = compute_metrics(self.overall_error_counts, which_metrics=['i_f1'])
-    metrics['n_samples'] = pred_k_hots.shape[0]    
+      # update overall and per class error counts
+      update_error_counts(self.overall_error_counts, pred_k_hots, target_k_hots, which_metrics=['o_f1', 'c_f1', 'i_f1'])
+
+      # compute i_f1 metric
+      metrics = compute_metrics(self.overall_error_counts, which_metrics=['i_f1'])  
+
+    # compute recipe metrics
+    if self.task == 'im2recipe':
+      metrics['perplexity'] = torch.exp(out[0]['recipe_loss'])
+
+    # save n_samples
+    metrics['n_samples'] = batch['img'].shape[0]  
 
     return metrics
     
@@ -81,8 +118,13 @@ class LitInverseCooking(pl.LightningModule):
     self.eval_epoch_end(test_step_outputs, 'test')
 
   def eval_epoch_end(self, eval_step_outputs, split):
-    # compute validation set metrics
-    overall_metrics = compute_metrics(self.overall_error_counts, ['o_f1', 'c_f1'])
+    s = sum(self.overall_error_counts.values())
+    if (isinstance(s, int) and s > 0) or (not isinstance(s, int) and s.any()):
+      # compute validation set metrics
+      overall_metrics = compute_metrics(self.overall_error_counts, ['o_f1', 'c_f1'])
+      self.log(f'{split}_o_f1', overall_metrics['o_f1'])
+      self.log(f'{split}_c_f1', overall_metrics['c_f1'])
+      self._reset_error_counts(overall=True)
 
     # init avg metrics to 0
     avg_metrics = dict(zip(eval_step_outputs[0].keys(), [0]*len(eval_step_outputs[0].keys())))
@@ -97,11 +139,6 @@ class LitInverseCooking(pl.LightningModule):
       if k != 'n_samples':
         self.log(f'{split}_{k}', avg_metrics[k]/avg_metrics['n_samples'])
 
-    self.log(f'{split}_o_f1', overall_metrics['o_f1'])
-    self.log(f'{split}_c_f1', overall_metrics['c_f1'])
-
-    self._reset_error_counts(overall=True)
-
   def training_step_end(self, losses):
 
     total_loss = 0
@@ -112,13 +149,16 @@ class LitInverseCooking(pl.LightningModule):
 
     if 'label_loss' in losses.keys():
       self.log('label_loss', losses['label_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
-      total_loss += (losses['label_loss'] * self.ingr_prediction_loss_weights['label_loss'])
+      total_loss += (losses['label_loss'] * self.loss_weights['label_loss'])
     if 'cardinality_loss' in losses.keys():
       self.log('cardinality_loss', losses['cardinality_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
-      total_loss += (losses['cardinality_loss'] * self.ingr_prediction_loss_weights['cardinality_loss'])
+      total_loss += (losses['cardinality_loss'] * self.loss_weights['cardinality_loss'])
     if 'eos_loss' in losses.keys():
       self.log('eos_loss', losses['eos_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
-      total_loss += (losses['eos_loss'] * self.ingr_prediction_loss_weights['eos_loss'])
+      total_loss += (losses['eos_loss'] * self.loss_weights['eos_loss'])
+    if 'recipe_loss' in losses.keys():
+      self.log('recipe_loss', losses['recipe_loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
+      total_loss += (losses['recipe_loss'] * self.loss_weights['recipe_loss'])     
 
     self.log('train_loss', total_loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
@@ -168,7 +208,7 @@ class LitInverseCooking(pl.LightningModule):
       self.overall_error_counts['i_fp'] = 0
       self.overall_error_counts['i_fn'] = 0
 
-  def configure_optimizers(self):  ## TODO: adapt to all scenarios -- e.g. pretrained parts: lr*scale_lr_pretrained
+  def configure_optimizers(self):
     params_imenc = filter(lambda p: p.requires_grad, self.model.image_encoder.parameters())
     num_params_imenc = sum([p.numel() for p in params_imenc])
     params_ingrpred = filter(lambda p: p.requires_grad, self.model.ingr_predictor.parameters())
@@ -193,11 +233,21 @@ class LitInverseCooking(pl.LightningModule):
         'lr': pretrained_lr if self.pretrained_ingrpred else self.lr
       }] 
 
+    if self.task == 'im2recipe':
+      params_recgen = filter(lambda p: p.requires_grad, self.model.recipe_gen.parameters())
+      num_params_recgen = sum([p.numel() for p in params_recgen])
+      print(f'Number of trainable parameters in the recipe generator is {num_params_recgen}.')
+
+      if num_params_recgen > 0:
+        opt_arguments += [{
+          'params': params_recgen, 
+          'lr': self.lr
+        }] 
+
     optimizer = torch.optim.Adam(
       opt_arguments,
       lr=self.lr,
       weight_decay=self.weight_decay)
-
    
     scheduler = {'scheduler': ExponentialLR(optimizer, self.lr_decay_rate),
                  'interval': 'epoch',

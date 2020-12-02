@@ -26,7 +26,7 @@ class Recipe1M(data.Dataset):
                  maxnumims,
                  maxnumlabels,
                  maxnuminstrs=10,
-                 maxseqlen=15,
+                 maxinstrlength=15,
                  return_img=False,
                  return_ingr=False,
                  return_recipe=False,
@@ -41,7 +41,7 @@ class Recipe1M(data.Dataset):
         self.split = split
         self.maxnumims = maxnumims
         self.maxnumlabels = maxnumlabels
-        self.maxseqlen = maxseqlen * maxnuminstrs
+        self.maxseqlen = maxnuminstrs * maxinstrlength
         self.return_img = return_img
         self.return_ingr = return_ingr
         self.return_recipe = return_recipe
@@ -50,21 +50,27 @@ class Recipe1M(data.Dataset):
         self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
 
-        self.ingrs_vocab = []
-        self.instrs_vocab = []
+        self.ingr_vocab = []
+        self.instr_vocab = []
         self.dataset = []
 
         # load ingredient voc
         if self.return_ingr:
-            self.ingrs_vocab = pickle.load(
+            self.ingr_vocab = pickle.load(
                 open(os.path.join(self.aux_data_dir, 'final_recipe1m_vocab_ingrs.pkl'), 'rb'))
+
             # remove eos from vocabulary list if not needed
             if not self.include_eos:
-                self.ingrs_vocab.remove_eos()
+                self.ingr_vocab.remove_eos()
+                self.ingr_pad_value = self.get_ingr_vocab_size() - 1
+                self.ingr_eos_value = self.ingr_pad_value
+            else:
+                self.ingr_pad_value = self.get_ingr_vocab_size() - 1
+                self.ingr_eos_value = self.ingr_vocab('<end>')
 
         # load recipe instructions voc
         if self.return_recipe:
-            self.instrs_vocab = pickle.load(
+            self.instr_vocab = pickle.load(
                 open(os.path.join(self.aux_data_dir, 'final_recipe1m_vocab_toks.pkl'), 'rb'))
 
         # load dataset
@@ -73,7 +79,7 @@ class Recipe1M(data.Dataset):
                 open(os.path.join(self.aux_data_dir, 'final_recipe1m_' + split + '.pkl'), 'rb'))   
         else:
             raise ValueError("""Dataset loader asked to not return images, nor ingredients, nor recipes. 
-                                Please set either return_images, return_ingr or return_recipe to true.""") 
+                                Please set either return_images, return_ingr or return_recipe to True.""") 
         
         if use_lmdb:
             # open lmdb file
@@ -84,9 +90,6 @@ class Recipe1M(data.Dataset):
                 lock=False,
                 readahead=False,
                 meminit=False)
-
-        # get pad_value
-        self.pad_value = self.get_ingr_vocab_size() - 1
 
         # get ids of data samples used
         ids = []
@@ -117,16 +120,16 @@ class Recipe1M(data.Dataset):
             # ingredients to idx
             true_ingr_idxs = []
             for i in range(len(ingr)):
-                true_ingr_idxs.append(self.ingrs_vocab(ingr[i]))
+                true_ingr_idxs.append(self.ingr_vocab(ingr[i]))
             true_ingr_idxs = list(set(true_ingr_idxs))
 
             if self.shuffle_labels:
                 np.random.shuffle(true_ingr_idxs)
 
             if self.include_eos:
-                true_ingr_idxs.append(self.ingrs_vocab('<end>'))
+                true_ingr_idxs.append(self.ingr_vocab('<end>'))
 
-            ret_ingr = true_ingr_idxs + [self.pad_value] * (self.maxnumlabels+self.include_eos - len(true_ingr_idxs))      
+            ret_ingr = true_ingr_idxs + [self.ingr_pad_value] * (self.maxnumlabels+self.include_eos - len(true_ingr_idxs))      
       
         # get image
         if self.return_img:
@@ -178,10 +181,10 @@ class Recipe1M(data.Dataset):
             # Convert recipe (string) to word ids.
             ret_rec = []
             ret_rec = self.recipe_to_idxs(tokens, ret_rec)
-            ret_rec.append(self.instrs_vocab('<end>'))
+            ret_rec.append(self.instr_vocab('<end>'))
 
             ret_rec = ret_rec[0:self.maxseqlen]
-            ret_rec = ret_rec + [self.pad_value] * (self.maxseqlen - len(ret_rec))  
+            ret_rec = ret_rec + [self.instr_vocab('<pad>')] * (self.maxseqlen - len(ret_rec))  
   
         return ret_img, ret_ingr, ret_rec
 
@@ -191,22 +194,22 @@ class Recipe1M(data.Dataset):
     def get_ingr_vocab(self):
         return [
             min(w, key=len) if not isinstance(w, str) else w
-            for w in self.ingrs_vocab.idx2word.values()
+            for w in self.ingr_vocab.idx2word.values()
         ]  # includes '<pad>' and eventually '<end>'
 
     def get_ingr_vocab_size(self):
         return len(self.get_ingr_vocab())
 
-    def get_instrs_vocab(self):
-        return self.instrs_vocab
+    def get_instr_vocab(self):
+        return self.instr_vocab
 
-    def get_instrs_vocab_size(self):
-        return len(self.get_instrs_vocab())
+    def get_instr_vocab_size(self):
+        return len(self.get_instr_vocab())
 
     def recipe_to_idxs(self, tokens, recipe):
-        recipe.append(self.instrs_vocab('<start>'))
+        recipe.append(self.instr_vocab('<start>'))
         for token in tokens:
-            recipe.append(self.instrs_vocab(token))
+            recipe.append(self.instr_vocab(token))
         return recipe
 
 
@@ -218,6 +221,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
                  batch_size,
                  num_workers,
                  maxnuminstrs=10,
+                 maxinstrlength=15,
                  shuffle_labels=False,
                  preprocessing=None,
                  include_eos=False,
@@ -231,6 +235,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         self.data_dir = data_dir
         self.maxnumlabels = maxnumlabels
         self.maxnuminstrs = maxnuminstrs
+        self.maxinstrlength = maxinstrlength
         self.batch_size = batch_size
         self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
@@ -252,19 +257,25 @@ class Recipe1MDataModule(pl.LightningDataModule):
             self.dataset_train = self._get_dataset('train')
             self.dataset_val = self._get_dataset('val')
             self.ingr_vocab_size = self.dataset_train.get_ingr_vocab_size()
+            self.instr_vocab_size = self.dataset_train.get_instr_vocab_size()
+            self.ingr_eos_value = self.dataset_train.ingr_eos_value
             print(f'Training set composed of {len(self.dataset_train)} samples.')
             print(f'Validation set composed of {len(self.dataset_val)} samples.')
         elif stage == 'test':
             self.dataset_test = self._get_dataset('test')
-            self.ingr_vocab_size = self.dataset_test.get_ingr_vocab_size()
             print(f'Test set composed of {len(self.dataset_test)} samples.')
-
+            self.ingr_vocab_size = self.dataset_test.get_ingr_vocab_size()
+            self.instr_vocab_size = self.dataset_test.get_instr_vocab_size()
+            self.ingr_eos_value = self.dataset_test.ingr_eos_value
+  
         print(f'Ingredient vocabulary size: {self.ingr_vocab_size}.')
+        print(f'Instruction vocabulary size: {self.instr_vocab_size}.')
+
 
     def train_dataloader(self):
     
         # sampler = RandomSamplerWithState(dataset, self.batch_size, self.seed)
-        # if self.checkpoint is not None:  ## TODO: review how checkpointing works here
+        # if self.checkpoint is not None:
         #     sampler.set_state(self.checkpoint['args'].current_epoch, self.checkpoint['current_step'])
 
         data_loader = torch.utils.data.DataLoader(
@@ -321,8 +332,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
             maxnumims=5,
             maxnumlabels=self.maxnumlabels,
             maxnuminstrs=self.maxnuminstrs,
+            maxinstrlength=self.maxinstrlength,
             transform=transform,
-            use_lmdb=True,  ## TODO: true at least for recipe1m
+            use_lmdb=True,  ## true for recipe1m
             shuffle_labels=self.shuffle_labels,
             split_data=split_data,
             include_eos=self.include_eos,

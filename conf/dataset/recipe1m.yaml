@@ -4,3 +4,4 @@ name: "recipe1m"
 path: "/datasets01/recipe1m/012319/"
 maxnumlabels: 20
 maxnuminstrs: 10
+maxinstrlength: 15

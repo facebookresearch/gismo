@@ -53,13 +53,3 @@ def set_flags_for_ingr_predictor(cfg):
             cfg.ingr_predictor.shuffle_labels = True if 'shuffle' in cfg.ingr_predictor.model else False
 
     OmegaConf.set_struct(cfg, True)
-
-
-# @hydra.main(config_path="../conf", config_name="config")
-# def get_config(cfg: DictConfig) -> None:
-
-#     OmegaConf.set_struct(cfg, False)
-#     set_flags_for_ingr_predictor(cfg)
-#     OmegaConf.set_struct(cfg, True)
-
-#     return cfg

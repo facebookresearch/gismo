@@ -7,7 +7,14 @@ defaults:
   - image_encoder: resnet50
   - ingr_predictor: ff
 
-task: "im2ingr"
+task: "im2recipe"
+
+recipe_gen:
+  dropout: 0.5
+  embed_size: 2048
+  n_att_heads: 8
+  layers: 2
+  normalize_before: True
 
 optim:
   lr: 0.001
@@ -17,10 +24,11 @@ optim:
   weight_decay: 0.0
   max_epochs: 400
   patience: 10
-  ingr_prediction_loss_weights:
+  loss_weights:
     label_loss: 1.0
     cardinality_loss: 0.0
     eos_loss: 0.0
+    recipe_loss: 1.0
 
 checkpoint:
   dir: '/checkpoint/adrianars/inversecooking2.0/debug/'
@@ -33,5 +41,5 @@ preprocessing:
 
 misc:
   seed: 1235
-  batch_size: 32
+  batch_size: 16
   num_workers: 8

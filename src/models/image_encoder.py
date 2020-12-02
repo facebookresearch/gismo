@@ -49,12 +49,6 @@ class ImageEncoder(nn.Module):
             return None
 
         pretrained_feats = self.pretrained_net(images)
-        # Get encoder output
-        # if keep_cnn_gradients:
-        #     raw_conv_feats = self.pretrained_net(images)
-        # else:
-        #     with torch.no_grad():
-        #         raw_conv_feats = self.pretrained_net(images)
 
         # Apply last_module to change the number of channels in the encoder output
         if self.last_module is not None:

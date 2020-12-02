@@ -84,15 +84,14 @@ class DecoderRNN(nn.Module):
                  hidden_size,
                  vocab_size,
                  dropout=0.5,
-                 seq_length=20,
-                 num_instrs=15):
+                 seq_length=20):
 
         super(DecoderRNN, self).__init__()
         self.embed = nn.Embedding(vocab_size, embed_size)
         self.linear = nn.Linear(hidden_size, vocab_size - 1)
         self.core = LSTMAtt(embed_size, hidden_size)
 
-        self.seq_length = seq_length * num_instrs
+        self.seq_length = seq_length
         self.dropout = dropout
         self.embed_size = embed_size
 
