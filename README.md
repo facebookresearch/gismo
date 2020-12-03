@@ -1,8 +1,8 @@
-## InverseCooking 2.0
+# InverseCooking 2.0
 
 Code for inversecooking2.0: merges image-to-set prediction with previous inversecooking and adds functionalities to move towards multi-modal generation.
 
-### Installation
+## Installation
 
 This code uses Python 3.8.5 (Anaconda), PyTorch 1.6 and cuda version 10.1.
 
@@ -22,7 +22,7 @@ $ pip install -r requirements.txt --upgrade
 $ pip install -r requirements_dev.txt --upgrade
 ```
 
-### Datasets
+## Datasets
 
 #### Recipe1M
 
@@ -45,7 +45,7 @@ $ python src/utils/recipe1m_utils.py --recipe1m_path path_to_recipe1m
 Resulting files will be stored under ```/path/to/recipe1m/preprocessed```.
 - Fill in ```configs/datapaths.json``` with the path to recipe1m dataset: ````"recipe1m": "/path/to/recipe1m/"````
 
-### Training
+## Training
 
 *Note: all python calls below must be run from* `./src`.
 
@@ -66,7 +66,7 @@ Check training progress with Tensorboard from ```../checkpoints```:
 $ tensorboard --logdir='.' --port=6006
 ```
 
-### Evaluation
+## Evaluation
 
 *Note: all python calls below must be run from* `./src`.
 
@@ -76,9 +76,19 @@ $ python eval.py --eval_split test --models_path PATH --dataset DATASET --batch_
 ```
 where DATASET is a dataset name (e.g. `recipe1m`) and PATH is the path to the saved models folder.
 
-### Pre-trained models
+## Pre-trained models
 TBD
 
-### License
+## Contributing
+
+### Developer tools
+
+The following commands should be used prior to submitting a fix:
+
+- `make format` to format all the files with and remove useless imports
+- `make test` to ensure that all unit tests are green
+- `make check` to run basic static checks on the codebase
+
+## License
 
 TBD
