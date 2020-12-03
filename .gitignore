@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 checkpoints/
-src/.vscode
+inv_cooking/.vscode
 outputs/
 launch.json
 settings.json
+.idea/

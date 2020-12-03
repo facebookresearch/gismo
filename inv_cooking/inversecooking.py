@@ -4,10 +4,10 @@ from torch import nn
 from torch.optim.lr_scheduler import ExponentialLR
 import pytorch_lightning as pl
 
-from models.im2ingr import Im2Ingr
-from models.im2recipe import Im2Recipe
-from models.ingredients_predictor import label2_k_hots
-from utils.metrics import update_error_counts, compute_metrics
+from .models.im2ingr import Im2Ingr
+from .models.im2recipe import Im2Recipe
+from .models.ingredients_predictor import label2_k_hots
+from .utils.metrics import update_error_counts, compute_metrics
 
 
 class LitInverseCooking(pl.LightningModule):

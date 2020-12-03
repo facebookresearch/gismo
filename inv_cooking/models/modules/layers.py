@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _single
-import models.modules.utils as utils
+import inv_cooking.models.modules.utils as utils
 
 
 def Embedding(num_embeddings, embedding_dim, padding_idx):

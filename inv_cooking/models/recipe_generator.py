@@ -4,7 +4,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from models.modules.transformer_decoder import DecoderTransformer
+from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
+
 
 class RecipeGenerator(nn.Module):
     def __init__(self, args,

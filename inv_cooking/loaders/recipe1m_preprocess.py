@@ -5,12 +5,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in https://github.com/facebookresearch/inversecooking
 
-import nltk
-import pickle
-import argparse
-from collections import Counter
 import json
 import os
+import pickle
+from collections import Counter
+
+import nltk
 from tqdm import *
 
 
@@ -77,6 +77,7 @@ def get_ingredient(det_ingr, replace_dict):
     det_ingr_undrs = det_ingr_undrs.replace(' ', '_')
 
     return det_ingr_undrs
+
 
 def get_instruction(instruction, replace_dict, instruction_mode=True):
     instruction = instruction.lower()
@@ -170,7 +171,6 @@ def update_counter(list_, counter_toks, istrain=False):
 def build_vocab_recipe1m(args):
     print("Loading data...")
 
-    args.save_path = os.path.join(args.recipe1m_path, 'preprocessed')
     if not os.path.exists(args.save_path):
         os.mkdir(args.save_path)
 
@@ -193,14 +193,18 @@ def build_vocab_recipe1m(args):
         idx2ind[entry['id']] = i
 
     ingrs_file = args.save_path + 'allingrs_count.pkl'
+    instrs_file = args.save_path + 'allwords_count.pkl'
+
     #####
     # 1. Count words in dataset and clean
     #####
-    if os.path.exists(ingrs_file) and not args.forcegen:
+    if os.path.exists(ingrs_file) and os.path.exists(instrs_file) and not args.forcegen:
         print("loading pre-extracted word counters")
         counter_ingrs = pickle.load(open(args.save_path + 'allingrs_count.pkl', 'rb'))
+        counter_toks = pickle.load(open(args.save_path + 'allwords_count.pkl', 'rb'))
     else:
         counter_ingrs = Counter()
+        counter_toks = Counter()
 
         for i, entry in tqdm(enumerate(layer1)):
 
@@ -237,10 +241,16 @@ def build_vocab_recipe1m(args):
                     or acc_len < args.minnumwords:
                 continue
 
+            # tokenize sentences and update counter
+            update_counter(instrs_list, counter_toks, istrain=entry['partition'] == 'train')
+            title = nltk.tokenize.word_tokenize(entry['title'].lower())
+            if entry['partition'] == 'train':
+                counter_toks.update(title)
             if entry['partition'] == 'train':
                 counter_ingrs.update(ingrs_list)
 
         pickle.dump(counter_ingrs, open(args.save_path + 'allingrs_count.pkl', 'wb'))
+        # pickle.dump(counter_toks, open(args.save_path + 'allwords_count.pkl', 'wb'))
 
     # manually add missing entries for better clustering
     base_words = [
@@ -270,7 +280,20 @@ def build_vocab_recipe1m(args):
     counter_ingrs, cluster_ingrs = remove_plurals(counter_ingrs, cluster_ingrs)
 
     # If the ingredient frequency is less than 'threshold', then the ingredient is discarded.
+    words = [word for word, cnt in counter_toks.items() if cnt >= args.threshold_words]
     ingrs = {word: cnt for word, cnt in counter_ingrs.items() if cnt >= args.threshold_ingrs}
+
+    # Recipe vocab
+    # Create a vocab wrapper and add some special tokens.
+    vocab_toks = Vocabulary()
+    vocab_toks.add_word('<start>')
+    vocab_toks.add_word('<end>')
+    vocab_toks.add_word('<eoi>')
+
+    # Add the words to the vocabulary.
+    for i, word in enumerate(words):
+        vocab_toks.add_word(word)
+    vocab_toks.add_word('<pad>')
 
     # Ingredient vocab
     # Create a vocab wrapper for ingredients
@@ -285,6 +308,7 @@ def build_vocab_recipe1m(args):
     _ = vocab_ingrs.add_word('<pad>', idx)
 
     print("Total ingr vocabulary size: {}".format(len(vocab_ingrs)))
+    print("Total token vocabulary size: {}".format(len(vocab_toks)))
 
     dataset = {'train': [], 'val': [], 'test': []}
 
@@ -335,10 +359,22 @@ def build_vocab_recipe1m(args):
             for im in ims['images']:
                 images_list.append(im['id'])
 
+        # tokenize sentences
+        toks = []
+
+        for instr in instrs_list:
+            tokens = nltk.tokenize.word_tokenize(instr)
+            toks.append(tokens)
+
+        title = nltk.tokenize.word_tokenize(entry['title'].lower())
+
         newentry = {
             'id': entry['id'],
+            'instructions': instrs_list,
+            'tokenized': toks,
             'ingredients': ingrs_list,
             'images': images_list,
+            'title': title
         }
         dataset[entry['partition']].append(newentry)
 
@@ -346,51 +382,18 @@ def build_vocab_recipe1m(args):
     for split in dataset.keys():
         print(split, ':', len(dataset[split]))
 
-    return vocab_ingrs, dataset
+    return vocab_ingrs, vocab_toks, dataset
 
 
-def main(args):
-
-    vocab_ingrs, dataset = build_vocab_recipe1m(args)
+def run_dataset_pre_processing(args):
+    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(args)
 
     with open(os.path.join(args.save_path, args.suff + 'recipe1m_vocab_ingrs.pkl'), 'wb') as f:
         pickle.dump(vocab_ingrs, f)
+    with open(os.path.join(args.save_path, args.suff+'recipe1m_vocab_toks.pkl'), 'wb') as f:
+        pickle.dump(vocab_toks, f)
 
     for split in dataset.keys():
         with open(os.path.join(args.save_path, args.suff + 'recipe1m_' + split + '.pkl'),
                   'wb') as f:
             pickle.dump(dataset[split], f)
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--recipe1m_path', type=str, default='path/to/recipe1m', help='recipe1m path')
-
-    parser.add_argument('--suff', type=str, default='final_')
-
-    parser.add_argument(
-        '--threshold_ingrs', type=int, default=10, help='minimum ingr count threshold')
-
-    parser.add_argument(
-        '--threshold_words', type=int, default=10, help='minimum word count threshold')
-
-    parser.add_argument(
-        '--maxnuminstrs', type=int, default=20, help='max number of instructions (sentences)')
-
-    parser.add_argument('--maxnumingrs', type=int, default=20, help='max number of ingredients')
-
-    parser.add_argument(
-        '--minnuminstrs', type=int, default=2, help='max number of instructions (sentences)')
-
-    parser.add_argument('--minnumingrs', type=int, default=2, help='max number of ingredients')
-
-    parser.add_argument(
-        '--minnumwords', type=int, default=20, help='minimum number of characters in recipe')
-
-    parser.add_argument('--forcegen', dest='forcegen', action='store_true')
-    parser.set_defaults(forcegen=False)
-
-    args = parser.parse_args()
-    main(args)

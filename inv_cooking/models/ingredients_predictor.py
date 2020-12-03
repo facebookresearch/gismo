@@ -6,11 +6,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
-from models.modules.ff_decoder import FFDecoder
-from models.modules.transformer_decoder import DecoderTransformer
-from models.modules.rnn_decoder import DecoderRNN
-from utils.metrics import softIoU, softIoULoss, DCLoss, DC, targetDistLoss
-from models.modules.utils import freeze_fn
+from inv_cooking.models.modules.ff_decoder import FFDecoder
+from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
+from inv_cooking.models.modules.rnn_decoder import DecoderRNN
+from inv_cooking.utils.metrics import softIoU, softIoULoss, DCLoss, DC, targetDistLoss
+from inv_cooking.models.modules.utils import freeze_fn
 
 
 def label2_k_hots(labels, pad_value, remove_eos=False):

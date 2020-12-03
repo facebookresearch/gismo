@@ -5,8 +5,8 @@ import torch.nn as nn
 
 import os
 
-from models.image_encoder import ImageEncoder
-from models.ingredients_predictor import get_ingr_predictor
+from inv_cooking.models.image_encoder import ImageEncoder
+from inv_cooking.models.ingredients_predictor import get_ingr_predictor
 
 
 class Im2Ingr(nn.Module):

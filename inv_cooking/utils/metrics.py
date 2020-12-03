@@ -6,6 +6,8 @@
 import sys
 import time
 import math
+from typing import List, Dict
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -117,7 +119,11 @@ class targetDistLoss(nn.Module):
         return loss
 
 
-def update_error_counts(error_counts, y_pred, y_true, which_metrics):
+def update_error_counts(
+        error_counts: Dict[str, int],
+        y_pred: torch.Tensor,
+        y_true: torch.Tensor,
+        which_metrics: List[str]):
 
     if 'o_f1' in which_metrics:
         error_counts['o_tp'] += (y_pred * y_true).sum().item()

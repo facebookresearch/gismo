@@ -11,9 +11,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _single
-import models.modules.utils as utils
-from models.modules.multihead_attention import MultiheadAttention
-from models.modules.layers import make_positions, LearnedPositionalEmbedding
+import inv_cooking.models.modules.utils as utils
+from inv_cooking.models.modules.multihead_attention import MultiheadAttention
+from inv_cooking.models.modules.layers import make_positions, LearnedPositionalEmbedding
 from scipy.stats import entropy
 import numpy as np
 

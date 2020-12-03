@@ -8,7 +8,7 @@ import torch.nn as nn
 import random
 import numpy as np
 
-from models.modules.utils import freeze_fn 
+from inv_cooking.models.modules.utils import freeze_fn
 
 
 class ImageEncoder(nn.Module):

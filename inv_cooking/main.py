@@ -9,12 +9,11 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
-from inversecooking import LitInverseCooking
-from loaders.recipe1m_loader import Recipe1MDataModule
-from loaders.recipe1m_preprocess import Vocabulary
+from .inversecooking import LitInverseCooking
+from .loaders.recipe1m_loader import Recipe1MDataModule
+from .loaders.recipe1m_preprocess import Vocabulary
 
 
-@hydra.main(config_path="../conf", config_name="config")
 def main(cfg: DictConfig) -> None:
 
     # fix seed
@@ -26,8 +25,8 @@ def main(cfg: DictConfig) -> None:
         os.makedirs(checkpoint_dir)
 
     # what flags do we need to activate in the data module
-    shuffle_labels = True if 'shuffle' in  cfg.ingr_predictor.model else False
-    include_eos = False if 'ff' in  cfg.ingr_predictor.model and not 'shuffle' in cfg.ingr_predictor else True
+    shuffle_labels = True if 'shuffle' in cfg.ingr_predictor.model else False
+    include_eos = False if 'ff' in cfg.ingr_predictor.model and not 'shuffle' in cfg.ingr_predictor else True
 
     if cfg.task == 'im2ingr':
         return_img = True
@@ -96,11 +95,11 @@ def main(cfg: DictConfig) -> None:
 
     # early stopping
     early_stop_callback = EarlyStopping(
-    monitor=monitor_metric,
-    min_delta=0.00,
-    patience=10,
-    verbose=False,
-    mode=best_metric
+        monitor=monitor_metric,
+        min_delta=0.00,
+        patience=10,
+        verbose=False,
+        mode=best_metric
     )
 
     # trainer
@@ -131,7 +130,3 @@ def main(cfg: DictConfig) -> None:
     # test
     dm.setup('test')
     trainer.test(datamodule=dm)
-
-
-if __name__ == '__main__':
-    main()

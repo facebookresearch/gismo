@@ -11,7 +11,7 @@ import torch.utils.data as data
 from torchvision import transforms as tf
 import pytorch_lightning as pl
 
-from loaders.recipe1m_preprocess import Vocabulary
+from inv_cooking.loaders.recipe1m_preprocess import Vocabulary
 # from recipe1m_preprocess import Vocabulary
 
 
@@ -318,8 +318,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
 
         # reads the file with ids to use for the corresponding split
         orig_cwd = hydra.utils.get_original_cwd()
-        parent_orig_cwd = os.path.abspath(os.path.join(orig_cwd, os.pardir))
-        splits_filename = os.path.join(parent_orig_cwd, 'data/splits/recipe1m', stage + '.txt')
+        splits_filename = os.path.join(orig_cwd, 'data/splits/recipe1m', stage + '.txt')
             
         with open(splits_filename, 'r') as f:
             split_data = np.array([int(line.rstrip('\n')) for line in f])
@@ -334,7 +333,8 @@ class Recipe1MDataModule(pl.LightningDataModule):
             maxnuminstrs=self.maxnuminstrs,
             maxinstrlength=self.maxinstrlength,
             transform=transform,
-            use_lmdb=True,  ## true for recipe1m
+            # use_lmdb=True,  # true for recipe1m
+            use_lmdb=False,
             shuffle_labels=self.shuffle_labels,
             split_data=split_data,
             include_eos=self.include_eos,

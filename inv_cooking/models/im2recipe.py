@@ -3,10 +3,10 @@
 import torch
 import torch.nn as nn
 
-from models.image_encoder import ImageEncoder
-from models.ingredients_encoder import IngredientsEncoder
-from models.ingredients_predictor import get_ingr_predictor, mask_from_eos, label2_k_hots
-from models.recipe_generator import RecipeGenerator
+from inv_cooking.models.image_encoder import ImageEncoder
+from inv_cooking.models.ingredients_encoder import IngredientsEncoder
+from inv_cooking.models.ingredients_predictor import get_ingr_predictor, mask_from_eos, label2_k_hots
+from inv_cooking.models.recipe_generator import RecipeGenerator
 
 
 class Im2Recipe(nn.Module):

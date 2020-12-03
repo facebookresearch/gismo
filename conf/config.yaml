@@ -7,7 +7,7 @@ defaults:
   - image_encoder: resnet50
   - ingr_predictor: ff
 
-task: "im2recipe"
+task: im2recipe
 
 recipe_gen:
   dropout: 0.5
@@ -31,7 +31,7 @@ optim:
     recipe_loss: 1.0
 
 checkpoint:
-  dir: '/checkpoint/adrianars/inversecooking2.0/debug/'
+  dir: '/checkpoint/qduval/inversecooking2.0/debug/'
   es_metric: 'o_f1'
   resume_from: None
 
@@ -43,3 +43,16 @@ misc:
   seed: 1235
   batch_size: 16
   num_workers: 8
+
+recipe1m_pre_processing:
+  recipe1m_path: '/checkpoint/qduval/recipe1m/'
+  save_path: '/checkpoint/qduval/recipe1m/preprocessed'
+  suff: "final_"
+  threshold_ingrs: 10  # minimum ingr count threshold
+  threshold_words: 10  # minimum word count threshold
+  maxnuminstrs: 20  # max number of instructions (sentences)
+  maxnumingrs: 20  # max number of ingredients
+  minnuminstrs: 2  # min number of instructions (sentences)
+  minnumingrs: 2  # min number of ingredients
+  minnumwords: 20  # minimum number of characters in recipe
+  forcegen: true

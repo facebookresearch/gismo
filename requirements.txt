@@ -5,3 +5,4 @@ lmdb
 nltk
 hydra-core
 pytorch-lightning
+tensorboard

@@ -1,7 +1,7 @@
 # @package _group_
 
 name: "recipe1m"
-path: "/datasets01/recipe1m/012319/"
+path: "/checkpoint/qduval/recipe1m/"
 maxnumlabels: 20
 maxnuminstrs: 10
 maxinstrlength: 15
