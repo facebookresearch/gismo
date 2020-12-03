@@ -5,6 +5,7 @@
 import torch.nn as nn
 
 from inv_cooking.models.modules.utils import freeze_fn
+import torchvision.models.resnet as resnet
 
 
 class ImageEncoder(nn.Module):
@@ -14,7 +15,7 @@ class ImageEncoder(nn.Module):
         """Load the pretrained model and replace top fc layer."""
         super(ImageEncoder, self).__init__()
 
-        pretrained_net = globals()[model](pretrained=pretrained)
+        pretrained_net = resnet.__dict__[model](pretrained=pretrained)
 
         if "resnet" in model or "resnext" in model:
             modules = list(pretrained_net.children())[
