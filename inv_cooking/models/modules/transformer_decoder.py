@@ -7,15 +7,13 @@
 # can be found in the PATENTS file in the same directory.
 
 import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.modules.utils import _single
-import inv_cooking.models.modules.utils as utils
+
+from inv_cooking.models.modules.layers import LearnedPositionalEmbedding, make_positions
 from inv_cooking.models.modules.multihead_attention import MultiheadAttention
-from inv_cooking.models.modules.layers import make_positions, LearnedPositionalEmbedding
-from scipy.stats import entropy
-import numpy as np
 
 
 class SinusoidalPositionalEmbedding(nn.Module):
@@ -30,11 +28,9 @@ class SinusoidalPositionalEmbedding(nn.Module):
         self.padding_idx = padding_idx
         self.left_pad = left_pad
         self.weights = SinusoidalPositionalEmbedding.get_embedding(
-            init_size,
-            embedding_dim,
-            padding_idx,
+            init_size, embedding_dim, padding_idx,
         )
-        self.register_buffer('_float_tensor', torch.FloatTensor())
+        self.register_buffer("_float_tensor", torch.FloatTensor())
 
     @staticmethod
     def get_embedding(num_embeddings, embedding_dim, padding_idx=None):
@@ -45,8 +41,12 @@ class SinusoidalPositionalEmbedding(nn.Module):
         half_dim = embedding_dim // 2
         emb = math.log(10000) / (half_dim - 1)
         emb = torch.exp(torch.arange(half_dim, dtype=torch.float) * -emb)
-        emb = torch.arange(num_embeddings, dtype=torch.float).unsqueeze(1) * emb.unsqueeze(0)
-        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(num_embeddings, -1)
+        emb = torch.arange(num_embeddings, dtype=torch.float).unsqueeze(
+            1
+        ) * emb.unsqueeze(0)
+        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(
+            num_embeddings, -1
+        )
         if embedding_dim % 2 == 1:
             # zero pad
             emb = torch.cat([emb, torch.zeros(num_embeddings, 1)], dim=1)
@@ -61,9 +61,7 @@ class SinusoidalPositionalEmbedding(nn.Module):
         max_pos = self.padding_idx + 1 + seq_len
         if self.weights is None or max_pos > self.weights.size(0):
             self.weights = SinusoidalPositionalEmbedding.get_embedding(
-                max_pos,
-                self.embedding_dim,
-                self.padding_idx,
+                max_pos, self.embedding_dim, self.padding_idx,
             )
         self.weights = self.weights.type_as(self._float_tensor)
 
@@ -72,7 +70,11 @@ class SinusoidalPositionalEmbedding(nn.Module):
             return self.weights[self.padding_idx + seq_len, :].expand(bsz, 1, -1)
 
         positions = make_positions(input.data, self.padding_idx, self.left_pad)
-        return self.weights.index_select(0, positions.view(-1)).view(bsz, seq_len, -1).detach()
+        return (
+            self.weights.index_select(0, positions.view(-1))
+            .view(bsz, seq_len, -1)
+            .detach()
+        )
 
     def max_positions(self):
         """Maximum number of supported positions."""
@@ -90,19 +92,11 @@ class TransformerDecoderLayer(nn.Module):
         self.relu_dropout = dropout
         self.normalize_before = normalize_before
 
-        # self attention 
-        self.self_attn = MultiheadAttention(
-            self.embed_dim,
-            n_att,
-            dropout=dropout,
-        )
+        # self attention
+        self.self_attn = MultiheadAttention(self.embed_dim, n_att, dropout=dropout,)
 
         # encoder attention
-        self.encoder_attn = MultiheadAttention(
-            self.embed_dim,
-            n_att,
-            dropout=dropout,
-        )
+        self.encoder_attn = MultiheadAttention(self.embed_dim, n_att, dropout=dropout,)
 
         self.fc1 = Linear(self.embed_dim, self.embed_dim)
         self.fc2 = Linear(self.embed_dim, self.embed_dim)
@@ -110,7 +104,14 @@ class TransformerDecoderLayer(nn.Module):
         # layer normalizations: we have one for the encoder attn, one for the self attn and one for the final module
         self.layer_norms = nn.ModuleList([LayerNorm(self.embed_dim) for i in range(3)])
 
-    def forward(self, x, encoder_out, encoder_padding_mask, incremental_state, other_encoder_out=None):
+    def forward(
+        self,
+        x,
+        encoder_out,
+        encoder_padding_mask,
+        incremental_state,
+        other_encoder_out=None,
+    ):
 
         # self attention
         residual = x
@@ -144,14 +145,22 @@ class TransformerDecoderLayer(nn.Module):
         else:
             # attention on encoder's outputs (composed of ingredient and image features)
             kv = torch.cat((other_encoder_out, encoder_out), 0)
-            mask = torch.cat((torch.zeros(other_encoder_out.shape[1], other_encoder_out.shape[0]).type_as(encoder_padding_mask),
-                              encoder_padding_mask), 1)
-            x, _ = self.encoder_attn(query=x,
-                                     key=kv,
-                                     value=kv,
-                                     key_padding_mask=mask,
-                                     incremental_state=incremental_state,
-                                     static_kv=True,
+            mask = torch.cat(
+                (
+                    torch.zeros(
+                        other_encoder_out.shape[1], other_encoder_out.shape[0]
+                    ).type_as(encoder_padding_mask),
+                    encoder_padding_mask,
+                ),
+                1,
+            )
+            x, _ = self.encoder_attn(
+                query=x,
+                key=kv,
+                value=kv,
+                key_padding_mask=mask,
+                incremental_state=incremental_state,
+                static_kv=True,
             )
 
         x = F.dropout(x, p=self.dropout, training=self.training)
@@ -180,39 +189,52 @@ class TransformerDecoderLayer(nn.Module):
 class DecoderTransformer(nn.Module):
     """Transformer decoder."""
 
-    def __init__(self,
-                 embed_size,
-                 vocab_size,
-                 dropout=0.5,
-                 seq_length=20,
-                 attention_nheads=16,
-                 pos_embeddings=True,
-                 num_layers=8,
-                 learned=True,
-                 normalize_before=True):
+    def __init__(
+        self,
+        embed_size,
+        vocab_size,
+        dropout=0.5,
+        seq_length=20,
+        attention_nheads=16,
+        pos_embeddings=True,
+        num_layers=8,
+        learned=True,
+        normalize_before=True,
+    ):
         super(DecoderTransformer, self).__init__()
         self.dropout = dropout
         self.seq_length = seq_length
-        self.embed_tokens = Embedding(vocab_size, embed_size, padding_idx=vocab_size - 1)
+        self.embed_tokens = Embedding(
+            vocab_size, embed_size, padding_idx=vocab_size - 1
+        )
 
         if pos_embeddings:
             self.embed_positions = PositionalEmbedding(
-                1024, embed_size, 0, left_pad=False, learned=learned)
+                1024, embed_size, 0, left_pad=False, learned=learned
+            )
         else:
             self.embed_positions = None
 
         self.embed_scale = math.sqrt(embed_size)
 
         self.layers = nn.ModuleList([])
-        self.layers.extend([
-            TransformerDecoderLayer(
-                embed_size, attention_nheads, dropout=dropout, normalize_before=normalize_before)
-            for i in range(num_layers)
-        ])
+        self.layers.extend(
+            [
+                TransformerDecoderLayer(
+                    embed_size,
+                    attention_nheads,
+                    dropout=dropout,
+                    normalize_before=normalize_before,
+                )
+                for i in range(num_layers)
+            ]
+        )
 
         self.linear = Linear(embed_size, vocab_size - 1)
 
-    def forward(self, features, mask, captions, other_features=None, incremental_state=None):
+    def forward(
+        self, features, mask, captions, other_features=None, incremental_state=None
+    ):
 
         if features is not None:
             features = features.permute(0, 2, 1)
@@ -227,7 +249,9 @@ class DecoderTransformer(nn.Module):
 
         # embed positions
         if self.embed_positions is not None:
-            positions = self.embed_positions(captions, incremental_state=incremental_state)
+            positions = self.embed_positions(
+                captions, incremental_state=incremental_state
+            )
         if incremental_state is not None:
             if self.embed_positions is not None:
                 positions = positions[:, -1:]
@@ -245,11 +269,7 @@ class DecoderTransformer(nn.Module):
 
         # decoder layers
         for layer in self.layers:
-            x = layer(x, 
-                      features, 
-                      mask, 
-                      incremental_state, 
-                      other_features)
+            x = layer(x, features, mask, incremental_state, other_features)
         # T x B x C -> B x T x C
         x = x.transpose(0, 1)
 
@@ -261,14 +281,16 @@ class DecoderTransformer(nn.Module):
         else:
             return x
 
-    def sample(self,
-               features,
-               mask,
-               other_features=None,
-               greedy=True,
-               temperature=1.0,
-               first_token_value=0,
-               replacement=True):
+    def sample(
+        self,
+        features,
+        mask,
+        other_features=None,
+        greedy=True,
+        temperature=1.0,
+        first_token_value=0,
+        replacement=True,
+    ):
 
         incremental_state = {}
 
@@ -281,9 +303,13 @@ class DecoderTransformer(nn.Module):
         logits = []
         for i in range(self.seq_length):
             # forward
-            outputs = self.forward(features=features, mask=mask, 
-                                   captions=torch.stack(sampled_ids, 1), 
-                                   other_features=other_features, incremental_state=incremental_state)
+            outputs = self.forward(
+                features=features,
+                mask=mask,
+                captions=torch.stack(sampled_ids, 1),
+                other_features=other_features,
+                incremental_state=incremental_state,
+            )
             outputs = outputs.squeeze(1)
             if not replacement:
                 # predicted mask
@@ -292,7 +318,7 @@ class DecoderTransformer(nn.Module):
                 else:
                     batch_ind = [j for j in range(fs) if sampled_ids[i][j] != 0]
                     sampled_ids_new = sampled_ids[i][batch_ind]
-                    predicted_mask[batch_ind, sampled_ids_new] = float('-inf')
+                    predicted_mask[batch_ind, sampled_ids_new] = float("-inf")
 
                 # mask previously selected ids
                 outputs += predicted_mask
@@ -311,7 +337,9 @@ class DecoderTransformer(nn.Module):
                 # top k random sampling
                 prob_prev_topk, indices = torch.topk(prob_prev, k=k, dim=1)
                 predicted = torch.multinomial(prob_prev_topk, 1).view(-1)
-                predicted = torch.index_select(indices, dim=1, index=predicted)[:, 0].detach()
+                predicted = torch.index_select(indices, dim=1, index=predicted)[
+                    :, 0
+                ].detach()
 
             sampled_ids.append(predicted)
         sampled_ids = torch.stack(sampled_ids[1:], 1)
@@ -324,16 +352,18 @@ class DecoderTransformer(nn.Module):
 
     def upgrade_state_dict(self, state_dict):
         if isinstance(self.embed_positions, SinusoidalPositionalEmbedding):
-            if 'decoder.embed_positions.weights' in state_dict:
-                del state_dict['decoder.embed_positions.weights']
-            if 'decoder.embed_positions._float_tensor' not in state_dict:
-                state_dict['decoder.embed_positions._float_tensor'] = torch.FloatTensor()
+            if "decoder.embed_positions.weights" in state_dict:
+                del state_dict["decoder.embed_positions.weights"]
+            if "decoder.embed_positions._float_tensor" not in state_dict:
+                state_dict[
+                    "decoder.embed_positions._float_tensor"
+                ] = torch.FloatTensor()
         return state_dict
 
 
 def Embedding(num_embeddings, embedding_dim, padding_idx):
     m = nn.Embedding(num_embeddings, embedding_dim, padding_idx=padding_idx)
-    nn.init.normal_(m.weight, mean=0, std=embedding_dim**-0.5)
+    nn.init.normal_(m.weight, mean=0, std=embedding_dim ** -0.5)
     return m
 
 
@@ -345,15 +375,21 @@ def LayerNorm(embedding_dim):
 def Linear(in_features, out_features, bias=True):
     m = nn.Linear(in_features, out_features, bias)
     nn.init.xavier_uniform_(m.weight)
-    nn.init.constant_(m.bias, 0.)
+    nn.init.constant_(m.bias, 0.0)
     return m
 
 
-def PositionalEmbedding(num_embeddings, embedding_dim, padding_idx, left_pad, learned=False):
+def PositionalEmbedding(
+    num_embeddings, embedding_dim, padding_idx, left_pad, learned=False
+):
     if learned:
-        m = LearnedPositionalEmbedding(num_embeddings, embedding_dim, padding_idx, left_pad)
-        nn.init.normal_(m.weight, mean=0, std=embedding_dim**-0.5)
+        m = LearnedPositionalEmbedding(
+            num_embeddings, embedding_dim, padding_idx, left_pad
+        )
+        nn.init.normal_(m.weight, mean=0, std=embedding_dim ** -0.5)
         nn.init.constant_(m.weight[padding_idx], 0)
     else:
-        m = SinusoidalPositionalEmbedding(embedding_dim, padding_idx, left_pad, num_embeddings)
+        m = SinusoidalPositionalEmbedding(
+            embedding_dim, padding_idx, left_pad, num_embeddings
+        )
     return m

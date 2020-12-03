@@ -16,6 +16,12 @@ $ conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
 $ pip install -r requirements.txt --upgrade
 ```
 
+- Additional dependencies for developers
+
+```bash
+$ pip install -r requirements_dev.txt --upgrade
+```
+
 ### Datasets
 
 #### Recipe1M

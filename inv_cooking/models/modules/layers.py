@@ -7,10 +7,12 @@
 # can be found in the PATENTS file in the same directory.
 
 import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.utils import _single
+
 import inv_cooking.models.modules.utils as utils
 
 
@@ -48,6 +50,7 @@ def LinearizedConv1d(in_channels, out_channels, kernel_size, dropout=0, **kwargs
 def ConvTBC(in_channels, out_channels, kernel_size, dropout=0, **kwargs):
     """Weight-normalized Conv1d layer"""
     from fairseq.modules import ConvTBC
+
     m = ConvTBC(in_channels, out_channels, kernel_size, **kwargs)
     std = math.sqrt((4 * (1.0 - dropout)) / (m.kernel_size[0] * in_channels))
     nn.init.normal_(m.weight, mean=0, std=std)
@@ -64,13 +67,13 @@ def make_positions(tensor, padding_idx, left_pad):
 
     # creates tensor from scratch - to avoid multigpu issues
     max_pos = padding_idx + 1 + tensor.size(1)
-    #if not hasattr(make_positions, 'range_buf'):
+    # if not hasattr(make_positions, 'range_buf'):
     range_buf = tensor.new()
-    #make_positions.range_buf = make_positions.range_buf.type_as(tensor)
+    # make_positions.range_buf = make_positions.range_buf.type_as(tensor)
     if range_buf.numel() < max_pos:
         torch.arange(padding_idx + 1, max_pos, out=range_buf)
     mask = tensor.ne(padding_idx)
-    positions = range_buf[:tensor.size(1)].expand_as(tensor)
+    positions = range_buf[: tensor.size(1)].expand_as(tensor)
     if left_pad:
         positions = positions - mask.size(1) + mask.long().sum(dim=1).unsqueeze(1)
 
@@ -119,18 +122,21 @@ class ConvTBC(torch.nn.Module):
         self.padding = _single(padding)
 
         self.weight = torch.nn.Parameter(
-            torch.Tensor(self.kernel_size[0], in_channels, out_channels))
+            torch.Tensor(self.kernel_size[0], in_channels, out_channels)
+        )
         self.bias = torch.nn.Parameter(torch.Tensor(out_channels))
 
     def forward(self, input):
         return input.contiguous().conv_tbc(self.weight, self.bias, self.padding[0])
 
     def __repr__(self):
-        s = ('{name}({in_channels}, {out_channels}, kernel_size={kernel_size}'
-             ', padding={padding}')
+        s = (
+            "{name}({in_channels}, {out_channels}, kernel_size={kernel_size}"
+            ", padding={padding}"
+        )
         if self.bias is None:
-            s += ', bias=False'
-        s += ')'
+            s += ", bias=False"
+        s += ")"
         return s.format(name=self.__class__.__name__, **self.__dict__)
 
 
@@ -161,7 +167,7 @@ class LinearizedConvolution(ConvTBC):
             output = super().forward(input)
             if self.kernel_size[0] > 1 and self.padding[0] > 0:
                 # remove future timesteps added by padding
-                output = output[:-self.padding[0], :, :]
+                output = output[: -self.padding[0], :, :]
             return output
 
         # reshape weight
@@ -192,10 +198,12 @@ class LinearizedConvolution(ConvTBC):
             self._set_input_buffer(incremental_state, input_buffer)
 
     def _get_input_buffer(self, incremental_state):
-        return utils.get_incremental_state(self, incremental_state, 'input_buffer')
+        return utils.get_incremental_state(self, incremental_state, "input_buffer")
 
     def _set_input_buffer(self, incremental_state, new_buffer):
-        return utils.set_incremental_state(self, incremental_state, 'input_buffer', new_buffer)
+        return utils.set_incremental_state(
+            self, incremental_state, "input_buffer", new_buffer
+        )
 
     def _get_linearized_weight(self):
         if self._linearized_weight is None:

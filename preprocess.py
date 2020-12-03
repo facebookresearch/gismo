@@ -10,5 +10,5 @@ def main(cfg: DictConfig) -> None:
     run_dataset_pre_processing(cfg.recipe1m_pre_processing)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

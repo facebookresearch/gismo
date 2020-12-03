@@ -1,18 +1,8 @@
-import lmdb
-import numpy as np
-import os
-import pickle
-import hydra
-
 import torch
-import torch.utils.data as data
-
 from torch.utils.data.sampler import Sampler
-from PIL import Image
 
 
 class RandomSamplerWithStateIterator:
-
     def __init__(self, data_source, seed):
         self.data_source = data_source
         self.seed = seed
@@ -44,7 +34,6 @@ class RandomSamplerWithStateIterator:
 
 
 class RandomSamplerWithState(Sampler):
-
     def __init__(self, data_source, batch_size, seed):
         self.iterator = RandomSamplerWithStateIterator(data_source, seed)
         self.batch_size = batch_size

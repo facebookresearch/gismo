@@ -2,25 +2,27 @@
 #
 # Code partially based on https://github.com/ruotianluo/ImageCaptioning.pytorch/blob/master/models/AttModel.py
 #
-# This source code is licensed under the MIT license found in the 
+# This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import torch
 import torch.nn as nn
-import random
-import numpy as np
 
 
 class AttentionLayer(nn.Module):
-
     def __init__(self, embed_size, hidden_size):
         super(AttentionLayer, self).__init__()
 
         self.linear_feats = nn.Sequential(
-            nn.Conv1d(embed_size, hidden_size, kernel_size=1), nn.ReLU())
-        self.embed_feats = nn.Sequential(nn.Conv1d(hidden_size, hidden_size, kernel_size=1))
+            nn.Conv1d(embed_size, hidden_size, kernel_size=1), nn.ReLU()
+        )
+        self.embed_feats = nn.Sequential(
+            nn.Conv1d(hidden_size, hidden_size, kernel_size=1)
+        )
 
-        self.linear_hidden = nn.Sequential(nn.Linear(hidden_size, hidden_size), nn.Tanh())
+        self.linear_hidden = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size), nn.Tanh()
+        )
         self.embed_hidden = nn.Sequential(nn.Linear(hidden_size, hidden_size))
 
         self.att_coeffs = nn.Conv1d(hidden_size, 1, kernel_size=1)
@@ -52,7 +54,6 @@ class AttentionLayer(nn.Module):
 
 
 class LSTMAtt(nn.Module):
-
     def __init__(self, embed_size, hidden_size):
         """Set the hyper-parameters and build the layers."""
         super(LSTMAtt, self).__init__()
@@ -66,8 +67,10 @@ class LSTMAtt(nn.Module):
     def forward(self, input_feat, features, prev_word, states):
 
         if states is None:
-            states = (torch.zeros(input_feat.size(0), self.hidden_size).type_as(input_feat),
-                      torch.zeros(input_feat.size(0), self.hidden_size).type_as(input_feat))
+            states = (
+                torch.zeros(input_feat.size(0), self.hidden_size).type_as(input_feat),
+                torch.zeros(input_feat.size(0), self.hidden_size).type_as(input_feat),
+            )
 
         input = torch.cat((input_feat, prev_word), 1)
         states = self.lstmcell(input, states)
@@ -78,13 +81,7 @@ class LSTMAtt(nn.Module):
 
 
 class DecoderRNN(nn.Module):
-
-    def __init__(self,
-                 embed_size,
-                 hidden_size,
-                 vocab_size,
-                 dropout=0.5,
-                 seq_length=20):
+    def __init__(self, embed_size, hidden_size, vocab_size, dropout=0.5, seq_length=20):
 
         super(DecoderRNN, self).__init__()
         self.embed = nn.Embedding(vocab_size, embed_size)
@@ -122,13 +119,15 @@ class DecoderRNN(nn.Module):
 
         return outs, sampled_ids
 
-    def sample(self,
-               features,
-               mask,
-               greedy=True,
-               temperature=1.0,
-               first_token_value=0,
-               replacement=True):
+    def sample(
+        self,
+        features,
+        mask,
+        greedy=True,
+        temperature=1.0,
+        first_token_value=0,
+        replacement=True,
+    ):
         """Generate captions for given image features."""
         logits = []
         avg_feats = torch.mean(features, dim=-1)
@@ -152,7 +151,7 @@ class DecoderRNN(nn.Module):
                 else:
                     batch_ind = [j for j in range(fs) if sampled_ids[i][j] != 0]
                     sampled_ids_new = sampled_ids[i][batch_ind]
-                    predicted_mask[batch_ind, sampled_ids_new] = float('-inf')
+                    predicted_mask[batch_ind, sampled_ids_new] = float("-inf")
 
                 # mask previously selected ids
                 outputs += predicted_mask
@@ -169,7 +168,9 @@ class DecoderRNN(nn.Module):
                 # top k random sampling
                 prob_prev_topk, indices = torch.topk(prob_prev, k=k, dim=1)
                 predicted = torch.multinomial(prob_prev_topk, 1).view(-1)
-                predicted = torch.index_select(indices, dim=1, index=predicted)[:, 0].detach()
+                predicted = torch.index_select(indices, dim=1, index=predicted)[
+                    :, 0
+                ].detach()
             sampled_ids.append(predicted)
             prev_word = self.embed(predicted)
 

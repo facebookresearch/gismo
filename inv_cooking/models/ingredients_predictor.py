@@ -1,16 +1,18 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the 
+# This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-import math
+
 from inv_cooking.models.modules.ff_decoder import FFDecoder
-from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
-from inv_cooking.utils.metrics import softIoU, softIoULoss, DCLoss, DC, targetDistLoss
+from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
+from inv_cooking.utils.metrics import DC, DCLoss, softIoULoss, targetDistLoss
 
 
 def label2_k_hots(labels, pad_value, remove_eos=False):
@@ -51,26 +53,29 @@ def mask_from_eos(prediction, eos_value, mult_before=True):
     return mask
 
 
-def predictions_to_idxs(label_logits,
-                    maxnumlabels,  ## TODO check how this is used, and whether the +1 in the set predictor construction is necessary
-                    pad_value,
-                    th=1,
-                    cardinality_prediction=None,
-                    which_loss='bce',
-                    accumulate_probs=False,
-                    use_empty_set=False):
+def predictions_to_idxs(
+    label_logits,
+    maxnumlabels,  ## TODO check how this is used, and whether the +1 in the set predictor construction is necessary
+    pad_value,
+    th=1,
+    cardinality_prediction=None,
+    which_loss="bce",
+    accumulate_probs=False,
+    use_empty_set=False,
+):
 
     assert th > 0 and th <= 1
-
 
     card_offset = 0 if use_empty_set else 1
 
     # select topk elements
-    probs, idxs = torch.topk(label_logits, k=maxnumlabels, dim=1, largest=True, sorted=True)
+    probs, idxs = torch.topk(
+        label_logits, k=maxnumlabels, dim=1, largest=True, sorted=True
+    )
     idxs_clone = idxs.clone()
 
     # mask to identify elements within the top-maxnumlabel ones which satisfy the threshold th
-    if which_loss == 'td':
+    if which_loss == "td":
         # cumulative threshold
         mask = torch.ones(probs.size()).type_as(probs).byte()
         for idx in range(probs.size(1)):
@@ -89,7 +94,7 @@ def predictions_to_idxs(label_logits,
 
         if accumulate_probs:
             for c in range(cardinality_prediction.size(-1)):
-                value = torch.sum(torch.log(probs[:, 0:c + 1]), dim=-1)
+                value = torch.sum(torch.log(probs[:, 0 : c + 1]), dim=-1)
                 cardinality_prediction[:, c] += value
 
         # select cardinality
@@ -103,7 +108,7 @@ def predictions_to_idxs(label_logits,
             # on the mask must be 0. Predicting 0 cardinality means 0 objects when
             # use_empty_set=True and 1 object when use_empty_set=False
             # real cardinality value is
-            above_cardinality = (i < card_idx + card_offset)
+            above_cardinality = i < card_idx + card_offset
             # multiply the auxiliar mask with this condition
             # (once you multiply by 0, the following entries will also be 0)
             aux_mask = aux_mask * above_cardinality
@@ -118,18 +123,19 @@ def predictions_to_idxs(label_logits,
 
 
 def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
-        
-    cardinality_pred = 'dc' if 'dc' in args.model else 'none'
-    cardinality_pred = 'cat' if 'cat' in args.model else cardinality_pred
-    
+
+    cardinality_pred = "dc" if "dc" in args.model else "none"
+    cardinality_pred = "cat" if "cat" in args.model else cardinality_pred
+
     # build ingredients predictor
-    if 'ff' in args.model and not 'shuffle' in args.model:
+    if "ff" in args.model and not "shuffle" in args.model:
         print(
-            'Building feed-forward decoder {}. Embed size {} / Dropout {} / '
-            ' Max. Num. Labels {} / Num. Layers {}'.format(
-                args.model, args.embed_size, args.dropout, maxnumlabels,
-                args.layers),
-                flush=True)
+            "Building feed-forward decoder {}. Embed size {} / Dropout {} / "
+            " Max. Num. Labels {} / Num. Layers {}".format(
+                args.model, args.embed_size, args.dropout, maxnumlabels, args.layers
+            ),
+            flush=True,
+        )
         decoder = FFDecoder(
             args.embed_size,
             vocab_size,
@@ -137,34 +143,44 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
             dropout=args.dropout,
             pred_cardinality=cardinality_pred,
             nobjects=maxnumlabels,
-            n_layers=args.layers)
+            n_layers=args.layers,
+        )
 
-    elif 'lstm' in args.model:
+    elif "lstm" in args.model:
 
-        maxnumlabels += 1 ## TODO: check +1 (required for EOS token)
+        maxnumlabels += 1  ## TODO: check +1 (required for EOS token)
 
         print(
-            'Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. '.format(
-                args.model, args.embed_size, args.dropout, maxnumlabels),
-            flush=True)
+            "Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. ".format(
+                args.model, args.embed_size, args.dropout, maxnumlabels
+            ),
+            flush=True,
+        )
 
         decoder = DecoderRNN(
             args.embed_size,
             args.embed_size,
             vocab_size,
             dropout=args.dropout,
-            seq_length=maxnumlabels)
+            seq_length=maxnumlabels,
+        )
 
-    elif 'tf' in args.model:
+    elif "tf" in args.model:
 
-        maxnumlabels += 1 ## TODO: check +1 (required for EOS token)
+        maxnumlabels += 1  ## TODO: check +1 (required for EOS token)
 
         print(
-            'Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / '
-            'Num. Attention Heads {} / Num. Layers {}.'.format(
-                args.model, args.embed_size, args.dropout, maxnumlabels,
-                args.n_att, args.layers),
-            flush=True)
+            "Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / "
+            "Num. Attention Heads {} / Num. Layers {}.".format(
+                args.model,
+                args.embed_size,
+                args.dropout,
+                maxnumlabels,
+                args.n_att,
+                args.layers,
+            ),
+            flush=True,
+        )
 
         decoder = DecoderTransformer(
             args.embed_size,
@@ -175,38 +191,41 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
             pos_embeddings=False,
             num_layers=args.layers,
             learned=False,
-            normalize_before=True)
+            normalize_before=True,
+        )
 
     # label and eos loss
     label_losses = {
-        'bce': nn.BCEWithLogitsLoss(reduction='mean') if ('ff' in args.model and not 'shuffle' in args.model) else nn.BCELoss(reduction='mean'), 
-        'iou': softIoULoss(reduction='mean'),
-        'td': targetDistLoss(reduction='mean'), 
+        "bce": nn.BCEWithLogitsLoss(reduction="mean")
+        if ("ff" in args.model and not "shuffle" in args.model)
+        else nn.BCELoss(reduction="mean"),
+        "iou": softIoULoss(reduction="mean"),
+        "td": targetDistLoss(reduction="mean"),
     }
     pad_value = vocab_size - 1
-    
-    if 'ff' in args.model and not 'shuffle' in args.model:
+
+    if "ff" in args.model and not "shuffle" in args.model:
         loss_key = {k for k in label_losses.keys() if k in args.model}.pop()
         label_loss = label_losses[loss_key]
         eos_loss = None
-    elif 'set' in args.model:
-        loss_key = 'bce'
-        label_loss = label_losses['bce']
-        eos_loss = nn.BCELoss(reduction='none')
+    elif "set" in args.model:
+        loss_key = "bce"
+        label_loss = label_losses["bce"]
+        eos_loss = nn.BCELoss(reduction="none")
     else:
-        loss_key = 'cross-entropy'
-        label_loss = nn.CrossEntropyLoss(ignore_index=pad_value, reduction='mean')
+        loss_key = "cross-entropy"
+        label_loss = nn.CrossEntropyLoss(ignore_index=pad_value, reduction="mean")
         eos_loss = None
 
     # cardinality loss
-    if cardinality_pred == 'dc':
-        print('Using Dirichlet-Categorical cardinality loss.', flush=True)
-        cardinality_loss = DCLoss(U=args.U, dataset=dataset, reduction='mean')
-    elif cardinality_pred == 'cat':
-        print('Using categorical cardinality loss.', flush=True)
-        cardinality_loss = nn.CrossEntropyLoss(reduction='mean')
+    if cardinality_pred == "dc":
+        print("Using Dirichlet-Categorical cardinality loss.", flush=True)
+        cardinality_loss = DCLoss(U=args.U, dataset=dataset, reduction="mean")
+    elif cardinality_pred == "cat":
+        print("Using categorical cardinality loss.", flush=True)
+        cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
     else:
-        print('Using no cardinality loss.', flush=True)
+        print("Using no cardinality loss.", flush=True)
         cardinality_loss = None
 
     model = IngredientsPredictor(
@@ -218,11 +237,14 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
         crit_cardinality=cardinality_loss,
         pad_value=pad_value,
         eos_value=eos_value,
-        perminv=('set' in args.model),
-        is_decoder_ff=True if ('ff' in args.model and not 'shuffle' in args.model) else False,
+        perminv=("set" in args.model),
+        is_decoder_ff=True
+        if ("ff" in args.model and not "shuffle" in args.model)
+        else False,
         loss_label=loss_key,
         card_type=cardinality_pred,
-        dataset=dataset)
+        dataset=dataset,
+    )
 
     if args.freeze:
         freeze_fn(model)
@@ -231,26 +253,27 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
 
 
 class IngredientsPredictor(nn.Module):
-
-    def __init__(self,
-                 decoder,
-                 maxnumlabels,
-                 vocab_size,
-                 crit=None,
-                 crit_eos=None,
-                 crit_cardinality=None,
-                 pad_value=0,
-                 eos_value=0,
-                 perminv=True,
-                 is_decoder_ff=False,
-                 th=0.5,
-                 loss_label='bce',
-                 replacement=False,  # this is set to False because it is the ingredient prediction model
-                 card_type='none',
-                 dataset='recipe1m',
-                 U=2.36,
-                 use_empty_set=False,
-                 eps=1e-8):
+    def __init__(
+        self,
+        decoder,
+        maxnumlabels,
+        vocab_size,
+        crit=None,
+        crit_eos=None,
+        crit_cardinality=None,
+        pad_value=0,
+        eos_value=0,
+        perminv=True,
+        is_decoder_ff=False,
+        th=0.5,
+        loss_label="bce",
+        replacement=False,  # this is set to False because it is the ingredient prediction model
+        card_type="none",
+        dataset="recipe1m",
+        U=2.36,
+        use_empty_set=False,
+        eps=1e-8,
+    ):
 
         super(IngredientsPredictor, self).__init__()
         self.decoder = decoder
@@ -266,18 +289,28 @@ class IngredientsPredictor(nn.Module):
         self.loss_label = loss_label
         self.replacement = replacement
         self.card_type = card_type
-        self.dataset = dataset   # TODO: this may not be used at all in this code
+        self.dataset = dataset  # TODO: this may not be used at all in this code
         self.u_term = math.log(U)  # TODO: this may not be used at all in this code
         self.eps = eps
-        self.use_empty_set = use_empty_set  # TODO: this may not be used at all in this code
+        self.use_empty_set = (
+            use_empty_set  # TODO: this may not be used at all in this code
+        )
         self.vocab_size = vocab_size
 
-    def forward(self, img_features, label_target=None, compute_losses=False, compute_predictions=False):
+    def forward(
+        self,
+        img_features,
+        label_target=None,
+        compute_losses=False,
+        compute_predictions=False,
+    ):
 
         losses = {}
         predictions = None
 
-        assert (label_target is not None and compute_losses) or (label_target is None and not compute_losses)
+        assert (label_target is not None and compute_losses) or (
+            label_target is None and not compute_losses
+        )
 
         if not compute_losses and not compute_predictions:
             return losses, predictions
@@ -294,7 +327,7 @@ class IngredientsPredictor(nn.Module):
                 cardinality_target = target_k_hot.sum(dim=-1).unsqueeze(1)
 
                 # compute labels loss
-                losses['label_loss'] = self.crit(label_logits, target_k_hot)
+                losses["label_loss"] = self.crit(label_logits, target_k_hot)
 
                 # compute cardinality loss if needed
                 if self.crit_cardinality is not None:
@@ -302,25 +335,31 @@ class IngredientsPredictor(nn.Module):
                     # 1st label corresponds to 0 only if use_empty_set is false
                     # otherwise, 1st label corresponds to 1
                     offset = 0 if self.use_empty_set else 1
-                    losses['cardinality_loss'] = self.crit_cardinality(
-                        cardinality_logits, (cardinality_target.squeeze() - offset).long()) 
+                    losses["cardinality_loss"] = self.crit_cardinality(
+                        cardinality_logits,
+                        (cardinality_target.squeeze() - offset).long(),
+                    )
 
             if compute_predictions:
                 # consider cardinality
-                if self.card_type == 'dc' and self.loss_label == 'bce':
+                if self.card_type == "dc" and self.loss_label == "bce":
                     offset = 0 if self.use_empty_set else 1
-                    cardinality = torch.log(DC(cardinality_logits, dataset=self.dataset))
+                    cardinality = torch.log(
+                        DC(cardinality_logits, dataset=self.dataset)
+                    )
                     u_term = np.array(list(range(cardinality.size(-1)))) + offset
                     u_term = u_term * self.u_term
                     u_term = torch.from_numpy(u_term).unsqueeze(0).type_as(cardinality)
                     cardinality = cardinality + u_term
-                elif self.card_type == 'cat':
-                    cardinality = torch.nn.functional.log_softmax(cardinality_logits + self.eps, dim=-1)
+                elif self.card_type == "cat":
+                    cardinality = torch.nn.functional.log_softmax(
+                        cardinality_logits + self.eps, dim=-1
+                    )
                 else:
                     cardinality = None
 
                 # apply nonlinearity to label logits
-                if self.loss_label == 'td':
+                if self.loss_label == "td":
                     label_probs = nn.functional.softmax(label_logits, dim=-1)
                 else:
                     label_probs = torch.sigmoid(label_logits)
@@ -333,8 +372,10 @@ class IngredientsPredictor(nn.Module):
                     th=self.th,
                     cardinality_prediction=cardinality,
                     which_loss=self.loss_label,
-                    accumulate_probs=self.card_type == 'dc' and self.loss_label == 'bce',
-                    use_empty_set=self.use_empty_set)
+                    accumulate_probs=self.card_type == "dc"
+                    and self.loss_label == "bce",
+                    use_empty_set=self.use_empty_set,
+                )
 
         else:  # auto-regressive models
 
@@ -342,21 +383,22 @@ class IngredientsPredictor(nn.Module):
             # output label_logits is only used to compute losses in case of self.perminv (no teacher forcing)
             # predictions output is used for all auto-regressive models
             predictions, label_logits = self.decoder.sample(
-                img_features,
-                None,
-                first_token_value=0,
-                replacement=self.replacement)
+                img_features, None, first_token_value=0, replacement=self.replacement
+            )
 
             if compute_predictions:
                 # mask labels after finding eos (cardinality)
-                sample_mask = mask_from_eos(predictions, eos_value=self.eos_value, mult_before=False)
+                sample_mask = mask_from_eos(
+                    predictions, eos_value=self.eos_value, mult_before=False
+                )
                 predictions[sample_mask == 0] = self.pad_value
 
             if compute_losses:
                 # add dummy first word to sequence and remove last
                 first_word = torch.zeros(len(label_target)).type_as(label_target)
-                shift_target = torch.cat([first_word.unsqueeze(-1), label_target],
-                                         -1)[:, :-1]
+                shift_target = torch.cat([first_word.unsqueeze(-1), label_target], -1)[
+                    :, :-1
+                ]
                 if self.perminv:
                     # autoregressive mode for decoder when training with permutation invariant objective
                     # e.g. lstmset and tfset
@@ -368,9 +410,15 @@ class IngredientsPredictor(nn.Module):
                     # eos probability is the one assigned to the position self.eos_value of the softmax
                     # this is used with bce loss only
                     eos = label_probs[:, :, self.eos_value]
-                    eos_pos = (label_target == self.eos_value)  # all zeros except position where eos is in the gt
-                    eos_head = ((label_target != self.pad_value) & (label_target != self.eos_value))  # 1s for gt label positions, 0s starting from eos position in the gt
-                    eos_target = ~eos_head  # 0s for gt label positions, 1s starting from eos position in the gt
+                    eos_pos = (
+                        label_target == self.eos_value
+                    )  # all zeros except position where eos is in the gt
+                    eos_head = (label_target != self.pad_value) & (
+                        label_target != self.eos_value
+                    )  # 1s for gt label positions, 0s starting from eos position in the gt
+                    eos_target = (
+                        ~eos_head
+                    )  # 0s for gt label positions, 1s starting from eos position in the gt
 
                     # select transformer steps to pool (steps corresponding to set elements, i.e. labels)
                     label_probs = label_probs * eos_head.float().unsqueeze(-1)
@@ -379,28 +427,36 @@ class IngredientsPredictor(nn.Module):
                     label_probs, _ = torch.max(label_probs, dim=1)
 
                     # compute label loss
-                    target_k_hot = label2_k_hots(label_target, self.pad_value, remove_eos=True)
+                    target_k_hot = label2_k_hots(
+                        label_target, self.pad_value, remove_eos=True
+                    )
                     loss = self.crit(label_probs[:, 1:], target_k_hot.float())
-                    losses['label_loss'] = loss
+                    losses["label_loss"] = loss
 
                     # compute eos loss
                     eos_loss = self.crit_eos(eos, eos_target.float())
                     # eos loss is computed for all timesteps <= eos in gt and
                     # equally penalizes the head (all 0s) and the true eos position (1)
-                    losses['eos_loss'] = (0.5 * (eos_loss * eos_pos.float()).sum(1) / (
-                                            eos_pos.float().sum(1) + self.eps) + \
-                                    0.5 * (eos_loss * eos_head.float()).sum(1) / (
-                                            eos_head.float().sum(1) + self.eps)).mean()
+                    losses["eos_loss"] = (
+                        0.5
+                        * (eos_loss * eos_pos.float()).sum(1)
+                        / (eos_pos.float().sum(1) + self.eps)
+                        + 0.5
+                        * (eos_loss * eos_head.float()).sum(1)
+                        / (eos_head.float().sum(1) + self.eps)
+                    ).mean()
 
                 else:
                     # other autoregressive models
                     # we need to recompute logits using teacher forcing (forward pass)
                     label_logits, _ = self.decoder(img_features, None, shift_target)
-                    label_logits_v = label_logits.view(label_logits.size(0) * label_logits.size(1), -1)
+                    label_logits_v = label_logits.view(
+                        label_logits.size(0) * label_logits.size(1), -1
+                    )
 
                     # compute label loss
                     label_target_v = label_target.view(-1)
                     loss = self.crit(label_logits_v, label_target_v)
-                    losses['label_loss'] = loss
+                    losses["label_loss"] = loss
 
         return losses, predictions

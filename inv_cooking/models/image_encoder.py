@@ -1,28 +1,27 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the 
+# This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from torchvision.models import resnet50, resnet101, resnext101_32x8d
-import torch
 import torch.nn as nn
-import random
-import numpy as np
 
 from inv_cooking.models.modules.utils import freeze_fn
 
 
 class ImageEncoder(nn.Module):
-
-    def __init__(self, embed_size, dropout=0.5, model='resnet50', pretrained=True, freeze='none'):
+    def __init__(
+        self, embed_size, dropout=0.5, model="resnet50", pretrained=True, freeze="none"
+    ):
         """Load the pretrained model and replace top fc layer."""
         super(ImageEncoder, self).__init__()
 
         pretrained_net = globals()[model](pretrained=pretrained)
 
-        if 'resnet' in model or 'resnext' in model:
-            modules = list(pretrained_net.children())[:-2]  # delete avg pooling and last fc layer
+        if "resnet" in model or "resnext" in model:
+            modules = list(pretrained_net.children())[
+                :-2
+            ]  # delete avg pooling and last fc layer
         else:
-            raise ValueError('Invalid image model {}'.format(model))
+            raise ValueError("Invalid image model {}".format(model))
 
         self.pretrained_net = nn.Sequential(*modules)
         in_dim = pretrained_net.fc.in_features
@@ -32,12 +31,15 @@ class ImageEncoder(nn.Module):
         else:
             self.last_module = nn.Sequential(
                 nn.Conv2d(in_dim, embed_size, kernel_size=1, padding=0, bias=False),
-                nn.Dropout(dropout), nn.BatchNorm2d(embed_size, momentum=0.01), nn.ReLU())
+                nn.Dropout(dropout),
+                nn.BatchNorm2d(embed_size, momentum=0.01),
+                nn.ReLU(),
+            )
 
         # eventually freeze image encoder
-        if freeze == 'pretrained':
+        if freeze == "pretrained":
             freeze_fn(self.pretrained_net)
-        elif freeze == 'all':
+        elif freeze == "all":
             freeze_fn(self.pretrained_net)
             if self.last_module is not None:
                 freeze_fn(self.last_module)
@@ -60,4 +62,3 @@ class ImageEncoder(nn.Module):
         features = features.view(features.size(0), features.size(1), -1)
 
         return features
-            
