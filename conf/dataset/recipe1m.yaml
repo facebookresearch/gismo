@@ -4,6 +4,9 @@ name: "recipe1m"
 path: "/checkpoint/qduval/recipe1m/"
 splits_path: "data/splits/recipe1m"
 
+image_resize: 448
+image_crop_size: 448
+
 filtering:
   max_num_images: 5
   max_num_labels: 20

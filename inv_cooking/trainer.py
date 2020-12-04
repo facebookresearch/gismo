@@ -59,7 +59,6 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         shuffle_labels=shuffle_labels,
         include_eos=include_eos,
         seed=cfg.misc.seed,
-        preprocessing=cfg.preprocessing,
         return_img=return_img,
         return_ingr=return_ingr,
         return_recipe=return_recipe

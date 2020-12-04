@@ -17,7 +17,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
         batch_size: int,
         num_workers: int,
         shuffle_labels=False,
-        preprocessing=None,
         include_eos=False,
         seed=1234,
         checkpoint=None,
@@ -35,7 +34,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
         self.checkpoint = (
             checkpoint  ## TODO: check how checkpoint is performed in lightning
         )
-        self.preprocessing = preprocessing
         self.return_img = return_img
         self.return_ingr = return_ingr
         self.return_recipe = return_recipe
@@ -119,13 +117,13 @@ class Recipe1MDataModule(pl.LightningDataModule):
         return dataset
 
     def _get_transforms(self, stage):
-        pipeline = [transforms.Resize(self.preprocessing.im_resize)]
+        pipeline = [transforms.Resize(self.dataset_config.image_resize)]
         if stage == "train":
             pipeline.append(transforms.RandomHorizontalFlip())
             pipeline.append(transforms.RandomAffine(degrees=10, translate=(0.1, 0.1)))
-            pipeline.append(transforms.RandomCrop(self.preprocessing.crop_size))
+            pipeline.append(transforms.RandomCrop(self.dataset_config.image_crop_size))
         else:
-            pipeline.append(transforms.CenterCrop(self.preprocessing.crop_size))
+            pipeline.append(transforms.CenterCrop(self.dataset_config.image_crop_size))
         pipeline.append(transforms.ToTensor())
         pipeline.append(
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))

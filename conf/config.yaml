@@ -36,10 +36,6 @@ checkpoint:
   es_metric: 'o_f1'
   resume_from: None
 
-preprocessing:
-  crop_size: 448
-  im_resize: 448
-
 misc:
   seed: 1235
   batch_size: 16

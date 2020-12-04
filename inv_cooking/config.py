@@ -36,6 +36,8 @@ class DatasetConfig:
     name: DatasetName = DatasetName.recipe1m
     path: str = MISSING
     splits_path: str = MISSING
+    image_resize: int = MISSING
+    image_crop_size: int = MISSING
     filtering: DatasetFilterConfig = DatasetFilterConfig()
     pre_processing: DictConfig = untyped_config()
 
@@ -59,7 +61,6 @@ class Config:
     recipe_gen: DictConfig = untyped_config()
     optim: DictConfig = untyped_config()
     checkpoint: DictConfig = untyped_config()
-    preprocessing: DictConfig = untyped_config()
     misc: DictConfig = untyped_config()
     dataset: DatasetConfig = DatasetConfig()
     image_encoder: DictConfig = untyped_config()
