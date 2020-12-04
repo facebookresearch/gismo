@@ -48,7 +48,7 @@ class Im2Recipe(nn.Module):
         # ingredient encoder model
         self.ingr_encoder = IngredientsEncoder(
             recipegen_args.embed_size,
-            num_classes=ingr_vocab_size,
+            voc_size=ingr_vocab_size,
             dropout=recipegen_args.dropout,
             scale_grad=False,
         )
