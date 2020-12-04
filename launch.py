@@ -1,12 +1,12 @@
 import hydra
 from omegaconf import DictConfig
 
-from inv_cooking.main import main as run
+from inv_cooking.scheduler import schedule_job
 
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: DictConfig) -> None:
-    run(cfg)
+    schedule_job(cfg)
 
 
 if __name__ == "__main__":

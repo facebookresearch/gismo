@@ -257,12 +257,10 @@ class LitInverseCooking(pl.LightningModule):
 
     def validation_step_end(self, metrics):
         valid_step_outputs = self._shared_eval_step_end(metrics)
-
         return valid_step_outputs
 
     def test_step_end(self, metrics):
         test_step_outputs = self._shared_eval_step_end(metrics)
-
         return test_step_outputs
 
     def _shared_eval_step_end(self, metrics):

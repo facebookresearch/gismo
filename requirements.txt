@@ -6,3 +6,4 @@ nltk
 hydra-core
 pytorch-lightning
 tensorboard
+submitit==1.1.5

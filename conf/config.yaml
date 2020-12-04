@@ -1,6 +1,6 @@
 hydra:
   run:
-    dir: ${checkpoint.dir}/${task}-${ingr_predictor.model}
+    dir: ${checkpoint.dir}/${task}-${ingr_predictor.model}/${now:%Y-%m-%d_%H-%M-%S}
 
 defaults:
   - dataset: recipe1m
@@ -8,6 +8,7 @@ defaults:
   - ingr_predictor: ff
 
 task: im2recipe
+executor: local
 
 recipe_gen:
   dropout: 0.5
@@ -56,3 +57,13 @@ recipe1m_pre_processing:
   minnumingrs: 2  # min number of ingredients
   minnumwords: 20  # minimum number of characters in recipe
   forcegen: true
+
+slurm:
+  log_folder: '/checkpoint/qduval/log_runs'
+  partition: dev
+  nodes: 1
+  cpus_per_task: 8
+  gpus_per_node: 8
+  mem_by_gpu: 60
+  timeout_min: 2880  # 2 days
+  gpu_type: volta

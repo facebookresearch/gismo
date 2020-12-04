@@ -1,16 +1,15 @@
 import os
 import pickle
 
-import hydra
 import lmdb
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.utils.data as data
 from PIL import Image
-
 # from torch.utils.data.sampler import SequentialSampler
 from torchvision import transforms as tf
+
 
 # from recipe1m_preprocess import Vocabulary
 
@@ -342,8 +341,8 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def _get_dataset(self, stage):
 
         # reads the file with ids to use for the corresponding split
-        orig_cwd = hydra.utils.get_original_cwd()
-        splits_filename = os.path.join(orig_cwd, "data/splits/recipe1m", stage + ".txt")
+        # TODO - read this path from the configuration
+        splits_filename = os.path.join(os.getcwd(), "data/splits/recipe1m", stage + ".txt")
 
         with open(splits_filename, "r") as f:
             split_data = np.array([int(line.rstrip("\n")) for line in f])

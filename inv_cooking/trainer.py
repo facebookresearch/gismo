@@ -6,11 +6,11 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from .inversecooking import LitInverseCooking
-from .loaders.recipe1m_loader import Recipe1MDataModule
+from inv_cooking.inversecooking import LitInverseCooking
+from inv_cooking.loaders.recipe1m_loader import Recipe1MDataModule
 
 
-def main(cfg: DictConfig) -> None:
+def run_training(cfg: DictConfig, gpus: int, nodes: int, distributed_mode: str) -> None:
 
     # fix seed
     seed_everything(cfg.misc.seed)
@@ -113,9 +113,9 @@ def main(cfg: DictConfig) -> None:
 
     # trainer
     trainer = pl.Trainer(
-        gpus=2,
-        # num_nodes=1,
-        accelerator="dp",
+        gpus=gpus,
+        num_nodes=nodes,
+        accelerator=distributed_mode,
         benchmark=True,  # increases speed for fixed image sizes
         check_val_every_n_epoch=1,
         checkpoint_callback=True,
