@@ -9,7 +9,6 @@ maxinstrlength: 15
 
 pre_processing:
   save_path: '/checkpoint/qduval/recipe1m/preprocessed'
-  prefix: "final_"
   threshold_ingrs: 10  # minimum ingr count threshold
   threshold_words: 10  # minimum word count threshold
   maxnuminstrs: 20  # max number of instructions (sentences)

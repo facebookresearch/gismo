@@ -419,21 +419,17 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
 def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
     vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(recipe1m_path, config)
 
-    ingredients_path = os.path.join(
-        config.save_path, config.prefix + "recipe1m_vocab_ingrs.pkl"
-    )
+    ingredients_path = os.path.join(config.save_path, "final_recipe1m_vocab_ingrs.pkl")
     with open(ingredients_path, "wb") as f:
         pickle.dump(vocab_ingrs, f)
 
-    vocab_tokens_path = os.path.join(
-        config.save_path, config.prefix + "recipe1m_vocab_toks.pkl"
-    )
+    vocab_tokens_path = os.path.join(config.save_path, "final_recipe1m_vocab_toks.pkl")
     with open(vocab_tokens_path, "wb") as f:
         pickle.dump(vocab_toks, f)
 
     for split in dataset.keys():
         recipe_split_path = os.path.join(
-            config.save_path, config.prefix + "recipe1m_" + split + ".pkl"
+            config.save_path, "final_recipe1m_" + split + ".pkl"
         )
         with open(recipe_split_path, "wb",) as f:
             pickle.dump(dataset[split], f)
