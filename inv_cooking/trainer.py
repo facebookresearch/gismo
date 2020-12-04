@@ -6,8 +6,8 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
+from inv_cooking.datasets.recipe1m.loader import Recipe1MDataModule
 from inv_cooking.inversecooking import LitInverseCooking
-from inv_cooking.loaders.recipe1m_loader import Recipe1MDataModule
 
 
 def run_training(cfg: DictConfig, gpus: int, nodes: int, distributed_mode: str) -> None:

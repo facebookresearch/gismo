@@ -1,7 +1,7 @@
 import hydra
 from omegaconf import DictConfig
 
-from inv_cooking.loaders.recipe1m_preprocess import run_dataset_pre_processing
+from inv_cooking.datasets.recipe1m.preprocess import run_dataset_pre_processing
 
 
 @hydra.main(config_path="conf", config_name="config")
