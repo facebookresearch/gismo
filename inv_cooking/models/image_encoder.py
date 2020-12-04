@@ -38,7 +38,7 @@ class ImageEncoder(nn.Module):
             )
         self._freeze_layers(freeze)
 
-    def _freeze_layers(self, freeze):
+    def _freeze_layers(self, freeze: str):
         if freeze == "pretrained":
             freeze_fn(self.pretrained_net)
         elif freeze == "all":
@@ -46,7 +46,7 @@ class ImageEncoder(nn.Module):
             if self.last_module is not None:
                 freeze_fn(self.last_module)
 
-    def forward(self, images: torch.Tensor, keep_cnn_gradients: bool = False):
+    def forward(self, images: torch.Tensor):
         if images is None:
             return None
 

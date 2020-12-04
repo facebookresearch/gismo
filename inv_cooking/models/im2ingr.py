@@ -39,14 +39,11 @@ class Im2Ingr(nn.Module):
     def forward(
         self, img, label_target=None, compute_losses=False, compute_predictions=False
     ):
-
         img_features = self.image_encoder(img)
-
         losses, predictions = self.ingr_predictor(
             img_features,
             label_target=label_target,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
         )
-
         return losses, predictions

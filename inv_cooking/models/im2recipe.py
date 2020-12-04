@@ -22,9 +22,7 @@ class Im2Recipe(nn.Module):
         maxrecipelen: int,
         ingr_eos_value,
     ):
-
-        super(Im2Recipe, self).__init__()
-
+        super().__init__()
         self.ingr_vocab_size = ingr_vocab_size
         self.ingr_pad_value = ingr_vocab_size - 1
         self.ingr_eos_value = ingr_eos_value
@@ -33,12 +31,9 @@ class Im2Recipe(nn.Module):
         if ingr_pred_config.freeze:
             image_encoder_config.freeze = "all"
 
-        # image encoder model
         self.image_encoder = ImageEncoder(
             ingr_pred_config.embed_size, **image_encoder_config
         )
-
-        # set predictor model
         self.ingr_predictor = get_ingr_predictor(
             ingr_pred_config,
             vocab_size=ingr_vocab_size,
@@ -46,16 +41,12 @@ class Im2Recipe(nn.Module):
             maxnumlabels=maxnumlabels,
             eos_value=ingr_eos_value,
         )
-
-        # ingredient encoder model
         self.ingr_encoder = IngredientsEncoder(
             recipe_gen_config.embed_size,
             voc_size=ingr_vocab_size,
             dropout=recipe_gen_config.dropout,
             scale_grad=False,
         )
-
-        # recipe generator model
         self.recipe_gen = RecipeGenerator(
             recipe_gen_config, instr_vocab_size, maxrecipelen
         )
@@ -69,37 +60,25 @@ class Im2Recipe(nn.Module):
         compute_losses=False,
         compute_predictions=False,
     ):
-
-        losses = {}
         ingr_predictions = None
-        predictions = None
-
         img_features = self.image_encoder(img)
 
         if use_ingr_pred:
-            # get ingredients predictions
+            # predict ingredients (do not use the ground truth)
             ingr_losses, ingr_predictions = self.ingr_predictor(
                 img_features,
                 label_target=ingr_gt,
                 compute_losses=compute_losses,
                 compute_predictions=True,
             )
-
-            # encode ingredients
             ingr_features = self.ingr_encoder(ingr_predictions)
-
-            # save ingredient losses losses
-
-            # get ingredients' mask
             ingr_mask = mask_from_eos(
                 ingr_predictions, eos_value=self.ingr_eos_value, mult_before=False
             )
             ingr_mask = ingr_mask.float().unsqueeze(1)
         else:
-            # encode ingredients (using gt ingredients)
+            # encode ingredients (using ground truth ingredients)
             ingr_features = self.ingr_encoder(ingr_gt)
-
-            # get ingredients' mask
             ingr_mask = mask_from_eos(
                 ingr_gt, eos_value=self.ingr_eos_value, mult_before=False
             )
@@ -114,7 +93,5 @@ class Im2Recipe(nn.Module):
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
         )
-
-        losses["recipe_loss"] = loss
-
+        losses = {"recipe_loss": loss}
         return losses, ingr_predictions, predictions

@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
@@ -21,23 +22,22 @@ class RecipeGenerator(nn.Module):
         )
 
         # recipe loss
-        self.crit = nn.CrossEntropyLoss(
+        self.criterion = nn.CrossEntropyLoss(
             ignore_index=instr_vocab_size - 1, reduction="mean"
         )
         # MaskedCrossEntropyCriterion(ignore_index=[instr_vocab_size-1], reduce=False)
 
     def forward(
         self,
-        img_features,
-        ingr_features,
-        ingr_mask,
-        recipe,
+        img_features: torch.Tensor,
+        ingr_features: torch.Tensor,
+        ingr_mask: torch.Tensor,
+        recipe_gt: torch.Tensor,
         compute_losses=False,
         compute_predictions=False,
         greedy=True,
         temperature=1.0,
     ):
-
         loss = None
         predictions = None
 
@@ -45,7 +45,7 @@ class RecipeGenerator(nn.Module):
             output_logits, _ = self.model(
                 features=ingr_features,
                 mask=ingr_mask,
-                captions=recipe,
+                captions=recipe_gt,
                 other_features=img_features,
             )
 
@@ -54,9 +54,9 @@ class RecipeGenerator(nn.Module):
             output_logits = output_logits.view(
                 output_logits.size(0) * output_logits.size(1), -1
             )
-            targets = recipe[:, 1:]
+            targets = recipe_gt[:, 1:]
             targets = targets.contiguous().view(-1)
-            loss = self.crit(output_logits, targets)
+            loss = self.criterion(output_logits, targets)
 
         if compute_predictions:
             predictions, _ = self.model.sample(
