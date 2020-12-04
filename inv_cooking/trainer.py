@@ -52,8 +52,10 @@ def run_training(cfg: DictConfig, gpus: int, nodes: int, distributed_mode: str) 
         raise ValueError(f"Unknown task: {cfg.task}.")
 
     # data module
+    splits_path = os.path.join(os.getcwd(), cfg.dataset.splits_path)
     dm = Recipe1MDataModule(
         data_dir=cfg.dataset.path,
+        splits_path=splits_path,
         maxnumlabels=cfg.dataset.maxnumlabels,
         maxnuminstrs=cfg.dataset.maxnuminstrs,
         maxinstrlength=cfg.dataset.maxinstrlength,

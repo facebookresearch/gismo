@@ -1,31 +1,25 @@
 import os
 import pickle
+from typing import Tuple
 
 import lmdb
 import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.utils.data as data
+import torchvision.transforms as transforms
 from PIL import Image
-# from torch.utils.data.sampler import SequentialSampler
-from torchvision import transforms as tf
-
-
-# from recipe1m_preprocess import Vocabulary
-
-
-# from utils import RandomSamplerWithState
 
 
 class Recipe1M(data.Dataset):
     def __init__(
         self,
-        data_dir,
-        split,
-        maxnumims,
-        maxnumlabels,
-        maxnuminstrs=10,
-        maxinstrlength=15,
+        data_dir: str,
+        split: str,
+        maxnumims: int,
+        maxnumlabels: int,
+        maxnuminstrs: int = 10,
+        maxinstrlength: int = 15,
         return_img=False,
         return_ingr=False,
         return_recipe=False,
@@ -35,7 +29,6 @@ class Recipe1M(data.Dataset):
         split_data=None,
         include_eos=False,
     ):
-
         self.root = os.path.join(data_dir, "images", split)
         self.aux_data_dir = os.path.join(data_dir, "preprocessed")
         self.split = split
@@ -117,9 +110,7 @@ class Recipe1M(data.Dataset):
         # prune dataset
         self.dataset = [self.dataset[i] for i in ids]
 
-    def __getitem__(self, index):
-        """Returns one triplet (image, ingredients, recipe)."""
-
+    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "recipe"]:
         ret_img = None
         ret_ingr = None
         ret_rec = None
@@ -236,12 +227,13 @@ class Recipe1M(data.Dataset):
 class Recipe1MDataModule(pl.LightningDataModule):
     def __init__(
         self,
-        data_dir,
-        maxnumlabels,
-        batch_size,
-        num_workers,
-        maxnuminstrs=10,
-        maxinstrlength=15,
+        data_dir: str,
+        splits_path: str,
+        maxnumlabels: int,
+        batch_size: int,
+        num_workers: int,
+        maxnuminstrs: int = 10,
+        maxinstrlength: int = 15,
         shuffle_labels=False,
         preprocessing=None,
         include_eos=False,
@@ -252,8 +244,8 @@ class Recipe1MDataModule(pl.LightningDataModule):
         return_recipe=False,
     ):
         super().__init__()
-
         self.data_dir = data_dir
+        self.splits_path = splits_path
         self.maxnumlabels = maxnumlabels
         self.maxnuminstrs = maxnuminstrs
         self.maxinstrlength = maxinstrlength
@@ -275,7 +267,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             # TODO: preprocessing
             pass
 
-    def setup(self, stage):
+    def setup(self, stage: str):
         if stage == "fit":
             self.dataset_train = self._get_dataset("train")
             self.dataset_val = self._get_dataset("val")
@@ -295,11 +287,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
         print(f"Instruction vocabulary size: {self.instr_vocab_size}.")
 
     def train_dataloader(self):
-
-        # sampler = RandomSamplerWithState(dataset, self.batch_size, self.seed)
-        # if self.checkpoint is not None:
-        #     sampler.set_state(self.checkpoint['args'].current_epoch, self.checkpoint['current_step'])
-
         data_loader = torch.utils.data.DataLoader(
             dataset=self.dataset_train,
             batch_size=self.batch_size,
@@ -310,8 +297,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
             collate_fn=_collate_fn,
             worker_init_fn=self._worker_init_fn,
         )
-        # sampler=sampler)
-
         return data_loader
 
     def val_dataloader(self):
@@ -320,10 +305,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return self._shared_eval_dataloader("test")
 
-    def _shared_eval_dataloader(self, split):
-
-        # sampler = SequentialSampler(dataset)
-
+    def _shared_eval_dataloader(self, split: str):
         data_loader = torch.utils.data.DataLoader(
             dataset=self.dataset_val if split == "val" else self.dataset_test,
             batch_size=self.batch_size,
@@ -334,20 +316,14 @@ class Recipe1MDataModule(pl.LightningDataModule):
             collate_fn=_collate_fn,
             worker_init_fn=self._worker_init_fn,
         )
-        # sampler=sampler)
-
         return data_loader
 
-    def _get_dataset(self, stage):
+    def _get_dataset(self, stage: str):
 
         # reads the file with ids to use for the corresponding split
-        # TODO - read this path from the configuration
-        splits_filename = os.path.join(os.getcwd(), "data/splits/recipe1m", stage + ".txt")
-
+        splits_filename = os.path.join(self.splits_path, stage + ".txt")
         with open(splits_filename, "r") as f:
             split_data = np.array([int(line.rstrip("\n")) for line in f])
-
-        transform = self._get_transforms(stage=stage)
 
         dataset = Recipe1M(
             self.data_dir,
@@ -356,9 +332,8 @@ class Recipe1MDataModule(pl.LightningDataModule):
             maxnumlabels=self.maxnumlabels,
             maxnuminstrs=self.maxnuminstrs,
             maxinstrlength=self.maxinstrlength,
-            transform=transform,
-            # use_lmdb=True,  # true for recipe1m
-            use_lmdb=False,
+            transform=self._get_transforms(stage=stage),
+            use_lmdb=False,  # TODO - check if necessary
             shuffle_labels=self.shuffle_labels,
             split_data=split_data,
             include_eos=self.include_eos,
@@ -366,26 +341,21 @@ class Recipe1MDataModule(pl.LightningDataModule):
             return_ingr=self.return_ingr,
             return_recipe=self.return_recipe,
         )
-
         return dataset
 
     def _get_transforms(self, stage):
-        transforms_list = [tf.Resize(self.preprocessing.im_resize)]
-
+        pipeline = [transforms.Resize(self.preprocessing.im_resize)]
         if stage == "train":
-            transforms_list.append(tf.RandomHorizontalFlip())
-            transforms_list.append(tf.RandomAffine(degrees=10, translate=(0.1, 0.1)))
-            transforms_list.append(tf.RandomCrop(self.preprocessing.crop_size))
+            pipeline.append(transforms.RandomHorizontalFlip())
+            pipeline.append(transforms.RandomAffine(degrees=10, translate=(0.1, 0.1)))
+            pipeline.append(transforms.RandomCrop(self.preprocessing.crop_size))
         else:
-            transforms_list.append(tf.CenterCrop(self.preprocessing.crop_size))
-
-        transforms_list.append(tf.ToTensor())
-        transforms_list.append(
-            tf.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+            pipeline.append(transforms.CenterCrop(self.preprocessing.crop_size))
+        pipeline.append(transforms.ToTensor())
+        pipeline.append(
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         )
-        transforms = tf.Compose(transforms_list)
-
-        return transforms
+        return transforms.Compose(pipeline)
 
     def _worker_init_fn(self, worker_id):
         np.random.seed(self.seed)
