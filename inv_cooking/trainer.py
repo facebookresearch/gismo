@@ -1,23 +1,23 @@
 import os
 
 import pytorch_lightning as pl
-from omegaconf import DictConfig
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
+from inv_cooking.config import Config, TaskType
 from inv_cooking.datasets.recipe1m.loader import Recipe1MDataModule
 from inv_cooking.inversecooking import LitInverseCooking
 
 
-def run_training(cfg: DictConfig, gpus: int, nodes: int, distributed_mode: str) -> None:
+def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
 
     # fix seed
     seed_everything(cfg.misc.seed)
 
     # checkpointing
     checkpoint_dir = os.path.join(
-        cfg.checkpoint.dir, cfg.task + "-" + cfg.ingr_predictor.model
+        cfg.checkpoint.dir, str(cfg.task) + "-" + cfg.ingr_predictor.model
     )
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
@@ -30,19 +30,19 @@ def run_training(cfg: DictConfig, gpus: int, nodes: int, distributed_mode: str) 
         else True
     )
 
-    if cfg.task == "im2ingr":
+    if cfg.task == TaskType.im2ingr:
         return_img = True
         return_ingr = True
         return_recipe = False
         monitor_metric = "val_o_f1"
         best_metric = "max"
-    elif cfg.task == "im2recipe":
+    elif cfg.task == TaskType.im2recipe:
         return_img = True
         return_ingr = True
         return_recipe = True
         monitor_metric = "val_perplexity"
         best_metric = "min"
-    elif cfg.task == "ingr2recipe":
+    elif cfg.task == TaskType.ingr2recipe:
         return_img = False
         return_ingr = True
         return_recipe = True
@@ -78,20 +78,20 @@ def run_training(cfg: DictConfig, gpus: int, nodes: int, distributed_mode: str) 
         task=cfg.task,
         im_args=cfg.image_encoder,
         ingrpred_args=cfg.ingr_predictor,
-        recipegen_args=cfg.recipe_gen if "recipe" in cfg.task else None,
+        recipegen_args=cfg.recipe_gen if "recipe" in str(cfg.task) else None,
         optim_args=cfg.optim,
         dataset_name=cfg.dataset.name,
         maxnumlabels=cfg.dataset.maxnumlabels,
         maxrecipelen=cfg.dataset.maxnuminstrs * cfg.dataset.maxinstrlength,
         ingr_vocab_size=dm.ingr_vocab_size,
-        instr_vocab_size=dm.instr_vocab_size if "recipe" in cfg.task else None,
+        instr_vocab_size=dm.instr_vocab_size if "recipe" in str(cfg.task) else None,
         ingr_eos_value=dm.ingr_eos_value,
     )
 
     # logger
     tb_logger = pl_loggers.TensorBoardLogger(
         os.path.join(cfg.checkpoint.dir, "logs/"),
-        name=cfg.task + "-" + cfg.ingr_predictor.model,
+        name=str(cfg.task) + "-" + cfg.ingr_predictor.model,
     )
 
     # checkpointing

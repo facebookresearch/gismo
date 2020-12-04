@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 from torch.optim.lr_scheduler import ExponentialLR
 
+from .config import TaskType
 from .models.im2ingr import Im2Ingr
 from .models.im2recipe import Im2Recipe
 from .models.ingredients_predictor import label2_k_hots
@@ -11,7 +12,7 @@ from .utils.metrics import compute_metrics, update_error_counts
 class LitInverseCooking(pl.LightningModule):
     def __init__(
         self,
-        task,
+        task: TaskType,
         im_args,
         ingrpred_args,
         recipegen_args,
@@ -25,7 +26,7 @@ class LitInverseCooking(pl.LightningModule):
     ):
         super().__init__()
 
-        if task == "im2ingr":
+        if task == TaskType.im2ingr:
             self.model = Im2Ingr(
                 im_args,
                 ingrpred_args,
@@ -34,7 +35,7 @@ class LitInverseCooking(pl.LightningModule):
                 maxnumlabels,
                 ingr_eos_value,
             )
-        elif task == "im2recipe":
+        elif task == TaskType.im2recipe:
             self.model = Im2Recipe(
                 im_args,
                 ingrpred_args,
@@ -46,8 +47,8 @@ class LitInverseCooking(pl.LightningModule):
                 maxrecipelen,
                 ingr_eos_value,
             )
-        elif task == "ingr2recipe":
-            raise NotImplementedError("ingr2recipe is not implemented yet")
+        else:
+            raise NotImplementedError(f"Task {task} is not implemented yet")
 
         self.task = task
         self.pretrained_imenc = im_args.pretrained
@@ -72,14 +73,14 @@ class LitInverseCooking(pl.LightningModule):
         compute_losses=False,
         compute_predictions=False,
     ):
-        if self.task == "im2ingr":
+        if self.task == TaskType.im2ingr:
             out = self.model(
                 img=img,
                 label_target=ingr_gt,
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
             )
-        elif self.task == "im2recipe":
+        elif self.task == TaskType.im2recipe:
             out = self.model(
                 img=img,
                 recipe_gt=recipe_gt,
@@ -93,7 +94,6 @@ class LitInverseCooking(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         out = self(compute_losses=True, split="train", **batch)
-
         return out[0]
 
     def validation_step(self, batch, batch_idx):
@@ -109,9 +109,9 @@ class LitInverseCooking(pl.LightningModule):
         metrics = {}
 
         # get model outputs
-        if self.task == "im2ingr":
+        if self.task == TaskType.im2ingr:
             out = self(batch["img"], split=prefix, compute_predictions=True)
-        elif self.task == "im2recipe":
+        elif self.task == TaskType.im2recipe:
             if prefix == "val":
                 out = self(
                     **batch,
@@ -153,7 +153,7 @@ class LitInverseCooking(pl.LightningModule):
             metrics = compute_metrics(self.overall_error_counts, which_metrics=["i_f1"])
 
         # compute recipe metrics
-        if self.task == "im2recipe":
+        if self.task == TaskType.im2recipe:
             metrics["perplexity"] = torch.exp(out[0]["recipe_loss"])
 
         # save n_samples
@@ -333,7 +333,7 @@ class LitInverseCooking(pl.LightningModule):
                 }
             ]
 
-        if self.task == "im2recipe":
+        if self.task == TaskType.im2recipe:
             params_recgen = filter(
                 lambda p: p.requires_grad, self.model.recipe_gen.parameters()
             )
