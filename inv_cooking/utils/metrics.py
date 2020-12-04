@@ -75,39 +75,34 @@ class DCLoss(nn.Module):
         return loss
 
 
-def softIoU(out, target, sum_axis=1, e=1e-8):
-    # logits to probs
-    out = torch.sigmoid(out)
-    # loss
-    num = (out * target).sum(sum_axis, True) + e
-    den = (out + target - out * target).sum(sum_axis, True) + e
-    iou = num / den
-
-    return iou
+@torch.jit.script
+def soft_iou(logits: torch.Tensor, target: torch.Tensor, sum_axis: int = 1, epsilon: float = 1e-8):
+    probs = torch.sigmoid(logits)
+    num = (probs * target).sum(sum_axis, True) + epsilon
+    den = (probs + target - probs * target).sum(sum_axis, True) + epsilon
+    return num / den
 
 
-class softIoULoss(nn.Module):
-    def __init__(self, reduction="none", e=1e-8):
-        super(softIoULoss, self).__init__()
+class SoftIoULoss(nn.Module):
+    def __init__(self, reduction="none", epsilon=1e-8):
+        super().__init__()
         assert reduction in ["none", "mean"]
         self.reduction = reduction
-        self.e = e
+        self.epsilon = epsilon
 
-    def forward(self, inputs, targets):
-        loss = 1.0 - softIoU(inputs, targets, e=self.e)
-
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
+        loss = 1.0 - soft_iou(inputs, targets, epsilon=self.epsilon)
         if self.reduction == "mean":
             loss = loss.mean()
-
         return loss
 
 
-class targetDistLoss(nn.Module):
-    def __init__(self, reduction="none", e=1e-8):
-        super(targetDistLoss, self).__init__()
+class TargetDistributionLoss(nn.Module):
+    def __init__(self, reduction="none", epsilon=1e-8):
+        super().__init__()
         assert reduction in ["none", "mean"]
         self.reduction = reduction
-        self.e = e
+        self.epsilon = epsilon
 
     def forward(self, label_prediction, label_target):
         # create target distribution
@@ -126,7 +121,7 @@ class targetDistLoss(nn.Module):
 
         # divide target by number of elements and add equal prob to all elements for the empty sets
         target_distribution = (
-            label_target.float() / (cardinality_target + self.e)
+            label_target.float() / (cardinality_target + self.epsilon)
             + is_empty * flat_target
         )
 

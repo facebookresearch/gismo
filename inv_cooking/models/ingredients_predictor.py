@@ -12,7 +12,7 @@ from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
-from inv_cooking.utils.metrics import DC, DCLoss, softIoULoss, targetDistLoss
+from inv_cooking.utils.metrics import DC, DCLoss, SoftIoULoss, TargetDistributionLoss
 
 
 def label2_k_hots(labels, pad_value, remove_eos=False):
@@ -199,8 +199,8 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
         "bce": nn.BCEWithLogitsLoss(reduction="mean")
         if ("ff" in args.model and not "shuffle" in args.model)
         else nn.BCELoss(reduction="mean"),
-        "iou": softIoULoss(reduction="mean"),
-        "td": targetDistLoss(reduction="mean"),
+        "iou": SoftIoULoss(reduction="mean"),
+        "td": TargetDistributionLoss(reduction="mean"),
     }
     pad_value = vocab_size - 1
 
