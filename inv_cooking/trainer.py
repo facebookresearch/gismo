@@ -17,7 +17,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
 
     # checkpointing
     checkpoint_dir = os.path.join(
-        cfg.checkpoint.dir, str(cfg.task) + "-" + cfg.ingr_predictor.model
+        cfg.checkpoint.dir, cfg.task.name + "-" + cfg.ingr_predictor.model
     )
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
@@ -52,13 +52,8 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         raise ValueError(f"Unknown task: {cfg.task}.")
 
     # data module
-    splits_path = os.path.join(os.getcwd(), cfg.dataset.splits_path)
     dm = Recipe1MDataModule(
-        data_dir=cfg.dataset.path,
-        splits_path=splits_path,
-        maxnumlabels=cfg.dataset.maxnumlabels,
-        maxnuminstrs=cfg.dataset.maxnuminstrs,
-        maxinstrlength=cfg.dataset.maxinstrlength,
+        dataset_config=cfg.dataset,
         batch_size=cfg.misc.batch_size,
         num_workers=cfg.misc.num_workers,
         shuffle_labels=shuffle_labels,
@@ -78,20 +73,20 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         task=cfg.task,
         image_encoder_config=cfg.image_encoder,
         ingr_pred_config=cfg.ingr_predictor,
-        recipe_gen_config=cfg.recipe_gen if "recipe" in str(cfg.task) else None,
+        recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
         optim_config=cfg.optim,
-        dataset_name=cfg.dataset.name,
-        maxnumlabels=cfg.dataset.maxnumlabels,
-        maxrecipelen=cfg.dataset.maxnuminstrs * cfg.dataset.maxinstrlength,
+        dataset_name=cfg.dataset.name.name,
+        maxnumlabels=cfg.dataset.filtering.maxnumlabels,
+        maxrecipelen=cfg.dataset.filtering.maxnuminstrs * cfg.dataset.filtering.maxinstrlength,
         ingr_vocab_size=dm.ingr_vocab_size,
-        instr_vocab_size=dm.instr_vocab_size if "recipe" in str(cfg.task) else None,
+        instr_vocab_size=dm.instr_vocab_size if "recipe" in cfg.task.name else None,
         ingr_eos_value=dm.ingr_eos_value,
     )
 
     # logger
     tb_logger = pl_loggers.TensorBoardLogger(
         os.path.join(cfg.checkpoint.dir, "logs/"),
-        name=str(cfg.task) + "-" + cfg.ingr_predictor.model,
+        name=cfg.task.name + "-" + cfg.ingr_predictor.model,
     )
 
     # checkpointing

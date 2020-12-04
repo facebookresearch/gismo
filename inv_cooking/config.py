@@ -19,6 +19,27 @@ class ExecutorType(Enum):
     slurm = 1
 
 
+class DatasetName(Enum):
+    recipe1m = 0
+
+
+@dataclass
+class DatasetFilterConfig:
+    maxnumims: int = MISSING
+    maxnumlabels: int = MISSING
+    maxnuminstrs: int = MISSING
+    maxinstrlength: int = MISSING
+
+
+@dataclass
+class DatasetConfig:
+    name: DatasetName = DatasetName.recipe1m
+    path: str = MISSING
+    splits_path: str = MISSING
+    filtering: DatasetFilterConfig = DatasetFilterConfig()
+    pre_processing: DictConfig = untyped_config()
+
+
 @dataclass
 class SlurmConfig:
     log_folder: str = MISSING
@@ -40,12 +61,12 @@ class Config:
     checkpoint: DictConfig = untyped_config()
     preprocessing: DictConfig = untyped_config()
     misc: DictConfig = untyped_config()
-    dataset: DictConfig = untyped_config()
+    dataset: DatasetConfig = DatasetConfig()
     image_encoder: DictConfig = untyped_config()
     ingr_predictor: DictConfig = untyped_config()
     slurm: SlurmConfig = SlurmConfig()
 
     @classmethod
-    def parse_config(cls, cfg: DictConfig):
+    def parse_config(cls, cfg: DictConfig) -> "Config":
         schema = OmegaConf.structured(Config)
         return OmegaConf.merge(schema, cfg)

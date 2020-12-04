@@ -3,9 +3,12 @@
 name: "recipe1m"
 path: "/checkpoint/qduval/recipe1m/"
 splits_path: "data/splits/recipe1m"
-maxnumlabels: 20
-maxnuminstrs: 10
-maxinstrlength: 15
+
+filtering:
+  maxnumims: 5
+  maxnumlabels: 20
+  maxnuminstrs: 10
+  maxinstrlength: 15
 
 pre_processing:
   save_path: '/checkpoint/qduval/recipe1m/preprocessed'
