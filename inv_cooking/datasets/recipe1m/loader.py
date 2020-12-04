@@ -99,108 +99,107 @@ class Recipe1M(data.Dataset):
                 meminit=False,
             )
 
-        # get ids of data samples used
+        # get ids of data samples used and prune dataset
         ids = []
         for i, entry in enumerate(self.dataset):
             if len(entry["images"]) == 0:
                 continue
             ids.append(i)
         ids = np.array(ids)[split_data]
-
-        # prune dataset
         self.dataset = [self.dataset[i] for i in ids]
-
-    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "recipe"]:
-        ret_img = None
-        ret_ingr = None
-        ret_rec = None
-
-        # get dataset sample
-        sample = self.dataset[index]
-
-        # get set of ingredients
-        if self.return_ingr:
-            ingr = self.dataset[index]["ingredients"]
-
-            # ingredients to idx
-            true_ingr_idxs = []
-            for i in range(len(ingr)):
-                true_ingr_idxs.append(self.ingr_vocab(ingr[i]))
-            true_ingr_idxs = list(set(true_ingr_idxs))
-
-            if self.shuffle_labels:
-                np.random.shuffle(true_ingr_idxs)
-
-            if self.include_eos:
-                true_ingr_idxs.append(self.ingr_vocab("<end>"))
-
-            ret_ingr = true_ingr_idxs + [self.ingr_pad_value] * (
-                self.maxnumlabels + self.include_eos - len(true_ingr_idxs)
-            )
-
-        # get image
-        if self.return_img:
-            sample["id"]
-            paths = sample["images"][0 : self.maxnumims]
-
-            # images
-            if len(paths) == 0:
-                path = None
-                ret_img = torch.zeros((3, 224, 224))  # TODO: ???
-            else:
-                if self.split == "train":
-                    img_idx = np.random.randint(0, len(paths))
-                else:
-                    img_idx = 0
-                path = paths[img_idx]
-                impath = os.path.join(
-                    self.root, path[0], path[1], path[2], path[3], path
-                )
-
-                if self.use_lmdb:
-                    try:
-                        with self.image_file.begin(write=False) as txn:
-                            image = txn.get(path.encode())
-                            image = np.frombuffer(image, dtype=np.uint8)
-                            image = np.reshape(image, (256, 256, 3))
-                        image = Image.fromarray(image.astype("uint8"), "RGB")
-                    except:
-                        print("Image id not found in lmdb. Loading jpeg file...")
-                        image = Image.open(impath).convert("RGB")
-                else:
-                    image = Image.open(impath).convert("RGB")
-
-                if self.transform is not None:
-                    image = self.transform(image)
-                ret_img = image
-
-        # get recipe (title and instructions)
-        if self.return_recipe:
-            title = sample["title"]
-            instructions = sample["tokenized"]
-
-            tokens = []
-            tokens.extend(title)
-            # add fake token to separate title from recipe
-            tokens.append("<eoi>")
-            for i in instructions:
-                tokens.extend(i)
-                tokens.append("<eoi>")
-
-            # Convert recipe (string) to word ids.
-            ret_rec = []
-            ret_rec = self.recipe_to_idxs(tokens, ret_rec)
-            ret_rec.append(self.instr_vocab("<end>"))
-
-            ret_rec = ret_rec[0 : self.maxseqlen]
-            ret_rec = ret_rec + [self.instr_vocab("<pad>")] * (
-                self.maxseqlen - len(ret_rec)
-            )
-
-        return ret_img, ret_ingr, ret_rec
 
     def __len__(self):
         return len(self.dataset)
+
+    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "recipe"]:
+        image = self._load_image(index) if self.return_img else None
+        ret_ingr = self._load_ingredients(index) if self.return_ingr else None
+        recipee = self._load_recipe(index) if self.return_recipe else None
+        return image, ret_ingr, recipee
+
+    def _load_ingredients(self, index: int):
+        ingr = self.dataset[index]["ingredients"]
+
+        # ingredients to idx
+        true_ingr_idxs = []
+        for i in range(len(ingr)):
+            true_ingr_idxs.append(self.ingr_vocab(ingr[i]))
+
+        true_ingr_idxs = list(set(true_ingr_idxs))
+        if self.shuffle_labels:
+            np.random.shuffle(true_ingr_idxs)
+
+        if self.include_eos:
+            true_ingr_idxs.append(self.ingr_vocab("<end>"))
+
+        ret_ingr = true_ingr_idxs + [self.ingr_pad_value] * (
+                self.maxnumlabels + self.include_eos - len(true_ingr_idxs)
+        )
+        return ret_ingr
+
+    def _load_image(self, index: int):
+        paths = self.dataset[index]["images"][0:self.maxnumims]
+        if not paths:
+            return torch.zeros(size=(3, 224, 224))  # TODO: ???
+
+        # If several images, select one image
+        img_idx = np.random.randint(0, len(paths)) if self.split == "train" else 0
+        path = paths[img_idx]
+        img_path = os.path.join(
+            self.root, path[0], path[1], path[2], path[3], path
+        )
+
+        # Load the image
+        if self.use_lmdb:
+            try:
+                with self.image_file.begin(write=False) as txn:
+                    image = txn.get(path.encode())
+                    image = np.frombuffer(image, dtype=np.uint8)
+                    image = np.reshape(image, (256, 256, 3))
+                image = Image.fromarray(image.astype("uint8"), "RGB")
+            except:
+                print("Image id not found in lmdb. Loading jpeg file...")
+                image = Image.open(img_path).convert("RGB")
+        else:
+            image = Image.open(img_path).convert("RGB")
+
+        # Transform the image
+        if self.transform is not None:
+            image = self.transform(image)
+        return image
+
+    def _load_recipe(self, index: int):
+        title = self.dataset[index]["title"]
+        instructions = self.dataset[index]["tokenized"]
+        tokens = []
+        tokens.extend(title)
+        # add fake token to separate title from recipe
+        tokens.append("<eoi>")
+        for i in instructions:
+            tokens.extend(i)
+            tokens.append("<eoi>")
+        # Convert recipe (string) to word ids.
+        ret_rec = []
+        ret_rec = self.recipe_to_idxs(tokens, ret_rec)
+        ret_rec.append(self.instr_vocab("<end>"))
+        ret_rec = ret_rec[0: self.maxseqlen]
+        ret_rec = ret_rec + [self.instr_vocab("<pad>")] * (
+                self.maxseqlen - len(ret_rec)
+        )
+        return ret_rec
+
+    @staticmethod
+    def _collate_fn(data):
+        img, ingr, recipe = zip(*data)
+        ret = {}
+        # Merge images, ingredients and recipes in minibatch
+        if img[0] is not None:
+            ret["img"] = torch.stack(img, 0)
+        if ingr[0] is not None:
+            ret["ingr_gt"] = torch.tensor(ingr)
+        if recipe[0] is not None:
+            ret["recipe_gt"] = torch.tensor(recipe)
+        return ret
 
     def get_ingr_vocab(self):
         return [
@@ -294,7 +293,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             drop_last=True,
             pin_memory=True,
-            collate_fn=_collate_fn,
+            collate_fn=Recipe1M._collate_fn,
             worker_init_fn=self._worker_init_fn,
         )
         return data_loader
@@ -313,7 +312,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             drop_last=False,
             pin_memory=True,
-            collate_fn=_collate_fn,
+            collate_fn=Recipe1M._collate_fn,
             worker_init_fn=self._worker_init_fn,
         )
         return data_loader
@@ -357,66 +356,5 @@ class Recipe1MDataModule(pl.LightningDataModule):
         )
         return transforms.Compose(pipeline)
 
-    def _worker_init_fn(self, worker_id):
+    def _worker_init_fn(self, worker_id: int):
         np.random.seed(self.seed)
-
-
-def _collate_fn(data):
-
-    img, ingr, recipe = zip(*data)
-
-    ret = {}
-
-    # Merge images, ingredients and recipes in minibatch
-    if img[0] is not None:
-        ret["img"] = torch.stack(img, 0)
-
-    if ingr[0] is not None:
-        ret["ingr_gt"] = torch.tensor(ingr)
-
-    if recipe[0] is not None:
-        ret["recipe_gt"] = torch.tensor(recipe)
-
-    return ret
-
-
-# if __name__ == '__main__':
-
-#     splits_filename = os.path.join('../data/splits/recipe1m', 'train' + '.txt')
-
-#     with open(splits_filename, 'r') as f:
-#         split_data = np.array([int(line.rstrip('\n')) for line in f])
-
-#     transforms_list = [tf.Resize(448)]
-#     transforms_list.append(tf.RandomHorizontalFlip())
-#     transforms_list.append(tf.RandomAffine(degrees=10, translate=(0.1, 0.1)))
-#     transforms_list.append(tf.RandomCrop(448))
-#     transforms_list.append(tf.ToTensor())
-#     transforms_list.append(tf.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)))
-#     transforms = tf.Compose(transforms_list)
-
-#     dataset = Recipe1M(
-#         '/datasets01/recipe1m/012319/',
-#         'train',
-#         maxnumims=5,
-#         maxnumlabels=20,
-#         transform=transforms,
-#         use_lmdb=True,  ## TODO: true at least for recipe1m
-#         shuffle_labels=False,
-#         split_data=split_data,
-#         include_eos=False,
-#         return_img=False,
-#         return_ingr=True,
-#         return_recipe=True)
-
-#     data_loader = torch.utils.data.DataLoader(
-#         dataset=dataset,
-#         batch_size=100,
-#         shuffle=False,
-#         num_workers=0,
-#         drop_last=False,
-#         pin_memory=True,
-#         collate_fn=_collate_fn)
-
-#     for info in data_loader:
-#         inputs = info
