@@ -76,10 +76,10 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
     # model
     model = LitInverseCooking(
         task=cfg.task,
-        im_args=cfg.image_encoder,
-        ingrpred_args=cfg.ingr_predictor,
-        recipegen_args=cfg.recipe_gen if "recipe" in str(cfg.task) else None,
-        optim_args=cfg.optim,
+        image_encoder_config=cfg.image_encoder,
+        ingr_pred_config=cfg.ingr_predictor,
+        recipe_gen_config=cfg.recipe_gen if "recipe" in str(cfg.task) else None,
+        optim_config=cfg.optim,
         dataset_name=cfg.dataset.name,
         maxnumlabels=cfg.dataset.maxnumlabels,
         maxrecipelen=cfg.dataset.maxnuminstrs * cfg.dataset.maxinstrlength,

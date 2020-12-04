@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import torch.nn as nn
+from omegaconf import DictConfig
 
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
@@ -11,16 +12,15 @@ from inv_cooking.models.recipe_generator import RecipeGenerator
 class Im2Recipe(nn.Module):
     def __init__(
         self,
-        im_args,
-        ingrpred_args,
-        recipegen_args,
-        ingr_vocab_size,
-        instr_vocab_size,
-        dataset,
-        maxnumlabels,
-        maxrecipelen,
+        image_encoder_config: DictConfig,
+        ingr_pred_config: DictConfig,
+        recipe_gen_config: DictConfig,
+        ingr_vocab_size: int,
+        instr_vocab_size: int,
+        dataset_name: str,
+        maxnumlabels: int,
+        maxrecipelen: int,
         ingr_eos_value,
-        eps=1e-8,
     ):
 
         super(Im2Recipe, self).__init__()
@@ -30,32 +30,34 @@ class Im2Recipe(nn.Module):
         self.ingr_eos_value = ingr_eos_value
         self.instr_vocab_size = instr_vocab_size
 
-        if ingrpred_args.freeze:
-            im_args.freeze = "all"
+        if ingr_pred_config.freeze:
+            image_encoder_config.freeze = "all"
 
         # image encoder model
-        self.image_encoder = ImageEncoder(ingrpred_args.embed_size, **im_args)
+        self.image_encoder = ImageEncoder(
+            ingr_pred_config.embed_size, **image_encoder_config
+        )
 
         # set predictor model
         self.ingr_predictor = get_ingr_predictor(
-            ingrpred_args,
+            ingr_pred_config,
             vocab_size=ingr_vocab_size,
-            dataset=dataset,
+            dataset=dataset_name,
             maxnumlabels=maxnumlabels,
             eos_value=ingr_eos_value,
         )
 
         # ingredient encoder model
         self.ingr_encoder = IngredientsEncoder(
-            recipegen_args.embed_size,
+            recipe_gen_config.embed_size,
             voc_size=ingr_vocab_size,
-            dropout=recipegen_args.dropout,
+            dropout=recipe_gen_config.dropout,
             scale_grad=False,
         )
 
         # recipe generator model
         self.recipe_gen = RecipeGenerator(
-            recipegen_args, instr_vocab_size, maxrecipelen
+            recipe_gen_config, instr_vocab_size, maxrecipelen
         )
 
     def forward(

@@ -1,5 +1,8 @@
+from typing import Optional
+
 import pytorch_lightning as pl
 import torch
+from omegaconf import DictConfig
 from torch.optim.lr_scheduler import ExponentialLR
 
 from .config import TaskType
@@ -13,23 +16,23 @@ class LitInverseCooking(pl.LightningModule):
     def __init__(
         self,
         task: TaskType,
-        im_args,
-        ingrpred_args,
-        recipegen_args,
-        optim_args,
-        dataset_name,  ## TODO: check if needed at all
-        maxnumlabels,
-        maxrecipelen,
-        ingr_vocab_size,
-        instr_vocab_size,
+        image_encoder_config: DictConfig,
+        ingr_pred_config: DictConfig,
+        recipe_gen_config: DictConfig,
+        optim_config: DictConfig,
+        dataset_name: str,  ## TODO: check if needed at all
+        maxnumlabels: int,
+        maxrecipelen: int,
+        ingr_vocab_size: int,
+        instr_vocab_size: int,
         ingr_eos_value,
     ):
         super().__init__()
 
         if task == TaskType.im2ingr:
             self.model = Im2Ingr(
-                im_args,
-                ingrpred_args,
+                image_encoder_config,
+                ingr_pred_config,
                 ingr_vocab_size,
                 dataset_name,
                 maxnumlabels,
@@ -37,9 +40,9 @@ class LitInverseCooking(pl.LightningModule):
             )
         elif task == TaskType.im2recipe:
             self.model = Im2Recipe(
-                im_args,
-                ingrpred_args,
-                recipegen_args,
+                image_encoder_config,
+                ingr_pred_config,
+                recipe_gen_config,
                 ingr_vocab_size,
                 instr_vocab_size,
                 dataset_name,
@@ -51,27 +54,27 @@ class LitInverseCooking(pl.LightningModule):
             raise NotImplementedError(f"Task {task} is not implemented yet")
 
         self.task = task
-        self.pretrained_imenc = im_args.pretrained
+        self.pretrained_imenc = image_encoder_config.pretrained
         self.pretrained_ingrpred = (
-            ingrpred_args.load_pretrained_from != "None"
+            ingr_pred_config.load_pretrained_from != "None"
         )  ## TODO: load model when pretrained
-        self.lr = optim_args.lr
-        self.scale_lr_pretrained = optim_args.scale_lr_pretrained
-        self.lr_decay_rate = optim_args.lr_decay_rate
-        self.lr_decay_every = optim_args.lr_decay_every
-        self.weight_decay = optim_args.weight_decay
-        self.loss_weights = optim_args.loss_weights
+        self.lr = optim_config.lr
+        self.scale_lr_pretrained = optim_config.scale_lr_pretrained
+        self.lr_decay_rate = optim_config.lr_decay_rate
+        self.lr_decay_every = optim_config.lr_decay_every
+        self.weight_decay = optim_config.weight_decay
+        self.loss_weights = optim_config.loss_weights
 
         self._reset_error_counts(overall=True)
 
     def forward(
         self,
-        img,
-        split,
-        ingr_gt=None,
-        recipe_gt=None,
-        compute_losses=False,
-        compute_predictions=False,
+        img: torch.Tensor,
+        split: str,
+        ingr_gt: Optional[torch.Tensor] = None,
+        recipe_gt: Optional[torch.Tensor] = None,
+        compute_losses: bool = False,
+        compute_predictions: bool = False,
     ):
         if self.task == TaskType.im2ingr:
             out = self.model(

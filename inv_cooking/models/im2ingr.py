@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import torch.nn as nn
+from omegaconf import DictConfig
 
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_predictor import get_ingr_predictor
@@ -9,28 +10,28 @@ from inv_cooking.models.ingredients_predictor import get_ingr_predictor
 class Im2Ingr(nn.Module):
     def __init__(
         self,
-        im_args,
-        ingrpred_args,
-        ingr_vocab_size,
-        dataset,
-        maxnumlabels,
+        image_encoder_config: DictConfig,
+        ingr_pred_config: DictConfig,
+        ingr_vocab_size: int,
+        dataset_name: str,
+        maxnumlabels: int,
         ingr_eos_value,
-        eps=1e-8,
     ):
-
-        super(Im2Ingr, self).__init__()
+        super().__init__()
 
         self.ingr_vocab_size = ingr_vocab_size
 
-        if ingrpred_args.freeze:
-            im_args.freeze = "all"
+        if ingr_pred_config.freeze:
+            image_encoder_config.freeze = "all"
 
-        self.image_encoder = ImageEncoder(ingrpred_args.embed_size, **im_args)
+        self.image_encoder = ImageEncoder(
+            ingr_pred_config.embed_size, **image_encoder_config
+        )
 
         self.ingr_predictor = get_ingr_predictor(
-            ingrpred_args,
+            ingr_pred_config,
             vocab_size=ingr_vocab_size,
-            dataset=dataset,
+            dataset=dataset_name,
             maxnumlabels=maxnumlabels,
             eos_value=ingr_eos_value,
         )
