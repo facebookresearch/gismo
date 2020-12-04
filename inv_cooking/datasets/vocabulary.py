@@ -36,19 +36,23 @@ class Vocabulary(object):
         id_to_remove = self.word2idx["<end>"]
 
         # remove word and shift all subsequent ids
-        for i in range(id_to_remove, len(self.idx2word) - 1):
+        length = len(self.idx2word)
+        for i in range(id_to_remove, length - 1):
             word_aux = self.idx2word[i + 1]
             if isinstance(word_aux, list):
                 for el in word_aux:
                     self.word2idx[el] = i
+            else:
+                self.word2idx[word_aux] = i
             self.idx2word[i] = word_aux
 
         # remove last idx
-        del self.idx2word[i + 1]
+        del self.idx2word[length - 1]
         # remove eos word
         del self.word2idx["<end>"]
+        self.idx -= 1
 
-    def __call__(self, word):
+    def __call__(self, word: str):
         if not word in self.word2idx:
             return self.word2idx["<pad>"]
         return self.word2idx[word]

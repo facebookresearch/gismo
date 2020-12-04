@@ -316,8 +316,6 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     vocab_toks.add_word("<start>")
     vocab_toks.add_word("<end>")
     vocab_toks.add_word("<eoi>")
-
-    # Add the words to the vocabulary.
     for i, word in enumerate(words):
         vocab_toks.add_word(word)
     vocab_toks.add_word("<pad>")
@@ -326,8 +324,6 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     # Create a vocab wrapper for ingredients
     vocab_ingrs = Vocabulary()
     idx = vocab_ingrs.add_word("<end>")
-    # this returns the next idx to add words to
-    # Add the ingredients to the vocabulary.
     for k, _ in ingrs.items():
         for ingr in cluster_ingrs[k]:
             idx = vocab_ingrs.add_word(ingr, idx)
