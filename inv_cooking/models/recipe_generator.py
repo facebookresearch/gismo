@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 
+from inv_cooking.config import RecipeGeneratorConfig
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 
 
 class RecipeGenerator(nn.Module):
-    def __init__(self, args, instr_vocab_size, maxrecipelen):
-
-        super(RecipeGenerator, self).__init__()
+    def __init__(self, args: RecipeGeneratorConfig, instr_vocab_size: int, maxrecipelen: int):
+        super().__init__()
 
         # recipe (text) generation model
         self.model = DecoderTransformer(

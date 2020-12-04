@@ -43,6 +43,15 @@ class DatasetConfig:
 
 
 @dataclass
+class RecipeGeneratorConfig:
+    dropout: float = MISSING
+    embed_size: int = MISSING
+    n_att_heads: int = MISSING
+    layers: int = MISSING
+    normalize_before: bool = MISSING
+
+
+@dataclass
 class SlurmConfig:
     log_folder: str = MISSING
     partition: str = MISSING
@@ -58,7 +67,7 @@ class SlurmConfig:
 class Config:
     task: TaskType = TaskType.im2ingr
     executor: ExecutorType = ExecutorType.local
-    recipe_gen: DictConfig = untyped_config()
+    recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
     optim: DictConfig = untyped_config()
     checkpoint: DictConfig = untyped_config()
     misc: DictConfig = untyped_config()

@@ -5,7 +5,7 @@ import torch
 from omegaconf import DictConfig
 from torch.optim.lr_scheduler import ExponentialLR
 
-from .config import TaskType
+from .config import TaskType, RecipeGeneratorConfig
 from .models.im2ingr import Im2Ingr
 from .models.im2recipe import Im2Recipe
 from .models.ingredients_predictor import label2_k_hots
@@ -18,7 +18,7 @@ class LitInverseCooking(pl.LightningModule):
         task: TaskType,
         image_encoder_config: DictConfig,
         ingr_pred_config: DictConfig,
-        recipe_gen_config: DictConfig,
+        recipe_gen_config: RecipeGeneratorConfig,
         optim_config: DictConfig,
         dataset_name: str,  ## TODO: check if needed at all
         maxnumlabels: int,

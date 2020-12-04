@@ -3,6 +3,7 @@
 import torch.nn as nn
 from omegaconf import DictConfig
 
+from inv_cooking.config import RecipeGeneratorConfig
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
 from inv_cooking.models.ingredients_predictor import get_ingr_predictor, mask_from_eos
@@ -14,7 +15,7 @@ class Im2Recipe(nn.Module):
         self,
         image_encoder_config: DictConfig,
         ingr_pred_config: DictConfig,
-        recipe_gen_config: DictConfig,
+        recipe_gen_config: RecipeGeneratorConfig,
         ingr_vocab_size: int,
         instr_vocab_size: int,
         dataset_name: str,
