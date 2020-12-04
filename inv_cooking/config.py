@@ -25,10 +25,10 @@ class DatasetName(Enum):
 
 @dataclass
 class DatasetFilterConfig:
-    maxnumims: int = MISSING
-    maxnumlabels: int = MISSING
-    maxnuminstrs: int = MISSING
-    maxinstrlength: int = MISSING
+    max_num_images: int = MISSING
+    max_num_labels: int = MISSING
+    max_num_instructions: int = MISSING
+    max_instruction_length: int = MISSING
 
 
 @dataclass

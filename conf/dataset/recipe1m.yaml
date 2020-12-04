@@ -5,10 +5,10 @@ path: "/checkpoint/qduval/recipe1m/"
 splits_path: "data/splits/recipe1m"
 
 filtering:
-  maxnumims: 5
-  maxnumlabels: 20
-  maxnuminstrs: 10
-  maxinstrlength: 15
+  max_num_images: 5
+  max_num_labels: 20
+  max_num_instructions: 10
+  max_instruction_length: 15
 
 pre_processing:
   save_path: '/checkpoint/qduval/recipe1m/preprocessed'

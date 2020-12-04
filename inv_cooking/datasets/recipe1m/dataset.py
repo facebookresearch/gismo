@@ -26,12 +26,12 @@ class Recipe1M(data.Dataset):
         selected_indices: np.ndarray=None,
         include_eos=False,
     ):
-        self.root = os.path.join(data_dir, "images", split)
-        self.aux_data_dir = os.path.join(data_dir, "preprocessed")
+        self.image_dir = os.path.join(data_dir, "images", split)
+        self.pre_processed_dir = os.path.join(data_dir, "preprocessed")
         self.split = split
-        self.maxnumims = filtering.maxnumims
-        self.maxnumlabels = filtering.maxnumlabels
-        self.maxseqlen = filtering.maxnuminstrs * filtering.maxinstrlength
+        self.max_num_images = filtering.max_num_images
+        self.max_num_labels = filtering.max_num_labels
+        self.max_seq_length = filtering.max_num_instructions * filtering.max_instruction_length
         self.return_img = return_img
         self.return_ingr = return_ingr
         self.return_recipe = return_recipe
@@ -48,7 +48,7 @@ class Recipe1M(data.Dataset):
         if self.return_ingr:
             self.ingr_vocab = pickle.load(
                 open(
-                    os.path.join(self.aux_data_dir, "final_recipe1m_vocab_ingrs.pkl"),
+                    os.path.join(self.pre_processed_dir, "final_recipe1m_vocab_ingrs.pkl"),
                     "rb",
                 )
             )
@@ -66,7 +66,7 @@ class Recipe1M(data.Dataset):
         if self.return_recipe:
             self.instr_vocab = pickle.load(
                 open(
-                    os.path.join(self.aux_data_dir, "final_recipe1m_vocab_toks.pkl"),
+                    os.path.join(self.pre_processed_dir, "final_recipe1m_vocab_toks.pkl"),
                     "rb",
                 )
             )
@@ -75,7 +75,7 @@ class Recipe1M(data.Dataset):
         if self.return_img or self.return_ingr or self.return_recipe:
             self.dataset = pickle.load(
                 open(
-                    os.path.join(self.aux_data_dir, "final_recipe1m_" + split + ".pkl"),
+                    os.path.join(self.pre_processed_dir, "final_recipe1m_" + split + ".pkl"),
                     "rb",
                 )
             )
@@ -88,7 +88,7 @@ class Recipe1M(data.Dataset):
         if use_lmdb:
             # open lmdb file
             self.image_file = lmdb.open(
-                os.path.join(self.aux_data_dir, "lmdb_" + split),
+                os.path.join(self.pre_processed_dir, "lmdb_" + split),
                 max_readers=1,
                 readonly=True,
                 lock=False,
@@ -130,12 +130,12 @@ class Recipe1M(data.Dataset):
             true_ingr_idxs.append(self.ingr_vocab("<end>"))
 
         ret_ingr = true_ingr_idxs + [self.ingr_pad_value] * (
-                self.maxnumlabels + self.include_eos - len(true_ingr_idxs)
+                self.max_num_labels + self.include_eos - len(true_ingr_idxs)
         )
         return ret_ingr
 
     def _load_image(self, index: int):
-        paths = self.dataset[index]["images"][0:self.maxnumims]
+        paths = self.dataset[index]["images"][0:self.max_num_images]
         if not paths:
             return torch.zeros(size=(3, 224, 224))  # TODO: ???
 
@@ -143,7 +143,7 @@ class Recipe1M(data.Dataset):
         img_idx = np.random.randint(0, len(paths)) if self.split == "train" else 0
         path = paths[img_idx]
         img_path = os.path.join(
-            self.root, path[0], path[1], path[2], path[3], path
+            self.image_dir, path[0], path[1], path[2], path[3], path
         )
 
         # Load the image
@@ -179,9 +179,9 @@ class Recipe1M(data.Dataset):
         ret_rec = []
         ret_rec = self.recipe_to_idxs(tokens, ret_rec)
         ret_rec.append(self.instr_vocab("<end>"))
-        ret_rec = ret_rec[0: self.maxseqlen]
+        ret_rec = ret_rec[0: self.max_seq_length]
         ret_rec = ret_rec + [self.instr_vocab("<pad>")] * (
-                self.maxseqlen - len(ret_rec)
+                self.max_seq_length - len(ret_rec)
         )
         return ret_rec
 
