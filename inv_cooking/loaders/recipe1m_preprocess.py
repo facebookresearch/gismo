@@ -11,6 +11,7 @@ import pickle
 from collections import Counter
 
 import nltk
+from omegaconf import DictConfig
 from tqdm import *
 
 
@@ -168,15 +169,15 @@ def update_counter(list_, counter_toks, istrain=False):
             counter_toks.update(tokens)
 
 
-def build_vocab_recipe1m(args):
+def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     print("Loading data...")
 
     if not os.path.exists(args.save_path):
         os.mkdir(args.save_path)
 
-    dets = json.load(open(os.path.join(args.recipe1m_path, "det_ingrs.json"), "r"))
-    layer1 = json.load(open(os.path.join(args.recipe1m_path, "layer1.json"), "r"))
-    layer2 = json.load(open(os.path.join(args.recipe1m_path, "layer2.json"), "r"))
+    dets = json.load(open(os.path.join(recipe1m_path, "det_ingrs.json"), "r"))
+    layer1 = json.load(open(os.path.join(recipe1m_path, "layer1.json"), "r"))
+    layer2 = json.load(open(os.path.join(recipe1m_path, "layer2.json"), "r"))
 
     id2im = {}
 
@@ -464,20 +465,20 @@ def build_vocab_recipe1m(args):
     return vocab_ingrs, vocab_toks, dataset
 
 
-def run_dataset_pre_processing(args):
-    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(args)
+def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
+    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(recipe1m_path, config)
 
     with open(
-        os.path.join(args.save_path, args.suff + "recipe1m_vocab_ingrs.pkl"), "wb"
+        os.path.join(config.save_path, config.prefix + "recipe1m_vocab_ingrs.pkl"), "wb"
     ) as f:
         pickle.dump(vocab_ingrs, f)
     with open(
-        os.path.join(args.save_path, args.suff + "recipe1m_vocab_toks.pkl"), "wb"
+        os.path.join(config.save_path, config.prefix + "recipe1m_vocab_toks.pkl"), "wb"
     ) as f:
         pickle.dump(vocab_toks, f)
 
     for split in dataset.keys():
         with open(
-            os.path.join(args.save_path, args.suff + "recipe1m_" + split + ".pkl"), "wb"
+            os.path.join(config.save_path, config.prefix + "recipe1m_" + split + ".pkl"), "wb"
         ) as f:
             pickle.dump(dataset[split], f)

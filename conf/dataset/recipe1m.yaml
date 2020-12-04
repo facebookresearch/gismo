@@ -5,3 +5,15 @@ path: "/checkpoint/qduval/recipe1m/"
 maxnumlabels: 20
 maxnuminstrs: 10
 maxinstrlength: 15
+
+pre_processing:
+  save_path: '/checkpoint/qduval/recipe1m/preprocessed'
+  prefix: "final_"
+  threshold_ingrs: 10  # minimum ingr count threshold
+  threshold_words: 10  # minimum word count threshold
+  maxnuminstrs: 20  # max number of instructions (sentences)
+  maxnumingrs: 20  # max number of ingredients
+  minnuminstrs: 2  # min number of instructions (sentences)
+  minnumingrs: 2  # min number of ingredients
+  minnumwords: 20  # minimum number of characters in recipe
+  forcegen: true  # do not cache results: recompute everything

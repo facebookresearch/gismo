@@ -45,19 +45,6 @@ misc:
   batch_size: 16
   num_workers: 8
 
-recipe1m_pre_processing:
-  recipe1m_path: '/checkpoint/qduval/recipe1m/'
-  save_path: '/checkpoint/qduval/recipe1m/preprocessed'
-  suff: "final_"
-  threshold_ingrs: 10  # minimum ingr count threshold
-  threshold_words: 10  # minimum word count threshold
-  maxnuminstrs: 20  # max number of instructions (sentences)
-  maxnumingrs: 20  # max number of ingredients
-  minnuminstrs: 2  # min number of instructions (sentences)
-  minnumingrs: 2  # min number of ingredients
-  minnumwords: 20  # minimum number of characters in recipe
-  forcegen: true
-
 slurm:
   log_folder: '/checkpoint/qduval/log_runs'
   partition: dev
