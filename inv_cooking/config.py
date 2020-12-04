@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Dict
 
 from omegaconf import MISSING, DictConfig, OmegaConf
 
@@ -24,6 +25,12 @@ class DatasetName(Enum):
 
 
 @dataclass
+class DatasetLoadingConfig:
+    batch_size: int = MISSING
+    num_workers: int = MISSING
+
+
+@dataclass
 class DatasetFilterConfig:
     max_num_images: int = MISSING
     max_num_labels: int = MISSING
@@ -38,6 +45,7 @@ class DatasetConfig:
     splits_path: str = MISSING
     image_resize: int = MISSING
     image_crop_size: int = MISSING
+    loading: DatasetLoadingConfig = DatasetLoadingConfig()
     filtering: DatasetFilterConfig = DatasetFilterConfig()
     pre_processing: DictConfig = untyped_config()
 
@@ -49,6 +57,24 @@ class RecipeGeneratorConfig:
     n_att_heads: int = MISSING
     layers: int = MISSING
     normalize_before: bool = MISSING
+
+
+@dataclass
+class OptimizationConfig:
+    seed: int = MISSING
+    lr: float = MISSING
+    scale_lr_pretrained: float = MISSING
+    lr_decay_rate: float = MISSING
+    lr_decay_every: int = MISSING
+    weight_decay: float = MISSING
+    max_epochs: int = MISSING
+    patience: int = MISSING
+    loss_weights: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class CheckpointConfig:
+    dir: str = MISSING
 
 
 @dataclass
@@ -68,9 +94,8 @@ class Config:
     task: TaskType = TaskType.im2ingr
     executor: ExecutorType = ExecutorType.local
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
-    optim: DictConfig = untyped_config()
-    checkpoint: DictConfig = untyped_config()
-    misc: DictConfig = untyped_config()
+    optimization: OptimizationConfig = OptimizationConfig()
+    checkpoint: CheckpointConfig = CheckpointConfig()
     dataset: DatasetConfig = DatasetConfig()
     image_encoder: DictConfig = untyped_config()
     ingr_predictor: DictConfig = untyped_config()

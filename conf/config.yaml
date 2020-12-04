@@ -17,7 +17,8 @@ recipe_gen:
   layers: 2
   normalize_before: True
 
-optim:
+optimization:
+  seed: 1235
   lr: 0.001
   scale_lr_pretrained: 0.01
   lr_decay_rate: 0.99
@@ -33,13 +34,6 @@ optim:
 
 checkpoint:
   dir: '/checkpoint/qduval/inversecooking2.0/debug/'
-  es_metric: 'o_f1'
-  resume_from: None
-
-misc:
-  seed: 1235
-  batch_size: 16
-  num_workers: 8
 
 slurm:
   log_folder: '/checkpoint/qduval/log_runs'

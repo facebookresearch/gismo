@@ -13,7 +13,7 @@ from inv_cooking.inversecooking import LitInverseCooking
 def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
 
     # fix seed
-    seed_everything(cfg.misc.seed)
+    seed_everything(cfg.optimization.seed)
 
     # checkpointing
     checkpoint_dir = os.path.join(
@@ -54,11 +54,9 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
     # data module
     dm = Recipe1MDataModule(
         dataset_config=cfg.dataset,
-        batch_size=cfg.misc.batch_size,
-        num_workers=cfg.misc.num_workers,
         shuffle_labels=shuffle_labels,
         include_eos=include_eos,
-        seed=cfg.misc.seed,
+        seed=cfg.optimization.seed,
         return_img=return_img,
         return_ingr=return_ingr,
         return_recipe=return_recipe
@@ -73,7 +71,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         image_encoder_config=cfg.image_encoder,
         ingr_pred_config=cfg.ingr_predictor,
         recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
-        optim_config=cfg.optim,
+        optim_config=cfg.optimization,
         dataset_name=cfg.dataset.name.name,
         maxnumlabels=cfg.dataset.filtering.max_num_labels,
         maxrecipelen=cfg.dataset.filtering.max_num_instructions * cfg.dataset.filtering.max_instruction_length,
@@ -115,7 +113,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         benchmark=True,  # increases speed for fixed image sizes
         check_val_every_n_epoch=1,
         checkpoint_callback=True,
-        max_epochs=cfg.optim.max_epochs,
+        max_epochs=cfg.optimization.max_epochs,
         num_sanity_val_steps=0,  # to debug validation without training
         precision=32,
         callbacks=[

@@ -7,6 +7,10 @@ splits_path: "data/splits/recipe1m"
 image_resize: 448
 image_crop_size: 448
 
+loading:
+  batch_size: 16
+  num_workers: 8
+
 filtering:
   max_num_images: 5
   max_num_labels: 20

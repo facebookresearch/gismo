@@ -14,8 +14,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def __init__(
         self,
         dataset_config: DatasetConfig,
-        batch_size: int,
-        num_workers: int,
         shuffle_labels=False,
         include_eos=False,
         seed=1234,
@@ -26,11 +24,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         self.dataset_config = dataset_config
-        self.batch_size = batch_size
         self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
         self.seed = seed
-        self.num_workers = num_workers
         self.checkpoint = (
             checkpoint  ## TODO: check how checkpoint is performed in lightning
         )
@@ -65,9 +61,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         data_loader = torch.utils.data.DataLoader(
             dataset=self.dataset_train,
-            batch_size=self.batch_size,
+            batch_size=self.dataset_config.loading.batch_size,
             shuffle=False,
-            num_workers=self.num_workers,
+            num_workers=self.dataset_config.loading.num_workers,
             drop_last=True,
             pin_memory=True,
             collate_fn=Recipe1M._collate_fn,
@@ -84,9 +80,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def _shared_eval_dataloader(self, split: str):
         data_loader = torch.utils.data.DataLoader(
             dataset=self.dataset_val if split == "val" else self.dataset_test,
-            batch_size=self.batch_size,
+            batch_size=self.dataset_config.loading.batch_size,
             shuffle=False,
-            num_workers=self.num_workers,
+            num_workers=self.dataset_config.loading.num_workers,
             drop_last=False,
             pin_memory=True,
             collate_fn=Recipe1M._collate_fn,
