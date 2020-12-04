@@ -89,6 +89,20 @@ class SlurmConfig:
     gpu_type: str = MISSING
 
 
+class ImageEncoderFreezeType(Enum):
+    none = 0
+    all = 1
+    pretrained = 2
+
+
+@dataclass
+class ImageEncoderConfig:
+    model: str = MISSING
+    pretrained: bool = MISSING
+    dropout: float = MISSING
+    freeze: ImageEncoderFreezeType = ImageEncoderFreezeType.none
+
+
 @dataclass
 class Config:
     task: TaskType = TaskType.im2ingr
@@ -97,7 +111,7 @@ class Config:
     optimization: OptimizationConfig = OptimizationConfig()
     checkpoint: CheckpointConfig = CheckpointConfig()
     dataset: DatasetConfig = DatasetConfig()
-    image_encoder: DictConfig = untyped_config()
+    image_encoder: ImageEncoderConfig = ImageEncoderConfig()
     ingr_predictor: DictConfig = untyped_config()
     slurm: SlurmConfig = SlurmConfig()
 

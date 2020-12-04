@@ -3,6 +3,7 @@ from typing import List
 import pytest
 import torch
 
+from inv_cooking.config import ImageEncoderConfig, ImageEncoderFreezeType
 from inv_cooking.models.image_encoder import ImageEncoder
 
 
@@ -12,10 +13,12 @@ from inv_cooking.models.image_encoder import ImageEncoder
 def test_image_encoder(embed_size: int, expected: List[int]):
     encoder = ImageEncoder(
         embed_size=embed_size,
-        dropout=0.5,
-        model="resnet50",
-        pretrained=True,
-        freeze="none",
+        config=ImageEncoderConfig(
+            dropout=0.5,
+            model="resnet50",
+            pretrained=True,
+            freeze=ImageEncoderFreezeType.none
+        )
     )
     x = torch.randn(size=(1, 3, 224, 224))
     y = encoder(x)

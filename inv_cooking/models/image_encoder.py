@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision.models.resnet as resnet
 
+from inv_cooking.config import ImageEncoderConfig, ImageEncoderFreezeType
 from inv_cooking.models.modules.utils import freeze_fn
 
 
@@ -14,34 +15,34 @@ class ImageEncoder(nn.Module):
     """
 
     def __init__(
-        self, embed_size, dropout=0.5, model="resnet50", pretrained=True, freeze="none"
+        self, embed_size: int, config: ImageEncoderConfig,
     ):
         super().__init__()
 
-        if "resnet" in model or "resnext" in model:
-            pretrained_net = resnet.__dict__[model](pretrained=pretrained)
+        if "resnet" in config.model or "resnext" in config.model:
+            pretrained_net = resnet.__dict__[config.model](pretrained=config.pretrained)
             # delete avg pooling and last fc layer
             modules = list(pretrained_net.children())[:-2]
             self.pretrained_net = nn.Sequential(*modules)
             in_dim = pretrained_net.fc.in_features
         else:
-            raise ValueError("Invalid image model {}".format(model))
+            raise ValueError("Invalid image model {}".format(config.model))
 
         if in_dim == embed_size:
             self.last_module = None
         else:
             self.last_module = nn.Sequential(
                 nn.Conv2d(in_dim, embed_size, kernel_size=1, padding=0, bias=False),
-                nn.Dropout(dropout),
+                nn.Dropout(config.dropout),
                 nn.BatchNorm2d(embed_size, momentum=0.01),
                 nn.ReLU(),
             )
-        self._freeze_layers(freeze)
+        self._freeze_layers(config.freeze)
 
-    def _freeze_layers(self, freeze: str):
-        if freeze == "pretrained":
+    def _freeze_layers(self, freeze: ImageEncoderFreezeType):
+        if freeze == ImageEncoderFreezeType.pretrained:
             freeze_fn(self.pretrained_net)
-        elif freeze == "all":
+        elif freeze == ImageEncoderFreezeType.all:
             freeze_fn(self.pretrained_net)
             if self.last_module is not None:
                 freeze_fn(self.last_module)

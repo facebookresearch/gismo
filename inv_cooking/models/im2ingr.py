@@ -3,6 +3,7 @@
 import torch.nn as nn
 from omegaconf import DictConfig
 
+from inv_cooking.config import ImageEncoderConfig
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_predictor import get_ingr_predictor
 
@@ -10,7 +11,7 @@ from inv_cooking.models.ingredients_predictor import get_ingr_predictor
 class Im2Ingr(nn.Module):
     def __init__(
         self,
-        image_encoder_config: DictConfig,
+        image_encoder_config: ImageEncoderConfig,
         ingr_pred_config: DictConfig,
         ingr_vocab_size: int,
         dataset_name: str,
@@ -25,7 +26,7 @@ class Im2Ingr(nn.Module):
             image_encoder_config.freeze = "all"
 
         self.image_encoder = ImageEncoder(
-            ingr_pred_config.embed_size, **image_encoder_config
+            ingr_pred_config.embed_size, image_encoder_config
         )
 
         self.ingr_predictor = get_ingr_predictor(
