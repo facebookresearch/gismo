@@ -1,31 +1,31 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
+import torch
 import torch.nn as nn
+import torchvision.models.resnet as resnet
 
 from inv_cooking.models.modules.utils import freeze_fn
-import torchvision.models.resnet as resnet
 
 
 class ImageEncoder(nn.Module):
+    """
+    Extract feature vectors from input images.
+    """
+
     def __init__(
         self, embed_size, dropout=0.5, model="resnet50", pretrained=True, freeze="none"
     ):
-        """Load the pretrained model and replace top fc layer."""
-        super(ImageEncoder, self).__init__()
-
-        pretrained_net = resnet.__dict__[model](pretrained=pretrained)
+        super().__init__()
 
         if "resnet" in model or "resnext" in model:
-            modules = list(pretrained_net.children())[
-                :-2
-            ]  # delete avg pooling and last fc layer
+            pretrained_net = resnet.__dict__[model](pretrained=pretrained)
+            # delete avg pooling and last fc layer
+            modules = list(pretrained_net.children())[:-2]
+            self.pretrained_net = nn.Sequential(*modules)
+            in_dim = pretrained_net.fc.in_features
         else:
             raise ValueError("Invalid image model {}".format(model))
-
-        self.pretrained_net = nn.Sequential(*modules)
-        in_dim = pretrained_net.fc.in_features
 
         if in_dim == embed_size:
             self.last_module = None
@@ -36,8 +36,9 @@ class ImageEncoder(nn.Module):
                 nn.BatchNorm2d(embed_size, momentum=0.01),
                 nn.ReLU(),
             )
+        self._freeze_layers(freeze)
 
-        # eventually freeze image encoder
+    def _freeze_layers(self, freeze):
         if freeze == "pretrained":
             freeze_fn(self.pretrained_net)
         elif freeze == "all":
@@ -45,21 +46,11 @@ class ImageEncoder(nn.Module):
             if self.last_module is not None:
                 freeze_fn(self.last_module)
 
-    def forward(self, images, keep_cnn_gradients=False):
-        """Extract feature vectors from input images."""
-
+    def forward(self, images: torch.Tensor, keep_cnn_gradients: bool = False):
         if images is None:
             return None
 
-        pretrained_feats = self.pretrained_net(images)
-
-        # Apply last_module to change the number of channels in the encoder output
+        features = self.pretrained_net(images)
         if self.last_module is not None:
-            features = self.last_module(pretrained_feats)
-        else:
-            features = pretrained_feats
-
-        # Reshape features
-        features = features.view(features.size(0), features.size(1), -1)
-
-        return features
+            features = self.last_module(features)
+        return features.reshape(features.size(0), features.size(1), -1)
