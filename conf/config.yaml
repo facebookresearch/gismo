@@ -6,6 +6,7 @@ defaults:
   - dataset: recipe1m
   - slurm: dev
   - image_encoder: resnet50
+  - ingr_predictor/model: ff_bce
   - ingr_predictor: ff
   - recipe_gen: default
 

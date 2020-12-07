@@ -2,6 +2,6 @@
 
 model: "lstmset"
 embed_size: 2048
-dropout: 0.1
-load_pretrained_from: None
 freeze: False  # setting freeze to True will also freeze the image encoder
+load_pretrained_from: None
+dropout: 0.1

@@ -1,14 +1,20 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from omegaconf import MISSING, DictConfig, OmegaConf
+from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING
 
 from .dataset import DatasetConfig
 from .image_encoder import ImageEncoderConfig
+from .ingredient_predictor import (
+    IngredientPredictorConfig,
+    IngredientPredictorFFConfig,
+    IngredientPredictorLSTMConfig,
+    IngredientPredictorTransformerConfig
+)
 from .optimization import OptimizationConfig
 from .recipe_generator import RecipeGeneratorConfig
 from .slurm import SlurmConfig
-from .utils import untyped_config
 
 
 class TaskType(Enum):
@@ -36,10 +42,12 @@ class Config:
     checkpoint: CheckpointConfig = CheckpointConfig()
     dataset: DatasetConfig = DatasetConfig()
     image_encoder: ImageEncoderConfig = ImageEncoderConfig()
-    ingr_predictor: DictConfig = untyped_config()
+    ingr_predictor: IngredientPredictorConfig = MISSING
     slurm: SlurmConfig = SlurmConfig()
 
-    @classmethod
-    def parse_config(cls, cfg: DictConfig) -> "Config":
-        schema = OmegaConf.structured(Config)
-        return OmegaConf.merge(schema, cfg)
+
+cs = ConfigStore.instance()
+cs.store(group="ingr_predictor/model", name="ff_bce", node=IngredientPredictorFFConfig, package="ingr_predictor")
+cs.store(group="ingr_predictor/model", name="lstmset", node=IngredientPredictorLSTMConfig, package="ingr_predictor")
+cs.store(group="ingr_predictor/model", name="tf", node=IngredientPredictorTransformerConfig, package="ingr_predictor")
+cs.store(name="config", node=Config)

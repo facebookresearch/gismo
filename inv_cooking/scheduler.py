@@ -9,8 +9,7 @@ from inv_cooking.config import Config, ExecutorType
 from inv_cooking.trainer import run_training
 
 
-def schedule_job(cfg: DictConfig) -> None:
-    cfg = Config.parse_config(cfg)
+def schedule_job(cfg: Config) -> None:
     _copy_source_code_to_cwd()  # Because Hydra create a new running folder
     if cfg.executor == ExecutorType.local:
         run_training(cfg, gpus=2, nodes=1, distributed_mode="dp")
