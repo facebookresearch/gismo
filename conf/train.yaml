@@ -4,19 +4,13 @@ hydra:
 
 defaults:
   - dataset: recipe1m
+  - slurm: dev
   - image_encoder: resnet50
   - ingr_predictor: ff
-  - slurm: dev
+  - recipe_gen: default
 
 task: im2recipe
 executor: local
-
-recipe_gen:
-  dropout: 0.5
-  embed_size: 2048
-  n_att_heads: 8
-  layers: 2
-  normalize_before: True
 
 optimization:
   seed: 1235
