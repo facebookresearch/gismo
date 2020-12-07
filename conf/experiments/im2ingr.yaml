@@ -1,0 +1,19 @@
+# @package _group_
+
+im2ingr:
+  comment: 'default configuration for im2ingr'
+  optimization:
+    seed: 1235
+    lr: 0.001
+    scale_lr_pretrained: 0.01
+    lr_decay_rate: 0.99
+    lr_decay_every: 1
+    weight_decay: 0.0
+    max_epochs: 400
+    patience: 10
+    loss_weights:
+      label_loss: 1.0
+      cardinality_loss: 0.0
+      eos_loss: 0.0
+      recipe_loss: 1.0
+
