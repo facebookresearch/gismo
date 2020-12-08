@@ -5,15 +5,15 @@ import hydra
 import submitit
 from omegaconf import DictConfig
 
-from inv_cooking.config import Config, ExecutorType
+from inv_cooking.config import Config
 from inv_cooking.trainer import run_training
 
 
 def schedule_job(cfg: Config) -> None:
     _copy_source_code_to_cwd()  # Because Hydra create a new running folder
-    if cfg.executor == ExecutorType.local:
+    if cfg.slurm.partition == "local":
         run_training(cfg, gpus=2, nodes=1, distributed_mode="dp")
-    elif cfg.executor == ExecutorType.slurm:
+    else:
         _schedule_job_on_slurm_using_dp(cfg)
 
 
@@ -37,8 +37,8 @@ def _schedule_job_on_slurm_using_dp(cfg: Config):
     nb_gpus = cfg.slurm.gpus_per_node
     executor = submitit.AutoExecutor(folder=cfg.slurm.log_folder)
     executor.update_parameters(
-        name="recipe1m_im2ingr_of1",  # TODO
-        slurm_comment="",  # TODO
+        name=cfg.name,
+        slurm_comment="",
         slurm_partition=cfg.slurm.partition,
         slurm_constraint=cfg.slurm.gpu_type,
         timeout_min=cfg.slurm.timeout_min,

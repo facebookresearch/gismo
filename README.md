@@ -37,7 +37,9 @@ $ python -c "import nltk; nltk.download("punkt")"
 #### Recipe1M
 
 - Download [Recipe1M](http://im2recipe.csail.mit.edu/dataset/download) (registration required) and extract under ```/path/to/recipe1m/```.
+
 - The contents of ```/path/to/recipe1m/``` should be the following:
+
 ```
 det_ingrs.json
 layer1.json
@@ -47,48 +49,47 @@ images/train
 images/val
 images/test
 ```
-- Pre-process dataset and build vocabularies with:
 
-```bash
-$ python src/utils/recipe1m_utils.py --recipe1m_path path_to_recipe1m
+- Pre-process the dataset with:
+
 ```
-Resulting files will be stored under ```/path/to/recipe1m/preprocessed```.
-- Fill in ```configs/datapaths.json``` with the path to recipe1m dataset: ````"recipe1m": "/path/to/recipe1m/"````
+python preprocess.py dataset=recipe1m
+```
+
+This will add an additional folder "preprocessed" inside the folder of the dataset.
 
 <br>
 
 ## Training
 
-*Note: all python calls below must be run from* `./src`.
-
-Checkpoints will be saved under a directory ```"<save_dir>/<dataset>/<model_name>/<image_model>/<experiment_name>/"```,  specified by ```--save_dir```, ```--dataset```, ```--model_name```, ```--image_model``` and ```--experiment_name```.
-
-The recommended way to train the models reported in the paper is to use the JSON configuration files provided in
-```configs``` folder. We have provided one configuration file for each combination of dataset, set predictor (model_name) and image backbone (image_model). The naming convention is ```configs/dataset/image_model_model_name.json```.
+### Running experiments
 
 Training can be run as in the following example command:
-```bash
-$ python train.py --save_dir ../checkpoints --resume --seed SEED --dataset DATASET \
---image_model IMAGE_MODEL --model_name MODEL_NAME --use_json_config
-```
-where DATASET is a dataset name (e.g. `recipe1m`), IMAGE_MODEL and MODEL_NAME are among the models listed above (e.g. `resnet50` and `ff_bce_cat`) and SEED is the value of a random seed (e.g. `1235`).
 
-Check training progress with Tensorboard from ```../checkpoints```:
-```bash
-$ tensorboard --logdir='.' --port=6006
-```
+    python train.py task=im2recipe name=im2recipe
+
+This command will look for the definition of the experiment "im2recipe" in the configuration
+file "conf/experiments/im2recipe.yaml" and run this experiment.
+
+### Running on SLURM
+
+Running on SLURM requires only to add the SLURM configuration to the command line:
+
+    python train.py task=im2recipe name=im2recipe slurm=<SLURM_CONF>
+
+Where the definition of the SLURM configuration to be used will be fetched from `conf/slurm/<SLURM_CONF>.yaml`, for instance `conf/slurm/dev.yaml`.
+
+### Monitoring progress
+
+Check training progress with Tensorboard from the folder in which the checkpoint are saved:
+
+    tensorboard --logdir='.' --port=6006
 
 <br>
 
 ## Evaluation
 
-*Note: all python calls below must be run from* `./src`.
-
-Calculate evaluation metrics as in the following example command:
-```bash
-$ python eval.py --eval_split test --models_path PATH --dataset DATASET --batch_size 100
-```
-where DATASET is a dataset name (e.g. `recipe1m`) and PATH is the path to the saved models folder.
+TBD
 
 <br>
 

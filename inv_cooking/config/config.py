@@ -1,17 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
 from .dataset import DatasetConfig
 from .image_encoder import ImageEncoderConfig
-from .ingredient_predictor import (
-    IngredientPredictorConfig,
-    IngredientPredictorFFConfig,
-    IngredientPredictorLSTMConfig,
-    IngredientPredictorTransformerConfig
-)
+from .ingredient_predictor import IngredientPredictorConfig
 from .optimization import OptimizationConfig
 from .recipe_generator import RecipeGeneratorConfig
 from .slurm import SlurmConfig
@@ -23,11 +17,6 @@ class TaskType(Enum):
     ingr2recipe = 2
 
 
-class ExecutorType(Enum):
-    local = 0
-    slurm = 1
-
-
 @dataclass
 class CheckpointConfig:
     dir: str = MISSING
@@ -35,8 +24,13 @@ class CheckpointConfig:
 
 @dataclass
 class Config:
+    """
+    Configuration fed to the main scheduler of experiment.
+    It contains all information necessary to run a single job.
+    """
     task: TaskType = TaskType.im2ingr
-    executor: ExecutorType = ExecutorType.local
+    name: str = MISSING
+    comment: str = MISSING
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
     optimization: OptimizationConfig = OptimizationConfig()
     checkpoint: CheckpointConfig = CheckpointConfig()
@@ -45,9 +39,3 @@ class Config:
     ingr_predictor: IngredientPredictorConfig = MISSING
     slurm: SlurmConfig = SlurmConfig()
 
-
-cs = ConfigStore.instance()
-cs.store(group="ingr_predictor/model", name="ff_bce", node=IngredientPredictorFFConfig, package="ingr_predictor")
-cs.store(group="ingr_predictor/model", name="lstmset", node=IngredientPredictorLSTMConfig, package="ingr_predictor")
-cs.store(group="ingr_predictor/model", name="tf", node=IngredientPredictorTransformerConfig, package="ingr_predictor")
-cs.store(name="config", node=Config)

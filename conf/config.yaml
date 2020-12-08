@@ -4,29 +4,16 @@ hydra:
 
 defaults:
   - dataset: recipe1m
-  - slurm: dev
+  - slurm: local
   - image_encoder: resnet50
-  - ingr_predictor/model: ff_bce
   - ingr_predictor: ff
   - recipe_gen: default
+  - experiments@experiments.im2ingr: im2ingr
+  - experiments@experiments.im2recipe: im2recipe
+  - experiments@experiments.ingr2recipe: ingr2recipe
 
 task: im2recipe
-executor: local
-
-optimization:
-  seed: 1235
-  lr: 0.001
-  scale_lr_pretrained: 0.01
-  lr_decay_rate: 0.99
-  lr_decay_every: 1
-  weight_decay: 0.0
-  max_epochs: 400
-  patience: 10
-  loss_weights:
-    label_loss: 1.0
-    cardinality_loss: 0.0
-    eos_loss: 0.0
-    recipe_loss: 1.0
+name: ""
 
 checkpoint:
   dir: '/checkpoint/qduval/inversecooking2.0/debug/'
