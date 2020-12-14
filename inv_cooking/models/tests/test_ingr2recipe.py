@@ -1,7 +1,7 @@
 import torch
 
-from inv_cooking.config import RecipeGeneratorConfig
 from inv_cooking.models.ingr2recipe import Ingr2Recipe
+from inv_cooking.models.tests.utils import FakeConfig
 
 
 def test_Ingr2Recipe():
@@ -9,11 +9,8 @@ def test_Ingr2Recipe():
     max_recipe_len = 15
     vocab_size = 10
 
-    recipe_generator_config = RecipeGeneratorConfig(
-        dropout=0.1, embed_size=3, n_att_heads=1, layers=1, normalize_before=True
-    )
     model = Ingr2Recipe(
-        recipe_gen_config=recipe_generator_config,
+        recipe_gen_config=FakeConfig.recipe_gen_config(),
         ingr_vocab_size=vocab_size,
         instr_vocab_size=vocab_size,
         max_recipe_len=max_recipe_len,

@@ -49,8 +49,8 @@ class Im2Ingr(nn.Module):
         Predict a set of ingredients from an image
         :param image: input image - shape is (N, C, H, W)
         :param label_target: ground truth of ingredients to predict - shape is (N, max_num_labels)
-        :param compute_losses: whether or not to compute the loss (requires recipe ground truth)
-        :param compute_predictions: whether or not to output the recipe prediction
+        :param compute_losses: whether or not to compute the loss
+        :param compute_predictions: whether or not to output the ingredients prediction
         """
         img_features = self.image_encoder(image)
         return self.ingr_predictor(
