@@ -88,14 +88,14 @@ class LitInverseCooking(pl.LightningModule):
     ):
         if self.task == TaskType.im2ingr:
             out = self.model(
-                img=img,
+                image=img,
                 label_target=ingr_gt,
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
             )
         elif self.task == TaskType.im2recipe:
             out = self.model(
-                img=img,
+                image=img,
                 recipe_gt=recipe_gt,
                 ingr_gt=ingr_gt,
                 use_ingr_pred=True if split == "test" else False,
