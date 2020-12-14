@@ -1,4 +1,4 @@
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Dict
 
 import pytorch_lightning as pl
 import torch
@@ -10,7 +10,7 @@ from .models.im2ingr import Im2Ingr
 from .models.im2recipe import Im2Recipe
 from .models.ingr2recipe import Ingr2Recipe
 from .models.ingredients_predictor import label2_k_hots
-from .utils.metrics import compute_metrics, update_error_counts
+from .utils.metrics import OverallErrorCounts
 
 
 class LitInverseCooking(pl.LightningModule):
@@ -75,7 +75,8 @@ class LitInverseCooking(pl.LightningModule):
         self.weight_decay = optim_config.weight_decay
         self.loss_weights = optim_config.loss_weights
 
-        self._reset_error_counts(overall=True)
+        self.overall_error_counts = OverallErrorCounts()
+        self.overall_error_counts.reset(overall=True)
 
     def forward(
         self,
@@ -159,15 +160,14 @@ class LitInverseCooking(pl.LightningModule):
             )
 
             # update overall and per class error counts
-            update_error_counts(
-                self.overall_error_counts,
+            self.overall_error_counts.update(
                 pred_k_hots,
                 target_k_hots,
                 which_metrics=["o_f1", "c_f1", "i_f1"],
             )
 
             # compute i_f1 metric
-            metrics = compute_metrics(self.overall_error_counts, which_metrics=["i_f1"])
+            metrics = self.overall_error_counts.compute_metrics(which_metrics=["i_f1"])
 
         # compute recipe metrics
         if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
@@ -188,15 +188,13 @@ class LitInverseCooking(pl.LightningModule):
         self._eval_epoch_end(test_step_outputs, split="test")
 
     def _eval_epoch_end(self, eval_step_outputs: List[Any], split: str):
-        s = sum(self.overall_error_counts.values())
+        s = sum(self.overall_error_counts.counts.values())
         if (isinstance(s, int) and s > 0) or (not isinstance(s, int) and s.any()):
             # compute validation set metrics
-            overall_metrics = compute_metrics(
-                self.overall_error_counts, ["o_f1", "c_f1"]
-            )
+            overall_metrics = self.overall_error_counts.compute_metrics(["o_f1", "c_f1"])
             self.log(f"{split}_o_f1", overall_metrics["o_f1"])
             self.log(f"{split}_c_f1", overall_metrics["c_f1"])
-            self._reset_error_counts(overall=True)
+            self.overall_error_counts.reset(overall=True)
 
         # init avg metrics to 0
         avg_metrics = dict(
@@ -213,7 +211,10 @@ class LitInverseCooking(pl.LightningModule):
             if k != "n_samples":
                 self.log(f"{split}_{k}", avg_metrics[k] / avg_metrics["n_samples"])
 
-    def training_step_end(self, losses):
+    def training_step_end(self, losses: Dict[str, torch.Tensor]):
+        """
+        Average the loss across all GPUs and combine these losses together as an overall loss
+        """
 
         total_loss = 0
 
@@ -231,6 +232,7 @@ class LitInverseCooking(pl.LightningModule):
                 logger=True,
             )
             total_loss += losses["label_loss"] * self.loss_weights["label_loss"]
+
         if "cardinality_loss" in losses.keys():
             self.log(
                 "cardinality_loss",
@@ -243,6 +245,7 @@ class LitInverseCooking(pl.LightningModule):
             total_loss += (
                 losses["cardinality_loss"] * self.loss_weights["cardinality_loss"]
             )
+
         if "eos_loss" in losses.keys():
             self.log(
                 "eos_loss",
@@ -253,6 +256,7 @@ class LitInverseCooking(pl.LightningModule):
                 logger=True,
             )
             total_loss += losses["eos_loss"] * self.loss_weights["eos_loss"]
+
         if "recipe_loss" in losses.keys():
             self.log(
                 "recipe_loss",
@@ -276,45 +280,22 @@ class LitInverseCooking(pl.LightningModule):
         return total_loss
 
     def validation_step_end(self, metrics):
-        valid_step_outputs = self._shared_eval_step_end(metrics)
+        valid_step_outputs = self._evaluation_step_end(metrics)
         return valid_step_outputs
 
     def test_step_end(self, metrics):
-        test_step_outputs = self._shared_eval_step_end(metrics)
+        test_step_outputs = self._evaluation_step_end(metrics)
         return test_step_outputs
 
-    def _shared_eval_step_end(self, metrics):
+    def _evaluation_step_end(self, metrics: Dict[str, List[float]]) -> Dict[str, float]:
+        """
+        Sum metrics withing mini-batches and reset the per sample error counts
+        """
         eval_step_outputs = {}
-
-        # sum metric within mini-batches
         for k in metrics.keys():
             eval_step_outputs[k] = sum(metrics[k])
-
-        # reset per sample error counts
-        self._reset_error_counts(perimage=True)
-
+        self.overall_error_counts.reset(per_image=True)
         return eval_step_outputs
-
-    def _reset_error_counts(self, overall=False, perimage=False):
-        # reset all error counts (done at the end of each epoch)
-        if overall:
-            self.overall_error_counts = {
-                "c_tp": 0,
-                "c_fp": 0,
-                "c_fn": 0,
-                "c_tn": 0,
-                "o_tp": 0,
-                "o_fp": 0,
-                "o_fn": 0,
-                "i_tp": 0,
-                "i_fp": 0,
-                "i_fn": 0,
-            }
-        # reset per sample error counts (done at the end of each iteration)
-        if perimage:
-            self.overall_error_counts["i_tp"] = 0
-            self.overall_error_counts["i_fp"] = 0
-            self.overall_error_counts["i_fn"] = 0
 
     def configure_optimizers(self):
         opt_arguments = []
