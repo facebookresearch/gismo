@@ -56,8 +56,8 @@ class LitInverseCooking(pl.LightningModule):
                 recipe_gen_config,
                 ingr_vocab_size,
                 instr_vocab_size,
-                maxrecipelen,
-                ingr_eos_value,
+                max_recipe_len=maxrecipelen,
+                ingr_eos_value=ingr_eos_value,
             )
         else:
             raise NotImplementedError(f"Task {task} is not implemented yet")

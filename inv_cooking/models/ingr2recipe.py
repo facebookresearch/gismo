@@ -1,11 +1,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+from typing import Dict, Tuple
 
+import torch
 import torch.nn as nn
-from omegaconf import DictConfig
 
-from inv_cooking.config import RecipeGeneratorConfig, ImageEncoderConfig
+from inv_cooking.config import RecipeGeneratorConfig
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
-from inv_cooking.models.ingredients_predictor import get_ingr_predictor, mask_from_eos
+from inv_cooking.models.ingredients_predictor import mask_from_eos
 from inv_cooking.models.recipe_generator import RecipeGenerator
 
 
@@ -15,7 +16,7 @@ class Ingr2Recipe(nn.Module):
         recipe_gen_config: RecipeGeneratorConfig,
         ingr_vocab_size: int,
         instr_vocab_size: int,
-        maxrecipelen: int,
+        max_recipe_len: int,
         ingr_eos_value,
     ):
         super().__init__()
@@ -30,16 +31,23 @@ class Ingr2Recipe(nn.Module):
             scale_grad=False,
         )
         self.recipe_gen = RecipeGenerator(
-            recipe_gen_config, instr_vocab_size, maxrecipelen
+            recipe_gen_config, instr_vocab_size, max_recipe_len
         )
 
     def forward(
         self,
-        recipe_gt,
-        ingr_gt,
-        compute_losses=False,
-        compute_predictions=False,
-    ):
+        recipe_gt: torch.Tensor,
+        ingr_gt: torch.Tensor,
+        compute_losses: bool = False,
+        compute_predictions: bool = False,
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        """
+        Transform the ingredients into a recipe
+        :param ingr_gt: the input ingredients to make a recipe from - shape (N, num_ingredient)
+        :param recipe_gt: the ground truth to reach - shape (N, max_recipe_len)
+        :param compute_losses: whether or not to compute the loss (requires recipe ground truth)
+        :param compute_predictions: whether or not to output the recipe prediction
+        """
 
         # encode ingredients
         ingr_features = self.ingr_encoder(ingr_gt)
@@ -50,6 +58,7 @@ class Ingr2Recipe(nn.Module):
 
         # generate recipe and compute losses if necessary
         loss, predictions = self.recipe_gen(
+            img_features=None,
             ingr_features=ingr_features,
             ingr_mask=ingr_mask,
             recipe_gt=recipe_gt,
