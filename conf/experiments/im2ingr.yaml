@@ -15,5 +15,3 @@ im2ingr:
       label_loss: 1.0
       cardinality_loss: 0.0
       eos_loss: 0.0
-      recipe_loss: 1.0
-
