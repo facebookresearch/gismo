@@ -29,10 +29,10 @@ class RecipeGenerator(nn.Module):
 
     def forward(
         self,
-        img_features: torch.Tensor,
         ingr_features: torch.Tensor,
         ingr_mask: torch.Tensor,
         recipe_gt: torch.Tensor,
+        img_features: torch.Tensor=None,
         compute_losses=False,
         compute_predictions=False,
         greedy=True,

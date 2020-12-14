@@ -25,7 +25,6 @@ class Im2Recipe(nn.Module):
     ):
         super().__init__()
         self.ingr_vocab_size = ingr_vocab_size
-        self.ingr_pad_value = ingr_vocab_size - 1
         self.ingr_eos_value = ingr_eos_value
         self.instr_vocab_size = instr_vocab_size
 
@@ -87,12 +86,13 @@ class Im2Recipe(nn.Module):
 
         # generate recipe and compute losses if necessary
         loss, predictions = self.recipe_gen(
-            img_features,
-            ingr_features,
-            ingr_mask,
-            recipe_gt,
+            img_features=img_features,
+            ingr_features=ingr_features,
+            ingr_mask=ingr_mask,
+            recipe_gt=recipe_gt,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
         )
+
         losses = {"recipe_loss": loss}
         return losses, ingr_predictions, predictions

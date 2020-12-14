@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import ExponentialLR
 from .config import TaskType, RecipeGeneratorConfig, OptimizationConfig, ImageEncoderConfig
 from .models.im2ingr import Im2Ingr
 from .models.im2recipe import Im2Recipe
+from .models.ingr2recipe import Ingr2Recipe
 from .models.ingredients_predictor import label2_k_hots
 from .utils.metrics import compute_metrics, update_error_counts
 
@@ -50,14 +51,23 @@ class LitInverseCooking(pl.LightningModule):
                 maxrecipelen,
                 ingr_eos_value,
             )
+        elif task == TaskType.ingr2recipe:
+            self.model = Ingr2Recipe(
+                recipe_gen_config,
+                ingr_vocab_size,
+                instr_vocab_size,
+                maxrecipelen,
+                ingr_eos_value,
+            )
         else:
             raise NotImplementedError(f"Task {task} is not implemented yet")
 
         self.task = task
-        self.pretrained_imenc = image_encoder_config.pretrained
-        self.pretrained_ingrpred = (
-            ingr_pred_config.load_pretrained_from != "None"
-        )  ## TODO: load model when pretrained
+        if self.task != TaskType.ingr2recipe:
+            self.pretrained_imenc = image_encoder_config.pretrained
+            self.pretrained_ingrpred = (
+                ingr_pred_config.load_pretrained_from != "None"
+            )  ## TODO: load model when pretrained
         self.lr = optim_config.lr
         self.scale_lr_pretrained = optim_config.scale_lr_pretrained
         self.lr_decay_rate = optim_config.lr_decay_rate
@@ -69,8 +79,8 @@ class LitInverseCooking(pl.LightningModule):
 
     def forward(
         self,
-        img: torch.Tensor,
         split: str,
+        img: Optional[torch.Tensor] = None,
         ingr_gt: Optional[torch.Tensor] = None,
         recipe_gt: Optional[torch.Tensor] = None,
         compute_losses: bool = False,
@@ -92,6 +102,13 @@ class LitInverseCooking(pl.LightningModule):
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
             )
+        elif self.task == TaskType.ingr2recipe:
+             out = self.model(
+                recipe_gt=recipe_gt,
+                ingr_gt=ingr_gt,
+                compute_losses=compute_losses,
+                compute_predictions=compute_predictions,
+            )           
 
         return out[0], out[1:]
 
@@ -113,8 +130,8 @@ class LitInverseCooking(pl.LightningModule):
 
         # get model outputs
         if self.task == TaskType.im2ingr:
-            out = self(batch["img"], split=prefix, compute_predictions=True)
-        elif self.task == TaskType.im2recipe:
+            out = self(img=batch["img"], split=prefix, compute_predictions=True)
+        elif self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
             if prefix == "val":
                 out = self(
                     **batch,
@@ -131,7 +148,7 @@ class LitInverseCooking(pl.LightningModule):
                 )
 
         # compute ingredient metrics
-        if out[1][0] is not None:
+        if self.task == TaskType.im2ingr or (TaskType.im2recipe and out[1][0] is not None):
             # convert model predictions and targets to k-hots
             pred_k_hots = label2_k_hots(
                 out[1][0],
@@ -156,11 +173,14 @@ class LitInverseCooking(pl.LightningModule):
             metrics = compute_metrics(self.overall_error_counts, which_metrics=["i_f1"])
 
         # compute recipe metrics
-        if self.task == TaskType.im2recipe:
+        if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
             metrics["perplexity"] = torch.exp(out[0]["recipe_loss"])
 
         # save n_samples
-        metrics["n_samples"] = batch["img"].shape[0]
+        if self.task == TaskType.im2ingr:
+            metrics["n_samples"] = batch["img"].shape[0]
+        else:
+            metrics["n_samples"] = batch["ingr_gt"].shape[0]
 
         return metrics
 
@@ -300,43 +320,44 @@ class LitInverseCooking(pl.LightningModule):
             self.overall_error_counts["i_fn"] = 0
 
     def configure_optimizers(self):
-        params_imenc = filter(
-            lambda p: p.requires_grad, self.model.image_encoder.parameters()
-        )
-        num_params_imenc = sum([p.numel() for p in params_imenc])
-        params_ingrpred = filter(
-            lambda p: p.requires_grad, self.model.ingr_predictor.parameters()
-        )
-        num_params_ingrpred = sum([p.numel() for p in params_ingrpred])
-
-        print(
-            f"Number of trainable parameters in the image encoder is {num_params_imenc}."
-        )
-        print(
-            f"Number of trainable parameters in the ingredient predictor is {num_params_ingrpred}."
-        )
-
+        opt_arguments = []
         pretrained_lr = self.lr * self.scale_lr_pretrained
 
-        opt_arguments = []
+        if hasattr(self.model, "image_encoder"):
+            params_imenc = filter(
+                lambda p: p.requires_grad, self.model.image_encoder.parameters()
+            )
+            num_params_imenc = sum([p.numel() for p in params_imenc])
+            print(
+                f"Number of trainable parameters in the image encoder is {num_params_imenc}."
+            )
 
-        if num_params_imenc > 0:
-            opt_arguments += [
-                {
-                    "params": params_imenc,
-                    "lr": pretrained_lr if self.pretrained_imenc else self.lr,
-                }
-            ]
+            if num_params_imenc > 0:
+                opt_arguments += [
+                    {
+                        "params": params_imenc,
+                        "lr": pretrained_lr if self.pretrained_imenc else self.lr,
+                    }
+                ]
 
-        if num_params_ingrpred > 0:
-            opt_arguments += [
-                {
-                    "params": params_ingrpred,
-                    "lr": pretrained_lr if self.pretrained_ingrpred else self.lr,
-                }
-            ]
+        if hasattr(self.model, "ingr_predictor"):
+            params_ingrpred = filter(
+                lambda p: p.requires_grad, self.model.ingr_predictor.parameters()
+            )
+            num_params_ingrpred = sum([p.numel() for p in params_ingrpred])
+            print(
+                f"Number of trainable parameters in the ingredient predictor is {num_params_ingrpred}."
+            )
 
-        if self.task == TaskType.im2recipe:
+            if num_params_ingrpred > 0:
+                opt_arguments += [
+                    {
+                        "params": params_ingrpred,
+                        "lr": pretrained_lr if self.pretrained_ingrpred else self.lr,
+                    }
+                ]
+
+        if hasattr(self.model, "recipe_gen"):
             params_recgen = filter(
                 lambda p: p.requires_grad, self.model.recipe_gen.parameters()
             )
@@ -347,6 +368,7 @@ class LitInverseCooking(pl.LightningModule):
 
             if num_params_recgen > 0:
                 opt_arguments += [{"params": params_recgen, "lr": self.lr}]
+
 
         optimizer = torch.optim.Adam(
             opt_arguments, lr=self.lr, weight_decay=self.weight_decay
