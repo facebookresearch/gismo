@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 
 from inv_cooking.config import DatasetConfig
 from .dataset import Recipe1M
+from .preprocess import run_dataset_pre_processing
 
 
 class Recipe1MDataModule(pl.LightningDataModule):
@@ -36,8 +37,8 @@ class Recipe1MDataModule(pl.LightningDataModule):
 
     def prepare_data(self):
         if not os.path.isdir(os.path.join(self.dataset_config.path, "preprocessed")):
-            # TODO: preprocessing
-            pass
+            print("Pre-processing Recipe1M dataset.")
+            run_dataset_pre_processing(self.dataset_config.path, self.dataset_config.pre_processing)
 
     def setup(self, stage: str):
         if stage == "fit":
