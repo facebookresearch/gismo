@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any, List
 
 import pytorch_lightning as pl
 import torch
@@ -112,20 +112,17 @@ class LitInverseCooking(pl.LightningModule):
 
         return out[0], out[1:]
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx: int):
         out = self(compute_losses=True, split="train", **batch)
         return out[0]
 
-    def validation_step(self, batch, batch_idx):
-        metrics = self._shared_eval(batch, batch_idx, "val")
-        return metrics
+    def validation_step(self, batch, batch_idx: int):
+        return self._evaluation_step(batch, prefix="val")
 
-    def test_step(self, batch, batch_idx):
-        metrics = self._shared_eval(batch, batch_idx, "test")
-        return metrics
+    def test_step(self, batch, batch_idx: int):
+        return self._evaluation_step(batch, prefix="test")
 
-    def _shared_eval(self, batch, batch_idx, prefix):
-
+    def _evaluation_step(self, batch, prefix: str):
         metrics = {}
 
         # get model outputs
@@ -184,13 +181,13 @@ class LitInverseCooking(pl.LightningModule):
 
         return metrics
 
-    def validation_epoch_end(self, valid_step_outputs):
-        self.eval_epoch_end(valid_step_outputs, "val")
+    def validation_epoch_end(self, valid_step_outputs: List[Any]):
+        self._eval_epoch_end(valid_step_outputs, split="val")
 
-    def test_epoch_end(self, test_step_outputs):
-        self.eval_epoch_end(test_step_outputs, "test")
+    def test_epoch_end(self, test_step_outputs: List[Any]):
+        self._eval_epoch_end(test_step_outputs, split="test")
 
-    def eval_epoch_end(self, eval_step_outputs, split):
+    def _eval_epoch_end(self, eval_step_outputs: List[Any], split: str):
         s = sum(self.overall_error_counts.values())
         if (isinstance(s, int) and s > 0) or (not isinstance(s, int) and s.any()):
             # compute validation set metrics
