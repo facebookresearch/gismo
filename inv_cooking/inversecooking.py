@@ -56,8 +56,8 @@ class LitInverseCooking(pl.LightningModule):
                 recipe_gen_config,
                 ingr_vocab_size,
                 instr_vocab_size,
-                maxrecipelen,
-                ingr_eos_value,
+                max_recipe_len=maxrecipelen,
+                ingr_eos_value=ingr_eos_value,
             )
         else:
             raise NotImplementedError(f"Task {task} is not implemented yet")
@@ -88,14 +88,14 @@ class LitInverseCooking(pl.LightningModule):
     ):
         if self.task == TaskType.im2ingr:
             out = self.model(
-                img=img,
+                image=img,
                 label_target=ingr_gt,
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
             )
         elif self.task == TaskType.im2recipe:
             out = self.model(
-                img=img,
+                image=img,
                 recipe_gt=recipe_gt,
                 ingr_gt=ingr_gt,
                 use_ingr_pred=True if split == "test" else False,

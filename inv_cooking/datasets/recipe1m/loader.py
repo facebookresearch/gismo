@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -40,7 +41,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             print("Pre-processing Recipe1M dataset.")
             run_dataset_pre_processing(self.dataset_config.path, self.dataset_config.pre_processing)
 
-    def setup(self, stage: str):
+    def setup(self, stage: Optional[str] = None):
         if stage == "fit":
             self.dataset_train = self._get_dataset("train")
             self.dataset_val = self._get_dataset("val")
@@ -113,7 +114,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         )
         return dataset
 
-    def _get_transforms(self, stage):
+    def _get_transforms(self, stage: str):
         pipeline = [transforms.Resize(self.dataset_config.image_resize)]
         if stage == "train":
             pipeline.append(transforms.RandomHorizontalFlip())

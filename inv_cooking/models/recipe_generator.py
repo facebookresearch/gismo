@@ -6,7 +6,9 @@ from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 
 
 class RecipeGenerator(nn.Module):
-    def __init__(self, args: RecipeGeneratorConfig, instr_vocab_size: int, maxrecipelen: int):
+    def __init__(
+        self, args: RecipeGeneratorConfig, instr_vocab_size: int, maxrecipelen: int
+    ):
         super().__init__()
 
         # recipe (text) generation model
@@ -32,7 +34,7 @@ class RecipeGenerator(nn.Module):
         ingr_features: torch.Tensor,
         ingr_mask: torch.Tensor,
         recipe_gt: torch.Tensor,
-        img_features: torch.Tensor=None,
+        img_features: torch.Tensor = None,
         compute_losses=False,
         compute_predictions=False,
         greedy=True,
