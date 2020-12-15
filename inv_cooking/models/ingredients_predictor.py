@@ -3,11 +3,18 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
+from typing import cast
 
 import numpy as np
 import torch
 import torch.nn as nn
 
+from inv_cooking.config import (
+    IngredientPredictorConfig,
+    IngredientPredictorFFConfig,
+    IngredientPredictorLSTMConfig,
+    IngredientPredictorTransformerConfig,
+)
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
@@ -122,74 +129,83 @@ def predictions_to_idxs(
     return idxs_clone
 
 
-def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
+def get_ingr_predictor(
+    config: IngredientPredictorConfig,
+    vocab_size: int,
+    dataset: str,
+    maxnumlabels: int,
+    eos_value: int,
+):
+    """
+    Create the ingredient predictor based on the configuration
+    """
 
-    cardinality_pred = "dc" if "dc" in args.model else "none"
-    cardinality_pred = "cat" if "cat" in args.model else cardinality_pred
+    cardinality_pred = config.cardinality_pred
 
     # build ingredients predictor
-    if "ff" in args.model and not "shuffle" in args.model:
+    if "ff" in config.model:
+        config = cast(IngredientPredictorFFConfig, config)
         print(
             "Building feed-forward decoder {}. Embed size {} / Dropout {} / "
             " Max. Num. Labels {} / Num. Layers {}".format(
-                args.model, args.embed_size, args.dropout, maxnumlabels, args.layers
+                config.model,
+                config.embed_size,
+                config.dropout,
+                maxnumlabels,
+                config.layers,
             ),
             flush=True,
         )
         decoder = FFDecoder(
-            args.embed_size,
+            config.embed_size,
             vocab_size,
-            args.embed_size,
-            dropout=args.dropout,
+            config.embed_size,
+            dropout=config.dropout,
             pred_cardinality=cardinality_pred,
             nobjects=maxnumlabels,
-            n_layers=args.layers,
+            n_layers=config.layers,
         )
 
-    elif "lstm" in args.model:
-
+    elif "lstm" in config.model:
+        config = cast(IngredientPredictorLSTMConfig, config)
         maxnumlabels += 1  ## TODO: check +1 (required for EOS token)
-
         print(
             "Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. ".format(
-                args.model, args.embed_size, args.dropout, maxnumlabels
+                config.model, config.embed_size, config.dropout, maxnumlabels
             ),
             flush=True,
         )
-
         decoder = DecoderRNN(
-            args.embed_size,
-            args.embed_size,
+            config.embed_size,
+            config.embed_size,
             vocab_size,
-            dropout=args.dropout,
+            dropout=config.dropout,
             seq_length=maxnumlabels,
         )
 
-    elif "tf" in args.model:
-
+    elif "tf" in config.model:
+        config = cast(IngredientPredictorTransformerConfig, config)
         maxnumlabels += 1  ## TODO: check +1 (required for EOS token)
-
         print(
             "Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / "
             "Num. Attention Heads {} / Num. Layers {}.".format(
-                args.model,
-                args.embed_size,
-                args.dropout,
+                config.model,
+                config.embed_size,
+                config.dropout,
                 maxnumlabels,
-                args.n_att,
-                args.layers,
+                config.n_att,
+                config.layers,
             ),
             flush=True,
         )
-
         decoder = DecoderTransformer(
-            args.embed_size,
+            config.embed_size,
             vocab_size,
-            dropout=args.dropout,
+            dropout=config.dropout,
             seq_length=maxnumlabels,
-            attention_nheads=args.n_att,
+            attention_nheads=config.n_att,
             pos_embeddings=False,
-            num_layers=args.layers,
+            num_layers=config.layers,
             learned=False,
             normalize_before=True,
         )
@@ -197,18 +213,18 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
     # label and eos loss
     label_losses = {
         "bce": nn.BCEWithLogitsLoss(reduction="mean")
-        if ("ff" in args.model and not "shuffle" in args.model)
+        if "ff" in config.model
         else nn.BCELoss(reduction="mean"),
         "iou": SoftIoULoss(reduction="mean"),
         "td": TargetDistributionLoss(reduction="mean"),
     }
     pad_value = vocab_size - 1
 
-    if "ff" in args.model and not "shuffle" in args.model:
-        loss_key = {k for k in label_losses.keys() if k in args.model}.pop()
+    if "ff" in config.model:
+        loss_key = {k for k in label_losses.keys() if k in config.model}.pop()
         label_loss = label_losses[loss_key]
         eos_loss = None
-    elif "set" in args.model:
+    elif config.with_set_prediction:
         loss_key = "bce"
         label_loss = label_losses["bce"]
         eos_loss = nn.BCELoss(reduction="none")
@@ -220,7 +236,7 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
     # cardinality loss
     if cardinality_pred == "dc":
         print("Using Dirichlet-Categorical cardinality loss.", flush=True)
-        cardinality_loss = DCLoss(U=args.U, dataset=dataset, reduction="mean")
+        cardinality_loss = DCLoss(U=config.U, dataset=dataset, reduction="mean")
     elif cardinality_pred == "cat":
         print("Using categorical cardinality loss.", flush=True)
         cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
@@ -237,18 +253,15 @@ def get_ingr_predictor(args, vocab_size, dataset, maxnumlabels, eos_value):
         crit_cardinality=cardinality_loss,
         pad_value=pad_value,
         eos_value=eos_value,
-        perminv=("set" in args.model),
-        is_decoder_ff=True
-        if ("ff" in args.model and not "shuffle" in args.model)
-        else False,
+        perminv=config.with_set_prediction,
+        is_decoder_ff="ff" in config.model,
         loss_label=loss_key,
         card_type=cardinality_pred,
         dataset=dataset,
     )
 
-    if args.freeze:
+    if config.freeze:
         freeze_fn(model)
-
     return model
 
 

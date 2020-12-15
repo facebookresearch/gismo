@@ -1,11 +1,16 @@
-from typing import Optional, Any, List, Dict
+from typing import Any, Dict, List, Optional
 
 import pytorch_lightning as pl
 import torch
-from omegaconf import DictConfig
 from torch.optim.lr_scheduler import ExponentialLR
 
-from .config import TaskType, RecipeGeneratorConfig, OptimizationConfig, ImageEncoderConfig
+from .config import (
+    ImageEncoderConfig,
+    IngredientPredictorConfig,
+    OptimizationConfig,
+    RecipeGeneratorConfig,
+    TaskType,
+)
 from .models.im2ingr import Im2Ingr
 from .models.im2recipe import Im2Recipe
 from .models.ingr2recipe import Ingr2Recipe
@@ -18,7 +23,7 @@ class LitInverseCooking(pl.LightningModule):
         self,
         task: TaskType,
         image_encoder_config: ImageEncoderConfig,
-        ingr_pred_config: DictConfig,
+        ingr_pred_config: IngredientPredictorConfig,
         recipe_gen_config: RecipeGeneratorConfig,
         optim_config: OptimizationConfig,
         dataset_name: str,  ## TODO: check if needed at all
@@ -104,12 +109,12 @@ class LitInverseCooking(pl.LightningModule):
                 compute_predictions=compute_predictions,
             )
         elif self.task == TaskType.ingr2recipe:
-             out = self.model(
+            out = self.model(
                 recipe_gt=recipe_gt,
                 ingr_gt=ingr_gt,
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
-            )           
+            )
 
         return out[0], out[1:]
 
@@ -146,7 +151,9 @@ class LitInverseCooking(pl.LightningModule):
                 )
 
         # compute ingredient metrics
-        if self.task == TaskType.im2ingr or (TaskType.im2recipe and out[1][0] is not None):
+        if self.task == TaskType.im2ingr or (
+            TaskType.im2recipe and out[1][0] is not None
+        ):
             # convert model predictions and targets to k-hots
             pred_k_hots = label2_k_hots(
                 out[1][0],
@@ -161,9 +168,7 @@ class LitInverseCooking(pl.LightningModule):
 
             # update overall and per class error counts
             self.overall_error_counts.update(
-                pred_k_hots,
-                target_k_hots,
-                which_metrics=["o_f1", "c_f1", "i_f1"],
+                pred_k_hots, target_k_hots, which_metrics=["o_f1", "c_f1", "i_f1"],
             )
 
             # compute i_f1 metric
@@ -191,7 +196,9 @@ class LitInverseCooking(pl.LightningModule):
         s = sum(self.overall_error_counts.counts.values())
         if (isinstance(s, int) and s > 0) or (not isinstance(s, int) and s.any()):
             # compute validation set metrics
-            overall_metrics = self.overall_error_counts.compute_metrics(["o_f1", "c_f1"])
+            overall_metrics = self.overall_error_counts.compute_metrics(
+                ["o_f1", "c_f1"]
+            )
             self.log(f"{split}_o_f1", overall_metrics["o_f1"])
             self.log(f"{split}_c_f1", overall_metrics["c_f1"])
             self.overall_error_counts.reset(overall=True)
@@ -346,7 +353,6 @@ class LitInverseCooking(pl.LightningModule):
 
             if num_params_recgen > 0:
                 opt_arguments += [{"params": params_recgen, "lr": self.lr}]
-
 
         optimizer = torch.optim.Adam(
             opt_arguments, lr=self.lr, weight_decay=self.weight_decay

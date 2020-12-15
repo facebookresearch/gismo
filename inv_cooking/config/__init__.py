@@ -1,7 +1,18 @@
-from .config import Config, CheckpointConfig, TaskType
-from .dataset import DatasetConfig, DatasetName, DatasetFilterConfig, DatasetLoadingConfig
+from .config import CheckpointConfig, Config, TaskType
+from .dataset import (
+    DatasetConfig,
+    DatasetFilterConfig,
+    DatasetLoadingConfig,
+    DatasetName,
+)
 from .image_encoder import ImageEncoderConfig, ImageEncoderFreezeType
+from .ingredient_predictor import (
+    IngredientPredictorConfig,
+    IngredientPredictorFFConfig,
+    IngredientPredictorLSTMConfig,
+    IngredientPredictorTransformerConfig,
+)
 from .optimization import OptimizationConfig
-from .recipe_generator import RecipeGeneratorConfig
 from .raw_config import RawConfig
+from .recipe_generator import RecipeGeneratorConfig
 from .slurm import SlurmConfig

@@ -3,9 +3,8 @@ from typing import Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
-from omegaconf import DictConfig
 
-from inv_cooking.config import ImageEncoderConfig
+from inv_cooking.config import ImageEncoderConfig, IngredientPredictorConfig
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_predictor import get_ingr_predictor
 
@@ -14,7 +13,7 @@ class Im2Ingr(nn.Module):
     def __init__(
         self,
         image_encoder_config: ImageEncoderConfig,
-        ingr_pred_config: DictConfig,
+        ingr_pred_config: IngredientPredictorConfig,
         ingr_vocab_size: int,
         dataset_name: str,
         max_num_labels: int,

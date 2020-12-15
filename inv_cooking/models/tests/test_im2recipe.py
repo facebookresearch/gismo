@@ -12,7 +12,7 @@ def test_Im2Recipe():
 
     model = Im2Recipe(
         image_encoder_config=FakeConfig.image_encoder_config(),
-        ingr_pred_config=FakeConfig.ingr_pred_config(),
+        ingr_pred_config=FakeConfig.ingr_pred_ff_config(),
         recipe_gen_config=FakeConfig.recipe_gen_config(),
         ingr_vocab_size=vocab_size,
         instr_vocab_size=vocab_size,
@@ -24,8 +24,12 @@ def test_Im2Recipe():
 
     batch_size = 5
     image = torch.randn(size=(batch_size, 3, 224, 224))
-    target_recipe = torch.randint(low=0, high=vocab_size - 1, size=(batch_size, max_recipe_len))
-    ingr_gt = torch.randint(low=0, high=vocab_size - 1, size=(batch_size, max_num_labels))
+    target_recipe = torch.randint(
+        low=0, high=vocab_size - 1, size=(batch_size, max_recipe_len)
+    )
+    ingr_gt = torch.randint(
+        low=0, high=vocab_size - 1, size=(batch_size, max_num_labels)
+    )
 
     losses, ingr_predictions, recipe_predictions = model(
         image,
@@ -42,4 +46,3 @@ def test_Im2Recipe():
     assert recipe_predictions.shape == torch.Size([batch_size, max_recipe_len])
     assert ingr_predictions.max() <= vocab_size - 1
     assert recipe_predictions.max() <= vocab_size - 1
-
