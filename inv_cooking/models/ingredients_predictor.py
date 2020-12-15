@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-from typing import cast
+from typing import Dict, Optional, Tuple, cast
 
 import numpy as np
 import torch
@@ -312,11 +312,18 @@ class IngredientsPredictor(nn.Module):
 
     def forward(
         self,
-        img_features,
-        label_target=None,
-        compute_losses=False,
-        compute_predictions=False,
-    ):
+        img_features: torch.Tensor,
+        label_target: Optional[torch.Tensor] = None,
+        compute_losses: bool = False,
+        compute_predictions: bool = False,
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        """
+        Predict the ingredients of the image features extracted by an image encoder
+        :param img_features: image features - shape (N, embedding_size, sequence_length)
+        :param label_target: ground truth, the ingredients to find - shape (N, max_num_labels)
+        :param compute_losses: whether or not to compute loss between output and target
+        :param compute_predictions: whether or not to output the predicted ingredients
+        """
 
         losses = {}
         predictions = None

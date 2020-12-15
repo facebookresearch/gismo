@@ -9,14 +9,14 @@ import torch.nn as nn
 class FFDecoder(nn.Module):
     def __init__(
         self,
-        embed_size,
-        vocab_size,
-        hidden_size,
-        dropout=0.0,
-        pred_cardinality="none",
-        nobjects=10,  ## for cardinality prediction only
-        n_layers=1,
-        use_empty_set=False,
+        embed_size: int,
+        vocab_size: int,
+        hidden_size: int,
+        dropout: float = 0.0,
+        pred_cardinality: str = "none",
+        nobjects: int = 10,  ## for cardinality prediction only
+        n_layers: int = 1,
+        use_empty_set: bool = False,
     ):
         super(FFDecoder, self).__init__()
 
@@ -51,7 +51,10 @@ class FFDecoder(nn.Module):
                 nobjects += 1
             self.fc_cardinality = nn.Sequential(nn.Linear(hidden_size, nobjects))
 
-    def forward(self, img_features):
+    def forward(self, img_features: torch.Tensor):
+        """
+        :param img_features: features extract of the image - shape (N, embedding_size, sequence_length)
+        """
 
         # Apply global average pooling
         feat = torch.mean(img_features, dim=-1)
