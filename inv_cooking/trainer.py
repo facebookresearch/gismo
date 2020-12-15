@@ -22,13 +22,9 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
 
-    # what flags do we need to activate in the data module
-    shuffle_labels = True if "shuffle" in cfg.ingr_predictor.model else False
-    include_eos = (
-        False
-        if "ff" in cfg.ingr_predictor.model and not "shuffle" in cfg.ingr_predictor
-        else True
-    )
+    # what flags do we need to activate in the data module (depending on the ingredient predictor architecture)
+    shuffle_labels = cfg.ingr_predictor.with_shuffle_labels
+    include_eos = "ff" not in cfg.ingr_predictor.model
 
     if cfg.task == TaskType.im2ingr:
         return_img = True

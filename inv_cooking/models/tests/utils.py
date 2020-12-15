@@ -16,6 +16,7 @@ class FakeConfig:
             freeze=False,
             load_pretrained_from="",
             with_set_prediction=False,
+            with_shuffle_labels=False,
             cardinality_pred="",
             layers=2,
             dropout=0.0,
@@ -29,6 +30,7 @@ class FakeConfig:
             freeze=False,  # setting freeze to True will also freeze the image encoder
             load_pretrained_from="",
             with_set_prediction=False,
+            with_shuffle_labels=False,
             dropout=0.1,
         )
 
@@ -41,6 +43,7 @@ class FakeConfig:
             freeze=False,
             load_pretrained_from="",
             with_set_prediction=False,
+            with_shuffle_labels=False,
             n_att=8,
             dropout=0.3,
         )
