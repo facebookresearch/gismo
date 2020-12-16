@@ -1,19 +1,19 @@
 from dataclasses import dataclass, field
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING, OmegaConf, DictConfig
+from omegaconf import MISSING, DictConfig, OmegaConf
 
-from .config import Config, CheckpointConfig
-from .optimization import OptimizationConfig
+from .config import CheckpointConfig, Config
 from .dataset import DatasetConfig
 from .image_encoder import ImageEncoderConfig
 from .ingredient_predictor import (
     IngredientPredictorConfig,
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
-    IngredientPredictorTransformerConfig
+    IngredientPredictorTransformerConfig,
 )
+from .optimization import OptimizationConfig
 from .recipe_generator import RecipeGeneratorConfig
 from .slurm import SlurmConfig
 from .utils import untyped_config
@@ -40,6 +40,7 @@ class RawConfig:
     * it contains the information needed to select the experiment
     This configuration is then transformed to be the configuration of one experiment.
     """
+
     task: str = MISSING
     name: str = MISSING
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
@@ -51,7 +52,7 @@ class RawConfig:
     experiments: Experiments = Experiments()
 
     @classmethod
-    def to_config(cls, raw_config: 'RawConfig') -> Config:
+    def to_config(cls, raw_config: "RawConfig") -> Config:
         experiment_name, experiment = cls._get_experiment(raw_config)
         config = OmegaConf.structured(Config)
         config.task = raw_config.task
@@ -67,7 +68,7 @@ class RawConfig:
         return config
 
     @staticmethod
-    def _get_experiment(raw_config: 'RawConfig') -> Tuple[str, Experiment]:
+    def _get_experiment(raw_config: "RawConfig") -> Tuple[str, Experiment]:
         experiment_name = raw_config.name or raw_config.task
         experiment = raw_config.experiments[raw_config.task][experiment_name]
         return experiment_name, experiment
@@ -75,13 +76,13 @@ class RawConfig:
     @staticmethod
     def _get_ingr_predictor(ingr_predictor: DictConfig) -> IngredientPredictorConfig:
         model = ingr_predictor.model
-        if model == "ff_bce":
+        if "ff" in model:
             schema = OmegaConf.structured(IngredientPredictorFFConfig)
             return OmegaConf.merge(schema, ingr_predictor)
-        elif model == "lstmset":
+        elif "lstm" in model:
             schema = OmegaConf.structured(IngredientPredictorLSTMConfig)
             return OmegaConf.merge(schema, ingr_predictor)
-        elif model == "tf":
+        elif "tf" in model:
             schema = OmegaConf.structured(IngredientPredictorTransformerConfig)
             return OmegaConf.merge(schema, ingr_predictor)
         else:

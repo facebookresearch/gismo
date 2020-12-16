@@ -1,11 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-from typing import Optional, Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
-from omegaconf import DictConfig
 
-from inv_cooking.config import RecipeGeneratorConfig, ImageEncoderConfig
+from inv_cooking.config import (
+    ImageEncoderConfig,
+    IngredientPredictorConfig,
+    RecipeGeneratorConfig,
+)
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
 from inv_cooking.models.ingredients_predictor import get_ingr_predictor, mask_from_eos
@@ -14,16 +17,16 @@ from inv_cooking.models.recipe_generator import RecipeGenerator
 
 class Im2Recipe(nn.Module):
     def __init__(
-            self,
-            image_encoder_config: ImageEncoderConfig,
-            ingr_pred_config: DictConfig,
-            recipe_gen_config: RecipeGeneratorConfig,
-            ingr_vocab_size: int,
-            instr_vocab_size: int,
-            dataset_name: str,
-            max_num_labels: int,
-            max_recipe_len: int,
-            ingr_eos_value,
+        self,
+        image_encoder_config: ImageEncoderConfig,
+        ingr_pred_config: IngredientPredictorConfig,
+        recipe_gen_config: RecipeGeneratorConfig,
+        ingr_vocab_size: int,
+        instr_vocab_size: int,
+        dataset_name: str,
+        max_num_labels: int,
+        max_recipe_len: int,
+        ingr_eos_value,
     ):
         super().__init__()
         self.ingr_vocab_size = ingr_vocab_size
@@ -54,13 +57,13 @@ class Im2Recipe(nn.Module):
         )
 
     def forward(
-            self,
-            image: torch.Tensor,
-            recipe_gt: torch.Tensor,
-            ingr_gt: Optional[torch.Tensor] = None,
-            use_ingr_pred: bool = False,
-            compute_losses: bool = False,
-            compute_predictions: bool = False,
+        self,
+        image: torch.Tensor,
+        recipe_gt: torch.Tensor,
+        ingr_gt: Optional[torch.Tensor] = None,
+        use_ingr_pred: bool = False,
+        compute_losses: bool = False,
+        compute_predictions: bool = False,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, torch.Tensor]:
         """
         Predict the ingredients and the recipe for the provided image

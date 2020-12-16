@@ -1,7 +1,9 @@
 # @package _group_
 
-model: lstmset
+model: lstm
 embed_size: 2048
 freeze: False  # setting freeze to True will also freeze the image encoder
 load_pretrained_from: None
+with_set_prediction: true
+with_shuffle_labels: false
 dropout: 0.1

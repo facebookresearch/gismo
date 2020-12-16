@@ -1,21 +1,51 @@
-from omegaconf import DictConfig
-
-from inv_cooking.config import ImageEncoderConfig, ImageEncoderFreezeType, RecipeGeneratorConfig
+from inv_cooking.config import (
+    ImageEncoderConfig,
+    ImageEncoderFreezeType,
+    IngredientPredictorFFConfig,
+    RecipeGeneratorConfig,
+    IngredientPredictorLSTMConfig, IngredientPredictorTransformerConfig,
+)
 
 
 class FakeConfig:
+    @staticmethod
+    def ingr_pred_ff_config() -> IngredientPredictorFFConfig:
+        return IngredientPredictorFFConfig(
+            model="ff_bce",
+            embed_size=2048,
+            freeze=False,
+            load_pretrained_from="",
+            with_set_prediction=False,
+            with_shuffle_labels=False,
+            cardinality_pred="",
+            layers=2,
+            dropout=0.0,
+        )
 
     @staticmethod
-    def ingr_pred_config() -> DictConfig:
-        return DictConfig(
-            {
-                "model": "ff_bce",
-                "embed_size": 2048,
-                "freeze": False,
-                "load_pretrained_from": None,
-                "layers": 2,
-                "dropout": 0.0,
-            }
+    def ingr_pred_lstm_config() -> IngredientPredictorLSTMConfig:
+        return IngredientPredictorLSTMConfig(
+            model="lstm",
+            embed_size=2048,
+            freeze=False,  # setting freeze to True will also freeze the image encoder
+            load_pretrained_from="",
+            with_set_prediction=False,
+            with_shuffle_labels=False,
+            dropout=0.1,
+        )
+
+    @staticmethod
+    def ingr_pred_tf_config() -> IngredientPredictorTransformerConfig:
+        return IngredientPredictorTransformerConfig(
+            model="tf",
+            layers=0,
+            embed_size=2048,
+            freeze=False,
+            load_pretrained_from="",
+            with_set_prediction=False,
+            with_shuffle_labels=False,
+            n_att=8,
+            dropout=0.3,
         )
 
     @staticmethod
