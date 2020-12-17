@@ -9,7 +9,6 @@ class IngredientPredictorConfig:
     embed_size: int = MISSING
     freeze: bool = MISSING
     load_pretrained_from: str = MISSING
-    with_shuffle_labels: bool = MISSING
 
 
 @dataclass

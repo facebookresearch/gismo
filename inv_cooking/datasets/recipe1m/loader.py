@@ -16,7 +16,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def __init__(
         self,
         dataset_config: DatasetConfig,
-        shuffle_labels=False,
         include_eos=False,
         seed=1234,
         checkpoint=None,
@@ -26,7 +25,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         self.dataset_config = dataset_config
-        self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
         self.seed = seed
         self.checkpoint = (
@@ -105,7 +103,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
             filtering=self.dataset_config.filtering,
             transform=self._get_transforms(stage=stage),
             use_lmdb=False,  # TODO - check if necessary
-            shuffle_labels=self.shuffle_labels,
             selected_indices=selected_indices,
             include_eos=self.include_eos,
             return_img=self.return_img,

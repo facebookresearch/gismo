@@ -22,7 +22,6 @@ class Recipe1M(data.Dataset):
         return_recipe=False,
         transform=None,
         use_lmdb=False,
-        shuffle_labels=False,
         selected_indices: np.ndarray=None,
         include_eos=False,
     ):
@@ -37,7 +36,6 @@ class Recipe1M(data.Dataset):
         self.return_recipe = return_recipe
         self.transform = transform
         self.use_lmdb = use_lmdb
-        self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
 
         self.ingr_vocab = []
@@ -121,10 +119,7 @@ class Recipe1M(data.Dataset):
         true_ingr_idxs = []
         for i in range(len(ingr)):
             true_ingr_idxs.append(self.ingr_vocab(ingr[i]))
-
         true_ingr_idxs = list(set(true_ingr_idxs))
-        if self.shuffle_labels:
-            np.random.shuffle(true_ingr_idxs)
 
         if self.include_eos:
             true_ingr_idxs.append(self.ingr_vocab("<end>"))
