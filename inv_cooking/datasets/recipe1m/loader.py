@@ -37,7 +37,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         self.return_recipe = return_recipe
 
     def prepare_data(self):
-        if not os.path.isdir(os.path.join(self.dataset_config.path, "preprocessed")):
+        if not os.path.isdir(self.dataset_config.pre_processing.save_path):
             print("Pre-processing Recipe1M dataset.")
             run_dataset_pre_processing(self.dataset_config.path, self.dataset_config.pre_processing)
 
