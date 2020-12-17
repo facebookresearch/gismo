@@ -155,12 +155,12 @@ class LitInverseCooking(pl.LightningModule):
             pred_k_hots = label2_k_hots(
                 out[1][0],
                 self.model.ingr_vocab_size - 1,
-                remove_eos=not self.model.ingr_predictor.is_decoder_ff,
+                remove_eos=self.model.ingr_predictor.remove_eos,
             )
             target_k_hots = label2_k_hots(
                 batch["ingr_gt"],
                 self.model.ingr_vocab_size - 1,
-                remove_eos=not self.model.ingr_predictor.is_decoder_ff,
+                remove_eos=self.model.ingr_predictor.remove_eos,
             )
 
             # update overall and per class error counts
