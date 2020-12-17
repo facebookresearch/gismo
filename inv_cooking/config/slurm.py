@@ -5,7 +5,6 @@ from omegaconf import MISSING
 
 @dataclass
 class SlurmConfig:
-    log_folder: str = MISSING
     partition: str = MISSING
     nodes: int = MISSING
     cpus_per_task: int = MISSING
