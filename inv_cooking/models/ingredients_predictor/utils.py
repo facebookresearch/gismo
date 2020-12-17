@@ -58,7 +58,6 @@ def predictions_to_indices(
     threshold: float = 1,
     cardinality_prediction: Optional[torch.Tensor] = None,
     which_loss: str = "bce",
-    use_empty_set: bool = False,
 ) -> torch.Tensor:
     """
     Select the highest logit values, and produce a vector holding the indices of the predicted elements
@@ -72,8 +71,6 @@ def predictions_to_indices(
     """
 
     assert 0.0 < threshold <= 1.0
-
-    card_offset = 0 if use_empty_set else 1
 
     # select topk elements
     probs, idxs = torch.topk(
@@ -107,17 +104,13 @@ def predictions_to_indices(
 
         for i in range(mask.size(-1)):
             # If the cardinality prediction is higher than i, it means that from this point
-            # on the mask must be 0. Predicting 0 cardinality means 0 objects when
-            # use_empty_set=True and 1 object when use_empty_set=False
-            # real cardinality value is
+            # on the mask must be 0.
+            card_offset = 1  # Predicting 0 cardinality means 1 object
             above_cardinality = i < card_idx + card_offset
             # multiply the auxiliar mask with this condition
             # (once you multiply by 0, the following entries will also be 0)
             aux_mask = aux_mask * above_cardinality
             mask[:, i] = aux_mask
-    else:
-        if not use_empty_set:
-            mask[:, 0] = 1
 
     idxs_clone[mask == 0] = pad_value
     return idxs_clone

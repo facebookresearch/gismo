@@ -93,7 +93,6 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         threshold: float = 0.5,
         loss_label: str = "bce",
         card_type: str = "none",
-        use_empty_set: bool = False,
         eps: float = 1e-8,
     ):
         super().__init__(remove_eos=True)
@@ -106,7 +105,6 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         self.loss_label = loss_label
         self.card_type = card_type
         self.eps = eps
-        self.use_empty_set = use_empty_set
         self.vocab_size = vocab_size
 
     def _forward_impl(
@@ -131,10 +129,8 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
 
             # compute cardinality loss if needed
             if self.crit_cardinality is not None:
-                # subtract 1 from num_target to match class idxs (1st label corresponds to class 0) only
-                # 1st label corresponds to 0 only if use_empty_set is false
-                # otherwise, 1st label corresponds to 1
-                offset = 0 if self.use_empty_set else 1
+                # subtract 1 from num_target because 1st label corresponds to value 1
+                offset = 1
                 losses["cardinality_loss"] = self.crit_cardinality(
                     cardinality_logits, (cardinality_target.squeeze() - offset).long(),
                 )
@@ -162,7 +158,6 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
                 threshold=self.threshold,
                 cardinality_prediction=cardinality,
                 which_loss=self.loss_label,
-                use_empty_set=self.use_empty_set,
             )
 
         return losses, predictions
