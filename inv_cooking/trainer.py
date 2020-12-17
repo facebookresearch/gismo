@@ -68,7 +68,6 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         ingr_pred_config=cfg.ingr_predictor if "im" in cfg.task.name else None,
         recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
         optim_config=cfg.optimization,
-        dataset_name=cfg.dataset.name.name,
         maxnumlabels=cfg.dataset.filtering.max_num_labels,
         maxrecipelen=cfg.dataset.filtering.max_num_instructions * cfg.dataset.filtering.max_instruction_length,
         ingr_vocab_size=dm.ingr_vocab_size,

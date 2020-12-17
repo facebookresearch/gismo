@@ -11,7 +11,7 @@ class IngredientPredictorConfig:
     load_pretrained_from: str = MISSING
     with_set_prediction: bool = MISSING
     with_shuffle_labels: bool = MISSING
-    cardinality_pred: str = "none"  # Either "dc" or "cat" or "none"
+    cardinality_pred: str = "none"  # Either "cat" or "none"
 
 
 @dataclass

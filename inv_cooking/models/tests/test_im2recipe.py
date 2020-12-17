@@ -16,7 +16,6 @@ def test_Im2Recipe():
         recipe_gen_config=FakeConfig.recipe_gen_config(),
         ingr_vocab_size=vocab_size,
         instr_vocab_size=vocab_size,
-        dataset_name="recipe1m",
         max_num_labels=max_num_labels,
         max_recipe_len=max_recipe_len,
         ingr_eos_value=vocab_size - 1,

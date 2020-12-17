@@ -26,7 +26,6 @@ class LitInverseCooking(pl.LightningModule):
         ingr_pred_config: IngredientPredictorConfig,
         recipe_gen_config: RecipeGeneratorConfig,
         optim_config: OptimizationConfig,
-        dataset_name: str,  ## TODO: check if needed at all
         maxnumlabels: int,
         maxrecipelen: int,
         ingr_vocab_size: int,
@@ -40,7 +39,6 @@ class LitInverseCooking(pl.LightningModule):
                 image_encoder_config,
                 ingr_pred_config,
                 ingr_vocab_size,
-                dataset_name,
                 maxnumlabels,
                 ingr_eos_value,
             )
@@ -51,7 +49,6 @@ class LitInverseCooking(pl.LightningModule):
                 recipe_gen_config,
                 ingr_vocab_size,
                 instr_vocab_size,
-                dataset_name,
                 maxnumlabels,
                 maxrecipelen,
                 ingr_eos_value,

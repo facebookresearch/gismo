@@ -19,7 +19,6 @@ def test_ingredient_predictor():
         model = get_ingr_predictor(
             config,
             vocab_size=vocab_size,
-            dataset="recipe1m",
             maxnumlabels=max_num_labels,
             eos_value=vocab_size - 1,
         )

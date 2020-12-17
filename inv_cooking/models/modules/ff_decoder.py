@@ -67,9 +67,7 @@ class FFDecoder(nn.Module):
         logits = self.classifier(feat)
 
         # Apply cardinality layer
-        if self.pred_cardinality == "dc":
-            return logits, nn.ReLU()(self.fc_cardinality(feat))
-        elif self.pred_cardinality != "none":
+        if self.pred_cardinality != "none":
             return logits, self.fc_cardinality(feat)
         else:
             return logits, None

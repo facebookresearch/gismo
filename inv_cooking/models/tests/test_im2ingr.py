@@ -23,7 +23,6 @@ def test_Im2Ingr():
             image_encoder_config=FakeConfig.image_encoder_config(),
             ingr_pred_config=ingr_predictor,
             ingr_vocab_size=vocab_size,
-            dataset_name="recipe1m",
             max_num_labels=max_num_labels,
             ingr_eos_value=vocab_size - 1,
         )

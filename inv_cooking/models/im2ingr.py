@@ -15,7 +15,6 @@ class Im2Ingr(nn.Module):
         image_encoder_config: ImageEncoderConfig,
         ingr_pred_config: IngredientPredictorConfig,
         ingr_vocab_size: int,
-        dataset_name: str,
         max_num_labels: int,
         ingr_eos_value,
     ):
@@ -32,7 +31,6 @@ class Im2Ingr(nn.Module):
         self.ingr_predictor = get_ingr_predictor(
             ingr_pred_config,
             vocab_size=ingr_vocab_size,
-            dataset=dataset_name,
             maxnumlabels=max_num_labels,
             eos_value=ingr_eos_value,
         )

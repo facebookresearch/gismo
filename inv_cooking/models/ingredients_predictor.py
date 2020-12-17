@@ -2,10 +2,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
 from typing import Dict, Optional, Tuple, cast
 
-import numpy as np
 import torch
 import torch.nn as nn
 
@@ -19,7 +17,7 @@ from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
-from inv_cooking.utils.metrics import DC, DCLoss, SoftIoULoss, TargetDistributionLoss
+from inv_cooking.utils.metrics import SoftIoULoss, TargetDistributionLoss
 
 
 def label2_k_hots(labels, pad_value, remove_eos=False):
@@ -67,7 +65,6 @@ def predictions_to_idxs(
     th=1,
     cardinality_prediction=None,
     which_loss="bce",
-    accumulate_probs=False,
     use_empty_set=False,
 ):
 
@@ -99,11 +96,6 @@ def predictions_to_idxs(
         # (note that the output is N - 1, e.g. argmax = 0 means that there's 1 element)
         # unless we are in the empty set case, e.g. argmax = 0 means there there are 0 elements
 
-        if accumulate_probs:
-            for c in range(cardinality_prediction.size(-1)):
-                value = torch.sum(torch.log(probs[:, 0 : c + 1]), dim=-1)
-                cardinality_prediction[:, c] += value
-
         # select cardinality
         _, card_idx = torch.max(cardinality_prediction, dim=-1)
 
@@ -132,7 +124,6 @@ def predictions_to_idxs(
 def get_ingr_predictor(
     config: IngredientPredictorConfig,
     vocab_size: int,
-    dataset: str,
     maxnumlabels: int,
     eos_value: int,
 ):
@@ -234,10 +225,7 @@ def get_ingr_predictor(
         eos_loss = None
 
     # cardinality loss
-    if cardinality_pred == "dc":
-        print("Using Dirichlet-Categorical cardinality loss.", flush=True)
-        cardinality_loss = DCLoss(U=config.U, dataset=dataset, reduction="mean")
-    elif cardinality_pred == "cat":
+    if cardinality_pred == "cat":
         print("Using categorical cardinality loss.", flush=True)
         cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
     else:
@@ -257,7 +245,6 @@ def get_ingr_predictor(
         is_decoder_ff="ff" in config.model,
         loss_label=loss_key,
         card_type=cardinality_pred,
-        dataset=dataset,
     )
 
     if config.freeze:
@@ -282,12 +269,9 @@ class IngredientsPredictor(nn.Module):
         loss_label="bce",
         replacement=False,  # this is set to False because it is the ingredient prediction model
         card_type="none",
-        dataset="recipe1m",
-        U=2.36,
         use_empty_set=False,
         eps=1e-8,
     ):
-
         super(IngredientsPredictor, self).__init__()
         self.decoder = decoder
         self.is_decoder_ff = is_decoder_ff
@@ -302,8 +286,6 @@ class IngredientsPredictor(nn.Module):
         self.loss_label = loss_label
         self.replacement = replacement
         self.card_type = card_type
-        self.dataset = dataset  # TODO: this may not be used at all in this code
-        self.u_term = math.log(U)  # TODO: this may not be used at all in this code
         self.eps = eps
         self.use_empty_set = (
             use_empty_set  # TODO: this may not be used at all in this code
@@ -362,16 +344,7 @@ class IngredientsPredictor(nn.Module):
 
             if compute_predictions:
                 # consider cardinality
-                if self.card_type == "dc" and self.loss_label == "bce":
-                    offset = 0 if self.use_empty_set else 1
-                    cardinality = torch.log(
-                        DC(cardinality_logits, dataset=self.dataset)
-                    )
-                    u_term = np.array(list(range(cardinality.size(-1)))) + offset
-                    u_term = u_term * self.u_term
-                    u_term = torch.from_numpy(u_term).unsqueeze(0).type_as(cardinality)
-                    cardinality = cardinality + u_term
-                elif self.card_type == "cat":
+                if self.card_type == "cat":
                     cardinality = torch.nn.functional.log_softmax(
                         cardinality_logits + self.eps, dim=-1
                     )
@@ -392,8 +365,6 @@ class IngredientsPredictor(nn.Module):
                     th=self.th,
                     cardinality_prediction=cardinality,
                     which_loss=self.loss_label,
-                    accumulate_probs=self.card_type == "dc"
-                    and self.loss_label == "bce",
                     use_empty_set=self.use_empty_set,
                 )
 

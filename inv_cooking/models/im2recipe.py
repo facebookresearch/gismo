@@ -23,7 +23,6 @@ class Im2Recipe(nn.Module):
         recipe_gen_config: RecipeGeneratorConfig,
         ingr_vocab_size: int,
         instr_vocab_size: int,
-        dataset_name: str,
         max_num_labels: int,
         max_recipe_len: int,
         ingr_eos_value,
@@ -42,7 +41,6 @@ class Im2Recipe(nn.Module):
         self.ingr_predictor = get_ingr_predictor(
             ingr_pred_config,
             vocab_size=ingr_vocab_size,
-            dataset=dataset_name,
             maxnumlabels=max_num_labels,
             eos_value=ingr_eos_value,
         )
