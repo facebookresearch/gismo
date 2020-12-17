@@ -11,7 +11,7 @@ from inv_cooking.config import (
 )
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
-from inv_cooking.models.ingredients_predictor import get_ingr_predictor, mask_from_eos
+from inv_cooking.models.ingredients_predictor import create_ingredient_predictor, mask_from_eos
 from inv_cooking.models.recipe_generator import RecipeGenerator
 
 
@@ -38,10 +38,10 @@ class Im2Recipe(nn.Module):
         self.image_encoder = ImageEncoder(
             ingr_pred_config.embed_size, image_encoder_config
         )
-        self.ingr_predictor = get_ingr_predictor(
+        self.ingr_predictor = create_ingredient_predictor(
             ingr_pred_config,
             vocab_size=ingr_vocab_size,
-            maxnumlabels=max_num_labels,
+            max_num_labels=max_num_labels,
             eos_value=ingr_eos_value,
         )
         self.ingr_encoder = IngredientsEncoder(

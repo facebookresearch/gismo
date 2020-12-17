@@ -10,25 +10,26 @@ from inv_cooking.config import (
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
 )
+from .predictor import IngredientsPredictor
 from .predictor_ar import AutoRegressiveIngredientsPredictor
 from .predictor_ff import FeedForwardIngredientsPredictor
 
 
-def get_ingr_predictor(
+def create_ingredient_predictor(
     config: IngredientPredictorConfig,
     vocab_size: int,
-    maxnumlabels: int,
+    max_num_labels: int,
     eos_value: int,
-):
+) -> IngredientsPredictor:
     """
     Create the ingredient predictor based on the configuration
     """
     if "ff" in config.model:
         config = cast(IngredientPredictorFFConfig, config)
-        return FeedForwardIngredientsPredictor.from_config(config, maxnumlabels, vocab_size)
+        return FeedForwardIngredientsPredictor.from_config(config, max_num_labels, vocab_size)
     elif "lstm" in config.model:
         config = cast(IngredientPredictorLSTMConfig, config)
-        return AutoRegressiveIngredientsPredictor.create_lstm_from_config(config, maxnumlabels, vocab_size, eos_value)
+        return AutoRegressiveIngredientsPredictor.create_lstm_from_config(config, max_num_labels, vocab_size, eos_value)
     elif "tf" in config.model:
         config = cast(IngredientPredictorTransformerConfig, config)
-        return AutoRegressiveIngredientsPredictor.create_tf_from_config(config, maxnumlabels, vocab_size, eos_value)
+        return AutoRegressiveIngredientsPredictor.create_tf_from_config(config, max_num_labels, vocab_size, eos_value)

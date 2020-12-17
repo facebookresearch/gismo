@@ -1,6 +1,6 @@
 import torch
 
-from inv_cooking.models.ingredients_predictor import get_ingr_predictor
+from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
 from .utils import FakeIngredientPredictorConfig
 
 
@@ -16,10 +16,10 @@ def test_ingredient_predictor():
     ]
 
     for config, expected_output_shape in all_configs:
-        model = get_ingr_predictor(
+        model = create_ingredient_predictor(
             config,
             vocab_size=vocab_size,
-            maxnumlabels=max_num_labels,
+            max_num_labels=max_num_labels,
             eos_value=vocab_size - 1,
         )
 
