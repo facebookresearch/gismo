@@ -5,18 +5,25 @@
 import torch
 
 
-def label2_k_hots(labels, pad_value, remove_eos=False):
+def label2_k_hots(labels: torch.Tensor, pad_value: int, remove_eos: bool = False):
+    """
+    :param labels: predictions of a model - shape (batch_size, max_num_labels)
+    :param pad_value: last valid value of the vocabulary, which represents padding
+    :param remove_eos: remove the end of sequence token from the predictions
+    :return shape (batch_size, pad_value + 1) with at most max_num_labels values set to 1
+    """
 
     # input labels to one hot vector
-    inp_ = torch.unsqueeze(labels, 2)
-    k_hots = torch.zeros(labels.size(0), labels.size(1), pad_value + 1).type_as(inp_)
-    k_hots.scatter_(2, inp_, 1)
+    batch_size, max_num_labels = labels.shape
+    labels = torch.unsqueeze(labels, dim=-1)
+    k_hots = torch.zeros(batch_size, max_num_labels, pad_value + 1).type_as(labels)
+    k_hots.scatter_(dim=2, index=labels, value=1)
     k_hots, _ = k_hots.max(dim=1)
 
-    # remove pad position
+    # remove pad position (padding value is supposed to be vocab_size - 1)
     k_hots = k_hots[:, :-1]
 
-    # handle eos
+    # handle eos (eos is supposed to be 0)
     if remove_eos:
         # this is used by tfset/lstmset when computing losses and
         # by all auto-regressive models when computing f1 metrics
