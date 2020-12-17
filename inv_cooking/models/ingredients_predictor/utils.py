@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from typing import Optional
 
 import torch
 
@@ -50,36 +51,46 @@ def mask_from_eos(prediction, eos_value, mult_before=True):
     return mask
 
 
-def predictions_to_idxs(
-    label_logits,
-    maxnumlabels,  ## TODO check how this is used, and whether the +1 in the set predictor construction is necessary
-    pad_value,
-    th:float=1,
-    cardinality_prediction=None,
-    which_loss="bce",
-    use_empty_set=False,
-):
+def predictions_to_indices(
+    label_probs: torch.Tensor,
+    max_num_labels: int,
+    pad_value: int,
+    threshold: float = 1,
+    cardinality_prediction: Optional[torch.Tensor] = None,
+    which_loss: str = "bce",
+    use_empty_set: bool = False,
+) -> torch.Tensor:
+    """
+    Select the highest logit values, and produce a vector holding the indices of the predicted elements
+    :param label_probs: the probabilities for each labels - shape (batch_size, max_num_labels)
+    :param max_num_labels: the maximum number of elements that can be predicted
+    :param pad_value: padding value (not a real prediction)
+    :param threshold: the minimum threshold for an element to be selected
+    :param cardinality_prediction: the number of elements to select - shape (batch_size,)
+    :param which_loss: either "bce" or "td"
+    :return the filtered predictions - shape (batch_size, max_num_labels)
+    """
 
-    assert th > 0 and th <= 1
+    assert 0.0 < threshold <= 1.0
 
     card_offset = 0 if use_empty_set else 1
 
     # select topk elements
     probs, idxs = torch.topk(
-        label_logits, k=maxnumlabels, dim=1, largest=True, sorted=True
+        label_probs, k=max_num_labels, dim=1, largest=True, sorted=True
     )
     idxs_clone = idxs.clone()
 
-    # mask to identify elements within the top-maxnumlabel ones which satisfy the threshold th
+    # mask to identify elements within the top-max_num_labels ones which satisfy the threshold
     if which_loss == "td":
         # cumulative threshold
         mask = torch.ones(probs.size()).type_as(probs).byte()
         for idx in range(probs.size(1)):
-            mask_step = torch.sum(probs[:, 0:idx], dim=-1) < th
+            mask_step = torch.sum(probs[:, 0:idx], dim=-1) < threshold
             mask[:, idx] = mask[:, idx] * mask_step
     else:
-        # probility threshold
-        mask = (probs > th).byte()
+        # probability threshold
+        mask = (probs > threshold).byte()
 
     # if the model has cardinality prediction
     if cardinality_prediction is not None:
@@ -109,5 +120,4 @@ def predictions_to_idxs(
             mask[:, 0] = 1
 
     idxs_clone[mask == 0] = pad_value
-
     return idxs_clone

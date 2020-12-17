@@ -11,8 +11,9 @@ from inv_cooking.config import IngredientPredictorFFConfig
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.utils.metrics import SoftIoULoss, TargetDistributionLoss
+
 from .predictor import IngredientsPredictor
-from .utils import predictions_to_idxs, label2_k_hots
+from .utils import label2_k_hots, predictions_to_indices
 
 
 class FeedForwardIngredientsPredictor(IngredientsPredictor):
@@ -21,7 +22,9 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
     """
 
     @staticmethod
-    def from_config(config: IngredientPredictorFFConfig, maxnumlabels: int, vocab_size: int) -> "FeedForwardIngredientsPredictor":
+    def from_config(
+        config: IngredientPredictorFFConfig, maxnumlabels: int, vocab_size: int
+    ) -> "FeedForwardIngredientsPredictor":
         cardinality_pred = config.cardinality_pred
         print(
             "Building feed-forward decoder {}. Embed size {} / Dropout {} / "
@@ -80,18 +83,18 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         return model
 
     def __init__(
-            self,
-            decoder: nn.Module,
-            max_num_labels: int,
-            vocab_size: int,
-            crit=None,
-            crit_cardinality=None,
-            pad_value: int = 0,
-            threshold: float = 0.5,
-            loss_label: str = "bce",
-            card_type: str = "none",
-            use_empty_set: bool = False,
-            eps: float = 1e-8,
+        self,
+        decoder: nn.Module,
+        max_num_labels: int,
+        vocab_size: int,
+        crit=None,
+        crit_cardinality=None,
+        pad_value: int = 0,
+        threshold: float = 0.5,
+        loss_label: str = "bce",
+        card_type: str = "none",
+        use_empty_set: bool = False,
+        eps: float = 1e-8,
     ):
         super().__init__(remove_eos=True)
         self.decoder = decoder
@@ -107,11 +110,11 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         self.vocab_size = vocab_size
 
     def _forward_impl(
-            self,
-            img_features: torch.Tensor,
-            label_target: Optional[torch.Tensor] = None,
-            compute_losses: bool = False,
-            compute_predictions: bool = False,
+        self,
+        img_features: torch.Tensor,
+        label_target: Optional[torch.Tensor] = None,
+        compute_losses: bool = False,
+        compute_predictions: bool = False,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         losses: Dict[str, torch.Tensor] = {}
@@ -133,8 +136,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
                 # otherwise, 1st label corresponds to 1
                 offset = 0 if self.use_empty_set else 1
                 losses["cardinality_loss"] = self.crit_cardinality(
-                    cardinality_logits,
-                    (cardinality_target.squeeze() - offset).long(),
+                    cardinality_logits, (cardinality_target.squeeze() - offset).long(),
                 )
 
         if compute_predictions:
@@ -146,18 +148,18 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             else:
                 cardinality = None
 
-            # apply nonlinearity to label logits
+            # apply non-linearity to label logits
             if self.loss_label == "td":
                 label_probs = nn.functional.softmax(label_logits, dim=-1)
             else:
                 label_probs = torch.sigmoid(label_logits)
 
             # get label ids
-            predictions = predictions_to_idxs(
-                label_probs,
-                self.maxnumlabels,
-                self.pad_value,
-                th=self.threshold,
+            predictions = predictions_to_indices(
+                label_probs=label_probs,
+                max_num_labels=self.maxnumlabels,
+                pad_value=self.pad_value,
+                threshold=self.threshold,
                 cardinality_prediction=cardinality,
                 which_loss=self.loss_label,
                 use_empty_set=self.use_empty_set,
