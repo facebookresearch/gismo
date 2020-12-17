@@ -1,7 +1,7 @@
 import torch
 
 from inv_cooking.models.ingredients_predictor import get_ingr_predictor
-from inv_cooking.models.tests.utils import FakeConfig
+from .utils import FakeIngredientPredictorConfig
 
 
 def test_ingredient_predictor():
@@ -10,9 +10,9 @@ def test_ingredient_predictor():
     max_num_labels = 10
 
     all_configs = [
-        (FakeConfig.ingr_pred_ff_config(), torch.Size([batch_size, max_num_labels])),
-        (FakeConfig.ingr_pred_lstm_config(), torch.Size([batch_size, max_num_labels + 1])),
-        (FakeConfig.ingr_pred_tf_config(), torch.Size([batch_size, max_num_labels + 1])),
+        (FakeIngredientPredictorConfig.ff_config(), torch.Size([batch_size, max_num_labels])),
+        (FakeIngredientPredictorConfig.lstm_config(), torch.Size([batch_size, max_num_labels + 1])),
+        (FakeIngredientPredictorConfig.tf_config(), torch.Size([batch_size, max_num_labels + 1])),
     ]
 
     for config, expected_output_shape in all_configs:

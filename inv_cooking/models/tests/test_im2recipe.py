@@ -2,6 +2,7 @@ import torch
 
 from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.models.tests.utils import FakeConfig
+from inv_cooking.models.ingredients_predictor.tests.utils import FakeIngredientPredictorConfig
 
 
 def test_Im2Recipe():
@@ -12,7 +13,7 @@ def test_Im2Recipe():
 
     model = Im2Recipe(
         image_encoder_config=FakeConfig.image_encoder_config(),
-        ingr_pred_config=FakeConfig.ingr_pred_ff_config(),
+        ingr_pred_config=FakeIngredientPredictorConfig.ff_config(),
         recipe_gen_config=FakeConfig.recipe_gen_config(),
         ingr_vocab_size=vocab_size,
         instr_vocab_size=vocab_size,
