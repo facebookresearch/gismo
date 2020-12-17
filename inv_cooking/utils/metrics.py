@@ -3,76 +3,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
 from typing import Dict, List
 
 import numpy as np
 import torch
 import torch.nn as nn
-
-
-def DC(alphas, dataset="recipe1m"):
-
-    if dataset == "recipe1m":
-        cms = np.array(
-            [
-                0.0000e00,
-                1.1570e04,
-                2.7383e04,
-                4.5583e04,
-                6.2422e04,
-                7.2228e04,
-                7.6909e04,
-                7.6319e04,
-                7.0102e04,
-                5.9216e04,
-                4.6648e04,
-                3.4192e04,
-                2.3283e04,
-                1.5590e04,
-                1.0079e04,
-                6.2400e03,
-                3.7690e03,
-                2.2110e03,
-                1.3430e03,
-                2.7000e01,
-            ]
-        )
-
-    cms = cms[0 : alphas.size(-1)]
-    c = sum(cms)
-
-    cms = torch.from_numpy(cms).type_as(alphas)
-    cms = cms.unsqueeze(0)
-
-    num = alphas + cms
-    den = (torch.sum(alphas, dim=-1) + c).unsqueeze(1)
-    dc_alphas = num / den
-
-    return dc_alphas
-
-
-class DCLoss(nn.Module):
-    def __init__(self, U, dataset, reduction="none", e=1e-8):
-        super(DCLoss, self).__init__()
-        assert reduction in ["none", "mean"]
-        self.U = math.log(U)
-        self.dataset = dataset
-        self.offset = 0 if self.dataset in ["coco", "nuswide"] else 1
-        self.reduction = reduction
-        self.e = e
-
-    def forward(self, input, target):
-        loss = (
-            nn.NLLLoss(reduction="none")(
-                torch.log(DC(input, dataset=self.dataset) + self.e), target
-            )
-            - ((target + self.offset) * self.U).float()
-        )
-
-        if self.reduction == "mean":
-            loss = loss.mean()
-        return loss
 
 
 @torch.jit.script
