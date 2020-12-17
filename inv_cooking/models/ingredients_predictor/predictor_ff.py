@@ -10,7 +10,7 @@ import torch.nn as nn
 from inv_cooking.config import IngredientPredictorFFConfig
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.utils import freeze_fn
-from inv_cooking.utils.metrics import SoftIoULoss, TargetDistributionLoss
+from inv_cooking.utils.criterion import SoftIoULoss, TargetDistributionLoss
 
 from .predictor import IngredientsPredictor
 from .utils import label2_k_hots, predictions_to_indices

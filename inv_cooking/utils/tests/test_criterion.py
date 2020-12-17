@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from inv_cooking.utils.metrics import soft_iou
+from inv_cooking.utils.criterion import soft_iou
 
 
 def test_soft_iou():
