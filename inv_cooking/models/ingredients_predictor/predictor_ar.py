@@ -14,7 +14,7 @@ from inv_cooking.config import (
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
-from .abstract_predictor import IngredientsPredictor
+from .predictor import IngredientsPredictor
 from .utils import mask_from_eos, label2_k_hots
 
 
@@ -23,14 +23,14 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
     Implementation of an ingredient predictor based on an auto-regressive architecture
     """
 
-    @staticmethod
+    @classmethod
     def create_tf_from_config(
+            cls,
             config: IngredientPredictorTransformerConfig,
             maxnumlabels: int,
             vocab_size: int,
             eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
-
         maxnumlabels += 1  # required for EOS token
         print(
             "Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / "
@@ -55,38 +55,16 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             learned=False,
             normalize_before=True,
         )
+        return cls.from_decoder(config, decoder, maxnumlabels, vocab_size, eos_value)
 
-        pad_value = vocab_size - 1
-        if config.with_set_prediction:
-            label_loss = nn.BCELoss(reduction="mean")
-            eos_loss = nn.BCELoss(reduction="none")
-        else:
-            label_loss = nn.CrossEntropyLoss(ignore_index=pad_value, reduction="mean")
-            eos_loss = None
-
-        model = AutoRegressiveIngredientsPredictor(
-            decoder,
-            maxnumlabels,
-            vocab_size,
-            crit=label_loss,
-            crit_eos=eos_loss,
-            pad_value=pad_value,
-            eos_value=eos_value,
-            perminv=config.with_set_prediction,
-        )
-
-        if config.freeze:
-            freeze_fn(model)
-        return model
-
-    @staticmethod
+    @classmethod
     def create_lstm_from_config(
+            cls,
             config: IngredientPredictorLSTMConfig,
             maxnumlabels: int,
             vocab_size: int,
             eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
-
         maxnumlabels += 1  # required for EOS token
         print(
             "Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. ".format(
@@ -101,7 +79,15 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             dropout=config.dropout,
             seq_length=maxnumlabels,
         )
+        return cls.from_decoder(config, decoder, maxnumlabels, vocab_size, eos_value)
 
+    @staticmethod
+    def from_decoder(
+            config: IngredientPredictorLSTMConfig,
+            decoder: nn.Module,
+            maxnumlabels: int,
+            vocab_size: int,
+            eos_value: int):
         pad_value = vocab_size - 1
         if config.with_set_prediction:
             label_loss = nn.BCELoss(reduction="mean")

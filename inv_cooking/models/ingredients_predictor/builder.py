@@ -10,8 +10,8 @@ from inv_cooking.config import (
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
 )
-from .ar_predictor import AutoRegressiveIngredientsPredictor
-from .ff_predictor import FeedForwardIngredientsPredictor
+from .predictor_ar import AutoRegressiveIngredientsPredictor
+from .predictor_ff import FeedForwardIngredientsPredictor
 
 
 def get_ingr_predictor(

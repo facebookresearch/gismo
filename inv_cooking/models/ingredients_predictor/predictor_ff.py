@@ -11,7 +11,7 @@ from inv_cooking.config import IngredientPredictorFFConfig
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.utils.metrics import SoftIoULoss, TargetDistributionLoss
-from .abstract_predictor import IngredientsPredictor
+from .predictor import IngredientsPredictor
 from .utils import predictions_to_idxs, label2_k_hots
 
 
