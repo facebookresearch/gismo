@@ -131,11 +131,14 @@ def get_ingr_predictor(
     Create the ingredient predictor based on the configuration
     """
 
-    cardinality_pred = config.cardinality_pred
+    # TODO - remove these later as they are only used for the FF decoder
+    cardinality_loss = None
+    cardinality_pred = "none"
 
     # build ingredients predictor
     if "ff" in config.model:
         config = cast(IngredientPredictorFFConfig, config)
+        cardinality_pred = config.cardinality_pred
         print(
             "Building feed-forward decoder {}. Embed size {} / Dropout {} / "
             " Max. Num. Labels {} / Num. Layers {}".format(
@@ -156,6 +159,13 @@ def get_ingr_predictor(
             nobjects=maxnumlabels,
             n_layers=config.layers,
         )
+        # cardinality loss
+        if cardinality_pred == "cat":
+            print("Using categorical cardinality loss.", flush=True)
+            cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
+        else:
+            print("Using no cardinality loss.", flush=True)
+            cardinality_loss = None
 
     elif "lstm" in config.model:
         config = cast(IngredientPredictorLSTMConfig, config)
@@ -223,14 +233,6 @@ def get_ingr_predictor(
         loss_key = "cross-entropy"
         label_loss = nn.CrossEntropyLoss(ignore_index=pad_value, reduction="mean")
         eos_loss = None
-
-    # cardinality loss
-    if cardinality_pred == "cat":
-        print("Using categorical cardinality loss.", flush=True)
-        cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
-    else:
-        print("Using no cardinality loss.", flush=True)
-        cardinality_loss = None
 
     model = IngredientsPredictor(
         decoder,
