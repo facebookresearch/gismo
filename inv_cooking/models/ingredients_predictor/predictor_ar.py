@@ -27,18 +27,18 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
     def create_tf_from_config(
             cls,
             config: IngredientPredictorTransformerConfig,
-            maxnumlabels: int,
+            max_num_labels: int,
             vocab_size: int,
             eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
-        maxnumlabels += 1  # required for EOS token
+        max_num_labels += 1  # required for EOS token
         print(
             "Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / "
             "Num. Attention Heads {} / Num. Layers {}.".format(
                 config.model,
                 config.embed_size,
                 config.dropout,
-                maxnumlabels,
+                max_num_labels,
                 config.n_att,
                 config.layers,
             ),
@@ -48,27 +48,27 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             config.embed_size,
             vocab_size,
             dropout=config.dropout,
-            seq_length=maxnumlabels,
+            seq_length=max_num_labels,
             attention_nheads=config.n_att,
             pos_embeddings=False,
             num_layers=config.layers,
             learned=False,
             normalize_before=True,
         )
-        return cls.from_decoder(config, decoder, maxnumlabels, vocab_size, eos_value)
+        return cls.from_decoder(config, decoder, max_num_labels, vocab_size, eos_value)
 
     @classmethod
     def create_lstm_from_config(
             cls,
             config: IngredientPredictorLSTMConfig,
-            maxnumlabels: int,
+            max_num_labels: int,
             vocab_size: int,
             eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
-        maxnumlabels += 1  # required for EOS token
+        max_num_labels += 1  # required for EOS token
         print(
             "Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. ".format(
-                config.model, config.embed_size, config.dropout, maxnumlabels
+                config.model, config.embed_size, config.dropout, max_num_labels
             ),
             flush=True,
         )
@@ -77,15 +77,15 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             config.embed_size,
             vocab_size,
             dropout=config.dropout,
-            seq_length=maxnumlabels,
+            seq_length=max_num_labels,
         )
-        return cls.from_decoder(config, decoder, maxnumlabels, vocab_size, eos_value)
+        return cls.from_decoder(config, decoder, max_num_labels, vocab_size, eos_value)
 
     @staticmethod
     def from_decoder(
             config: IngredientPredictorLSTMConfig,
             decoder: nn.Module,
-            maxnumlabels: int,
+            max_num_labels: int,
             vocab_size: int,
             eos_value: int):
         pad_value = vocab_size - 1
@@ -98,7 +98,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
         model = AutoRegressiveIngredientsPredictor(
             decoder,
-            maxnumlabels,
+            max_num_labels,
             vocab_size,
             crit=label_loss,
             crit_eos=eos_loss,
@@ -165,26 +165,26 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             shift_target = torch.cat([first_word.unsqueeze(-1), label_target], -1)[
                            :, :-1
                            ]
+
+            # autoregressive mode for decoder when training with permutation invariant objective
             if self.perminv:
-                # autoregressive mode for decoder when training with permutation invariant objective
-                # e.g. lstmset and tfset
 
-                # apply softmax nonlinearity before pooling across timesteps
-                label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
+                # apply softmax non-linearity before pooling across timesteps
+                label_probs = nn.functional.softmax(label_logits, dim=-1)
 
-                # find idxs for eos label
+                # Find index for eos label
                 # eos probability is the one assigned to the position self.eos_value of the softmax
                 # this is used with bce loss only
                 eos = label_probs[:, :, self.eos_value]
-                eos_pos = (
-                        label_target == self.eos_value
-                )  # all zeros except position where eos is in the gt
-                eos_head = (label_target != self.pad_value) & (
-                        label_target != self.eos_value
-                )  # 1s for gt label positions, 0s starting from eos position in the gt
-                eos_target = (
-                    ~eos_head
-                )  # 0s for gt label positions, 1s starting from eos position in the gt
+
+                # all zeros except position where eos is in the gt
+                eos_pos = label_target == self.eos_value
+
+                # 1s for gt label positions, 0s starting from eos position in the gt
+                eos_head = (label_target != self.pad_value) & (label_target != self.eos_value)
+
+                # 0s for gt label positions, 1s starting from eos position in the gt
+                eos_target = ~eos_head
 
                 # select transformer steps to pool (steps corresponding to set elements, i.e. labels)
                 label_probs = label_probs * eos_head.float().unsqueeze(-1)
@@ -201,6 +201,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
                 # compute eos loss
                 eos_loss = self.crit_eos(eos, eos_target.float())
+
                 # eos loss is computed for all timesteps <= eos in gt and
                 # equally penalizes the head (all 0s) and the true eos position (1)
                 losses["eos_loss"] = (

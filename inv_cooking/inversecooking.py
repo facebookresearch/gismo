@@ -30,7 +30,7 @@ class LitInverseCooking(pl.LightningModule):
         maxrecipelen: int,
         ingr_vocab_size: int,
         instr_vocab_size: int,
-        ingr_eos_value,
+        ingr_eos_value: int,
     ):
         super().__init__()
 

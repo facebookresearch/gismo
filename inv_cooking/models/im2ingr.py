@@ -20,7 +20,7 @@ class Im2Ingr(nn.Module):
         ingr_pred_config: IngredientPredictorConfig,
         ingr_vocab_size: int,
         max_num_labels: int,
-        ingr_eos_value,
+        ingr_eos_value: int,
     ):
         super().__init__()
         self.ingr_vocab_size = ingr_vocab_size

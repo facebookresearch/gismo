@@ -29,7 +29,7 @@ class Im2Recipe(nn.Module):
         instr_vocab_size: int,
         max_num_labels: int,
         max_recipe_len: int,
-        ingr_eos_value,
+        ingr_eos_value: int,
     ):
         super().__init__()
         self.ingr_vocab_size = ingr_vocab_size
