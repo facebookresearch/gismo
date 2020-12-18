@@ -29,7 +29,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         print(
             "Building feed-forward decoder {}. Embed size {} / Dropout {} / "
             " Max. Num. Labels {} / Num. Layers {}".format(
-                config.model,
+                config.model.name,
                 config.embed_size,
                 config.dropout,
                 maxnumlabels,

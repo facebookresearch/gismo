@@ -4,9 +4,15 @@ from enum import Enum
 from omegaconf import MISSING
 
 
+class IngredientPredictorType(Enum):
+    ff = 0
+    lstm = 1
+    tf = 2
+
+
 @dataclass
 class IngredientPredictorConfig:
-    model: str = MISSING  # Either "ff", "lstm" or "tf"
+    model: IngredientPredictorType = MISSING
     embed_size: int = MISSING
     freeze: bool = MISSING
     load_pretrained_from: str = MISSING

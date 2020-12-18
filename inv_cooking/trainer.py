@@ -5,7 +5,7 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from inv_cooking.config import Config, TaskType
+from inv_cooking.config import Config, TaskType, IngredientPredictorType
 from inv_cooking.datasets.recipe1m.loader import Recipe1MDataModule
 from inv_cooking.inversecooking import LitInverseCooking
 
@@ -17,7 +17,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
 
     # checkpointing
     checkpoint_dir = os.path.join(
-        cfg.checkpoint.dir, cfg.task.name + "-" + cfg.ingr_predictor.model
+        cfg.checkpoint.dir, cfg.task.name + "-" + cfg.ingr_predictor.model.name
     )
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
@@ -44,7 +44,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         raise ValueError(f"Unknown task: {cfg.task}.")
 
     # data module
-    include_eos = "ff" not in cfg.ingr_predictor.model
+    include_eos = cfg.ingr_predictor.model != IngredientPredictorType.ff
     dm = Recipe1MDataModule(
         dataset_config=cfg.dataset,
         include_eos=include_eos,
@@ -74,7 +74,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
     # logger
     tb_logger = pl_loggers.TensorBoardLogger(
         os.path.join(cfg.checkpoint.dir, "logs/"),
-        name=cfg.task.name + "-" + cfg.ingr_predictor.model,
+        name=cfg.task.name + "-" + cfg.ingr_predictor.model.name,
     )
 
     # checkpointing

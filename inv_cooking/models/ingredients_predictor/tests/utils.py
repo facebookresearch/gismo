@@ -3,7 +3,7 @@ from inv_cooking.config import (
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
-    IngredientPredictorCriterion,
+    IngredientPredictorCriterion, IngredientPredictorType,
 )
 
 
@@ -12,7 +12,7 @@ class FakeIngredientPredictorConfig:
     @staticmethod
     def ff_config() -> IngredientPredictorFFConfig:
         return IngredientPredictorFFConfig(
-            model="ff",
+            model=IngredientPredictorType.ff,
             embed_size=2048,
             freeze=False,
             load_pretrained_from="",
@@ -25,7 +25,7 @@ class FakeIngredientPredictorConfig:
     @staticmethod
     def lstm_config(with_set_prediction: bool = False) -> IngredientPredictorLSTMConfig:
         return IngredientPredictorLSTMConfig(
-            model="lstm",
+            model=IngredientPredictorType.lstm,
             embed_size=2048,
             freeze=False,  # setting freeze to True will also freeze the image encoder
             load_pretrained_from="",
@@ -36,7 +36,7 @@ class FakeIngredientPredictorConfig:
     @staticmethod
     def tf_config(with_set_prediction: bool = False) -> IngredientPredictorTransformerConfig:
         return IngredientPredictorTransformerConfig(
-            model="tf",
+            model=IngredientPredictorType.tf,
             layers=0,
             embed_size=2048,
             freeze=False,

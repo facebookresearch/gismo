@@ -35,7 +35,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         print(
             "Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / "
             "Num. Attention Heads {} / Num. Layers {}.".format(
-                config.model,
+                config.model.name,
                 config.embed_size,
                 config.dropout,
                 max_num_labels,
@@ -68,7 +68,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         max_num_labels += 1  # required for EOS token
         print(
             "Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. ".format(
-                config.model, config.embed_size, config.dropout, max_num_labels
+                config.model.name, config.embed_size, config.dropout, max_num_labels
             ),
             flush=True,
         )

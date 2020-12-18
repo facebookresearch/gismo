@@ -13,6 +13,7 @@ from .ingredient_predictor import (
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
+    IngredientPredictorType,
 )
 from .optimization import OptimizationConfig
 from .raw_config import RawConfig

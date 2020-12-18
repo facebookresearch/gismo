@@ -1,7 +1,7 @@
 import torch
 
 from inv_cooking.config import CardinalityPredictionType, IngredientPredictorFFConfig, IngredientPredictorConfig, \
-    IngredientPredictorCriterion
+    IngredientPredictorCriterion, IngredientPredictorType
 from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
 from .utils import FakeIngredientPredictorConfig
 
@@ -41,7 +41,7 @@ class TestIngredientPredictor:
 
     def test_ff_with_cardinality(self):
         config = IngredientPredictorFFConfig(
-            model="ff",
+            model=IngredientPredictorType.ff,
             embed_size=2048,
             freeze=False,
             load_pretrained_from="",
