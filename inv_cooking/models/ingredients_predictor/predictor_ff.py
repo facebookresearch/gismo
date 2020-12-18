@@ -7,7 +7,11 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from inv_cooking.config import IngredientPredictorFFConfig, CardinalityPredictionType, IngredientPredictorCriterion
+from inv_cooking.config import (
+    CardinalityPredictionType,
+    IngredientPredictorCriterion,
+    IngredientPredictorFFConfig,
+)
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.utils.criterion import SoftIoULoss, TargetDistributionLoss
@@ -38,18 +42,17 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             flush=True,
         )
         decoder = FFDecoder(
-            config.embed_size,
-            vocab_size,
-            config.embed_size,
+            embed_size=config.embed_size,
+            vocab_size=vocab_size,
+            hidden_size=config.embed_size,
             dropout=config.dropout,
-            pred_cardinality=cardinality_pred,
-            nobjects=max_num_labels,
             n_layers=config.layers,
         )
 
         # cardinality loss
         if cardinality_pred == CardinalityPredictionType.categorical:
             print("Using categorical cardinality loss.", flush=True)
+            decoder.add_cardinality_prediction(max_num_labels)
             cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
         else:
             print("Using no cardinality loss.", flush=True)

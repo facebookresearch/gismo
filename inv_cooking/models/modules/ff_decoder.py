@@ -1,12 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
-
-from inv_cooking.config import CardinalityPredictionType
 
 
 class FFDecoder(nn.Module):
@@ -16,15 +14,45 @@ class FFDecoder(nn.Module):
         vocab_size: int,
         hidden_size: int,
         dropout: float = 0.0,
-        pred_cardinality: CardinalityPredictionType = CardinalityPredictionType.none,
-        nobjects: int = 10,  ## for cardinality prediction only
         n_layers: int = 1,
     ):
-        super(FFDecoder, self).__init__()
+        super().__init__()
+        self.fc_layers = self._create_hidden_layers(
+            embed_size, n_layers, hidden_size, dropout
+        )
+        if self.fc_layers is not None:
+            in_dim = hidden_size
+        else:
+            in_dim = embed_size
+        self.classifier = nn.Linear(in_dim, vocab_size - 1)
+        self.fc_cardinality = None
 
-        in_dim = embed_size
+    def add_cardinality_prediction(self, max_num_labels: int):
+        self.fc_cardinality = nn.Linear(self.classifier.in_features, max_num_labels)
 
-        # Add fully connected layers
+    def forward(
+        self, img_features: torch.Tensor
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        """
+        :param img_features: features of the image - shape (N, embedding_size, sequence_length)
+        """
+        feat = self._average_pooling(img_features)
+        if self.fc_layers is not None:
+            feat = self.fc_layers(feat)
+        logits = self.classifier(feat)
+        if self.fc_cardinality is not None:
+            return logits, self.fc_cardinality(feat)
+        else:
+            return logits, None
+
+    @staticmethod
+    def _average_pooling(img_features):
+        return torch.mean(img_features, dim=-1)
+
+    @staticmethod
+    def _create_hidden_layers(
+        in_dim: int, n_layers: int, hidden_size: int, dropout: float
+    ) -> Optional[nn.Module]:
         fc_layers = []
         for i in range(n_layers):
             fc_layers.extend(
@@ -35,32 +63,6 @@ class FFDecoder(nn.Module):
                     nn.ReLU(),
                 ]
             )
-            in_dim = hidden_size
-
         if len(fc_layers) != 0:
-            self.fc_layers = nn.Sequential(*fc_layers)
-        else:
-            self.fc_layers = None
-
-        self.classifier = nn.Sequential(nn.Linear(hidden_size, vocab_size - 1))
-
-        self.pred_cardinality = pred_cardinality
-        if self.pred_cardinality != CardinalityPredictionType.none:
-            self.fc_cardinality = nn.Sequential(nn.Linear(hidden_size, nobjects))
-
-    def forward(self, img_features: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-        """
-        :param img_features: features extract of the image - shape (N, embedding_size, sequence_length)
-        """
-        feat = self._average_pooling(img_features)
-        if self.fc_layers is not None:
-            feat = self.fc_layers(feat)
-        logits = self.classifier(feat)
-        if self.pred_cardinality != CardinalityPredictionType.none:
-            return logits, self.fc_cardinality(feat)
-        else:
-            return logits, None
-
-    @staticmethod
-    def _average_pooling(img_features):
-        return torch.mean(img_features, dim=-1)
+            return nn.Sequential(*fc_layers)
+        return None
