@@ -19,7 +19,6 @@ class FFDecoder(nn.Module):
         pred_cardinality: CardinalityPredictionType = CardinalityPredictionType.none,
         nobjects: int = 10,  ## for cardinality prediction only
         n_layers: int = 1,
-        use_empty_set: bool = False,
     ):
         super(FFDecoder, self).__init__()
 
@@ -47,11 +46,6 @@ class FFDecoder(nn.Module):
 
         self.pred_cardinality = pred_cardinality
         if self.pred_cardinality != CardinalityPredictionType.none:
-            if (
-                use_empty_set
-            ):  ## TODO: may not be needed at all, do we have empty sets here?
-                # This is to account for 0 when using cardinality prediction and dealing with datasets with empty sets
-                nobjects += 1
             self.fc_cardinality = nn.Sequential(nn.Linear(hidden_size, nobjects))
 
     def forward(self, img_features: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
