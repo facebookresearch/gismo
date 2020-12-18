@@ -23,7 +23,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
 
     @staticmethod
     def from_config(
-        config: IngredientPredictorFFConfig, maxnumlabels: int, vocab_size: int
+        config: IngredientPredictorFFConfig, max_num_labels: int, vocab_size: int
     ) -> "FeedForwardIngredientsPredictor":
         cardinality_pred = config.cardinality_pred
         print(
@@ -32,7 +32,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
                 config.model.name,
                 config.embed_size,
                 config.dropout,
-                maxnumlabels,
+                max_num_labels,
                 config.layers,
             ),
             flush=True,
@@ -43,7 +43,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             config.embed_size,
             dropout=config.dropout,
             pred_cardinality=cardinality_pred,
-            nobjects=maxnumlabels,
+            nobjects=max_num_labels,
             n_layers=config.layers,
         )
 
@@ -65,7 +65,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
 
         model = FeedForwardIngredientsPredictor(
             decoder,
-            maxnumlabels,
+            max_num_labels,
             vocab_size,
             crit=label_loss,
             crit_cardinality=cardinality_loss,
