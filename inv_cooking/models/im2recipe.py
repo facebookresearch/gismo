@@ -6,12 +6,16 @@ import torch.nn as nn
 
 from inv_cooking.config import (
     ImageEncoderConfig,
+    ImageEncoderFreezeType,
     IngredientPredictorConfig,
     RecipeGeneratorConfig,
 )
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
-from inv_cooking.models.ingredients_predictor import create_ingredient_predictor, mask_from_eos
+from inv_cooking.models.ingredients_predictor import (
+    create_ingredient_predictor,
+    mask_from_eos,
+)
 from inv_cooking.models.recipe_generator import RecipeGenerator
 
 
@@ -33,7 +37,7 @@ class Im2Recipe(nn.Module):
         self.instr_vocab_size = instr_vocab_size
 
         if ingr_pred_config.freeze:
-            image_encoder_config.freeze = "all"
+            image_encoder_config.freeze = ImageEncoderFreezeType.all
 
         self.image_encoder = ImageEncoder(
             ingr_pred_config.embed_size, image_encoder_config

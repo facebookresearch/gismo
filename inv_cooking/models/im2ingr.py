@@ -4,7 +4,11 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from inv_cooking.config import ImageEncoderConfig, IngredientPredictorConfig
+from inv_cooking.config import (
+    ImageEncoderConfig,
+    ImageEncoderFreezeType,
+    IngredientPredictorConfig,
+)
 from inv_cooking.models.image_encoder import ImageEncoder
 from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
 
@@ -22,7 +26,7 @@ class Im2Ingr(nn.Module):
         self.ingr_vocab_size = ingr_vocab_size
 
         if ingr_pred_config.freeze:
-            image_encoder_config.freeze = "all"
+            image_encoder_config.freeze = ImageEncoderFreezeType.all
 
         self.image_encoder = ImageEncoder(
             ingr_pred_config.embed_size, image_encoder_config
