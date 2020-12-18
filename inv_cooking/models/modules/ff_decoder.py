@@ -1,9 +1,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from typing import Tuple, Optional
 
 import torch
 import torch.nn as nn
+
+from inv_cooking.config import CardinalityPredictionType
 
 
 class FFDecoder(nn.Module):
@@ -13,7 +16,7 @@ class FFDecoder(nn.Module):
         vocab_size: int,
         hidden_size: int,
         dropout: float = 0.0,
-        pred_cardinality: str = "none",
+        pred_cardinality: CardinalityPredictionType = CardinalityPredictionType.none,
         nobjects: int = 10,  ## for cardinality prediction only
         n_layers: int = 1,
         use_empty_set: bool = False,
@@ -43,7 +46,7 @@ class FFDecoder(nn.Module):
         self.classifier = nn.Sequential(nn.Linear(hidden_size, vocab_size - 1))
 
         self.pred_cardinality = pred_cardinality
-        if self.pred_cardinality != "none":
+        if self.pred_cardinality != CardinalityPredictionType.none:
             if (
                 use_empty_set
             ):  ## TODO: may not be needed at all, do we have empty sets here?
@@ -51,23 +54,19 @@ class FFDecoder(nn.Module):
                 nobjects += 1
             self.fc_cardinality = nn.Sequential(nn.Linear(hidden_size, nobjects))
 
-    def forward(self, img_features: torch.Tensor):
+    def forward(self, img_features: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """
         :param img_features: features extract of the image - shape (N, embedding_size, sequence_length)
         """
-
-        # Apply global average pooling
-        feat = torch.mean(img_features, dim=-1)
-
-        # Apply fully connected layers
+        feat = self._average_pooling(img_features)
         if self.fc_layers is not None:
             feat = self.fc_layers(feat)
-
-        # Apply classifier
         logits = self.classifier(feat)
-
-        # Apply cardinality layer
-        if self.pred_cardinality != "none":
+        if self.pred_cardinality != CardinalityPredictionType.none:
             return logits, self.fc_cardinality(feat)
         else:
             return logits, None
+
+    @staticmethod
+    def _average_pooling(img_features):
+        return torch.mean(img_features, dim=-1)

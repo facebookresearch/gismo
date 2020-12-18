@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from inv_cooking.config import IngredientPredictorFFConfig
+from inv_cooking.config import IngredientPredictorFFConfig, CardinalityPredictionType
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.utils.criterion import SoftIoULoss, TargetDistributionLoss
@@ -48,7 +48,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         )
 
         # cardinality loss
-        if cardinality_pred == "cat":
+        if cardinality_pred == CardinalityPredictionType.categorical:
             print("Using categorical cardinality loss.", flush=True)
             cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
         else:
@@ -92,7 +92,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         pad_value: int = 0,
         threshold: float = 0.5,
         loss_label: str = "bce",
-        card_type: str = "none",
+        card_type: CardinalityPredictionType = CardinalityPredictionType.none,
         eps: float = 1e-8,
     ):
         super().__init__(remove_eos=True)
@@ -137,7 +137,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
 
         if compute_predictions:
             # consider cardinality
-            if self.card_type == "cat":
+            if self.card_type == CardinalityPredictionType.categorical:
                 cardinality = nn.functional.log_softmax(
                     cardinality_logits + self.eps, dim=-1
                 )

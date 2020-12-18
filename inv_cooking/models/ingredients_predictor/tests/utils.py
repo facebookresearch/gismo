@@ -1,4 +1,5 @@
 from inv_cooking.config import (
+    CardinalityPredictionType,
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
@@ -6,6 +7,7 @@ from inv_cooking.config import (
 
 
 class FakeIngredientPredictorConfig:
+
     @staticmethod
     def ff_config() -> IngredientPredictorFFConfig:
         return IngredientPredictorFFConfig(
@@ -13,7 +15,7 @@ class FakeIngredientPredictorConfig:
             embed_size=2048,
             freeze=False,
             load_pretrained_from="",
-            cardinality_pred="",
+            cardinality_pred=CardinalityPredictionType.none,
             layers=2,
             dropout=0.0,
         )

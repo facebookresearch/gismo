@@ -7,6 +7,7 @@ from .dataset import (
 )
 from .image_encoder import ImageEncoderConfig, ImageEncoderFreezeType
 from .ingredient_predictor import (
+    CardinalityPredictionType,
     IngredientPredictorConfig,
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,

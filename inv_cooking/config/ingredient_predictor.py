@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 
 from omegaconf import MISSING
 
@@ -11,11 +12,16 @@ class IngredientPredictorConfig:
     load_pretrained_from: str = MISSING
 
 
+class CardinalityPredictionType(Enum):
+    none = 0
+    categorical = 1
+
+
 @dataclass
 class IngredientPredictorFFConfig(IngredientPredictorConfig):
     layers: int = MISSING
     dropout: float = MISSING
-    cardinality_pred: str = "none"  # Either "cat" or "none"
+    cardinality_pred: CardinalityPredictionType = CardinalityPredictionType.none
 
 
 @dataclass
