@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from inv_cooking.config import ImageEncoderConfig, IngredientPredictorConfig
 from inv_cooking.models.image_encoder import ImageEncoder
-from inv_cooking.models.ingredients_predictor import get_ingr_predictor
+from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
 
 
 class Im2Ingr(nn.Module):
@@ -15,7 +15,6 @@ class Im2Ingr(nn.Module):
         image_encoder_config: ImageEncoderConfig,
         ingr_pred_config: IngredientPredictorConfig,
         ingr_vocab_size: int,
-        dataset_name: str,
         max_num_labels: int,
         ingr_eos_value,
     ):
@@ -29,11 +28,10 @@ class Im2Ingr(nn.Module):
             ingr_pred_config.embed_size, image_encoder_config
         )
 
-        self.ingr_predictor = get_ingr_predictor(
+        self.ingr_predictor = create_ingredient_predictor(
             ingr_pred_config,
             vocab_size=ingr_vocab_size,
-            dataset=dataset_name,
-            maxnumlabels=max_num_labels,
+            max_num_labels=max_num_labels,
             eos_value=ingr_eos_value,
         )
 

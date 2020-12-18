@@ -19,6 +19,7 @@ class TaskType(Enum):
 
 @dataclass
 class CheckpointConfig:
+    log_folder: str = MISSING
     dir: str = MISSING
 
 

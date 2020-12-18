@@ -16,7 +16,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def __init__(
         self,
         dataset_config: DatasetConfig,
-        shuffle_labels=False,
         include_eos=False,
         seed=1234,
         checkpoint=None,
@@ -26,7 +25,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
     ):
         super().__init__()
         self.dataset_config = dataset_config
-        self.shuffle_labels = shuffle_labels
         self.include_eos = include_eos
         self.seed = seed
         self.checkpoint = (
@@ -37,7 +35,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         self.return_recipe = return_recipe
 
     def prepare_data(self):
-        if not os.path.isdir(os.path.join(self.dataset_config.path, "preprocessed")):
+        if not os.path.isdir(self.dataset_config.pre_processing.save_path):
             print("Pre-processing Recipe1M dataset.")
             run_dataset_pre_processing(self.dataset_config.path, self.dataset_config.pre_processing)
 
@@ -105,7 +103,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
             filtering=self.dataset_config.filtering,
             transform=self._get_transforms(stage=stage),
             use_lmdb=False,  # TODO - check if necessary
-            shuffle_labels=self.shuffle_labels,
             selected_indices=selected_indices,
             include_eos=self.include_eos,
             return_img=self.return_img,

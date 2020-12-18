@@ -1,0 +1,4 @@
+# @package _group_
+
+dir: '/checkpoint/qduval/inversecooking2.0/debug/'
+log_folder: '/checkpoint/qduval/log_runs'

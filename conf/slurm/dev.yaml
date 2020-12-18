@@ -1,6 +1,5 @@
 # @package _group_
 
-log_folder: '/checkpoint/qduval/log_runs'
 partition: dev
 nodes: 1
 cpus_per_task: 8

@@ -5,6 +5,7 @@ hydra:
 defaults:
   - dataset: recipe1m
   - slurm: local
+  - checkpoint: qduval
   - image_encoder: resnet50
   - ingr_predictor: ff
   - recipe_gen: default
@@ -14,6 +15,3 @@ defaults:
 
 task: im2recipe
 name: ""
-
-checkpoint:
-  dir: '/checkpoint/qduval/inversecooking2.0/debug/'

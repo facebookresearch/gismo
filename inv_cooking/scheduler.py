@@ -35,7 +35,7 @@ def _copy_source_code_to_cwd():
 
 def _schedule_job_on_slurm_using_dp(cfg: Config):
     nb_gpus = cfg.slurm.gpus_per_node
-    executor = submitit.AutoExecutor(folder=cfg.slurm.log_folder)
+    executor = submitit.AutoExecutor(folder=cfg.checkpoint.log_folder)
     executor.update_parameters(
         name=cfg.name,
         slurm_comment="",

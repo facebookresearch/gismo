@@ -22,10 +22,6 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
 
-    # what flags do we need to activate in the data module (depending on the ingredient predictor architecture)
-    shuffle_labels = cfg.ingr_predictor.with_shuffle_labels
-    include_eos = "ff" not in cfg.ingr_predictor.model
-
     if cfg.task == TaskType.im2ingr:
         return_img = True
         return_ingr = True
@@ -48,9 +44,9 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         raise ValueError(f"Unknown task: {cfg.task}.")
 
     # data module
+    include_eos = "ff" not in cfg.ingr_predictor.model
     dm = Recipe1MDataModule(
         dataset_config=cfg.dataset,
-        shuffle_labels=shuffle_labels,
         include_eos=include_eos,
         seed=cfg.optimization.seed,
         return_img=return_img,
@@ -68,7 +64,6 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         ingr_pred_config=cfg.ingr_predictor if "im" in cfg.task.name else None,
         recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
         optim_config=cfg.optimization,
-        dataset_name=cfg.dataset.name.name,
         maxnumlabels=cfg.dataset.filtering.max_num_labels,
         maxrecipelen=cfg.dataset.filtering.max_num_instructions * cfg.dataset.filtering.max_instruction_length,
         ingr_vocab_size=dm.ingr_vocab_size,

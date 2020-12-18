@@ -26,7 +26,6 @@ class LitInverseCooking(pl.LightningModule):
         ingr_pred_config: IngredientPredictorConfig,
         recipe_gen_config: RecipeGeneratorConfig,
         optim_config: OptimizationConfig,
-        dataset_name: str,  ## TODO: check if needed at all
         maxnumlabels: int,
         maxrecipelen: int,
         ingr_vocab_size: int,
@@ -40,7 +39,6 @@ class LitInverseCooking(pl.LightningModule):
                 image_encoder_config,
                 ingr_pred_config,
                 ingr_vocab_size,
-                dataset_name,
                 maxnumlabels,
                 ingr_eos_value,
             )
@@ -51,7 +49,6 @@ class LitInverseCooking(pl.LightningModule):
                 recipe_gen_config,
                 ingr_vocab_size,
                 instr_vocab_size,
-                dataset_name,
                 maxnumlabels,
                 maxrecipelen,
                 ingr_eos_value,
@@ -158,12 +155,12 @@ class LitInverseCooking(pl.LightningModule):
             pred_k_hots = label2_k_hots(
                 out[1][0],
                 self.model.ingr_vocab_size - 1,
-                remove_eos=not self.model.ingr_predictor.is_decoder_ff,
+                remove_eos=self.model.ingr_predictor.remove_eos,
             )
             target_k_hots = label2_k_hots(
                 batch["ingr_gt"],
                 self.model.ingr_vocab_size - 1,
-                remove_eos=not self.model.ingr_predictor.is_decoder_ff,
+                remove_eos=self.model.ingr_predictor.remove_eos,
             )
 
             # update overall and per class error counts
