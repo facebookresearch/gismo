@@ -9,6 +9,7 @@ from .image_encoder import ImageEncoderConfig, ImageEncoderFreezeType
 from .ingredient_predictor import (
     CardinalityPredictionType,
     IngredientPredictorConfig,
+    IngredientPredictorCriterion,
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,

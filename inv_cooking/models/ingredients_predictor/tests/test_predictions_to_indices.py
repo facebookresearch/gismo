@@ -1,5 +1,6 @@
 import torch
 
+from inv_cooking.config import IngredientPredictorCriterion
 from inv_cooking.models.ingredients_predictor.utils import predictions_to_indices
 
 
@@ -19,7 +20,7 @@ def test_predictions_to_indices_bce():
         pad_value=vocab_size - 1,
         threshold=0.5,
         cardinality_prediction=None,
-        which_loss="bce",
+        which_loss=IngredientPredictorCriterion.bce,
     )
     assert expected.equal(out)
 
@@ -31,9 +32,10 @@ def test_predictions_to_indices_bce():
         pad_value=vocab_size - 1,
         threshold=0.5,
         cardinality_prediction=torch.tensor([2, 3]),
-        which_loss="bce",
+        which_loss=IngredientPredictorCriterion.bce,
     )
     assert expected.equal(out)
+
 
 def test_predictions_to_indices_td_loss():
     label_logits = torch.tensor([
@@ -50,7 +52,7 @@ def test_predictions_to_indices_td_loss():
         pad_value=vocab_size - 1,
         threshold=0.9,
         cardinality_prediction=None,
-        which_loss="td",
+        which_loss=IngredientPredictorCriterion.td,
     )
     assert expected.equal(out), "5 is the padding value"
 

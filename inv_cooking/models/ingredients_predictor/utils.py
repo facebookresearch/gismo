@@ -5,6 +5,8 @@ from typing import Optional
 
 import torch
 
+from inv_cooking.config import IngredientPredictorCriterion
+
 
 def label2_k_hots(labels: torch.Tensor, pad_value: int, remove_eos: bool = False):
     """
@@ -57,7 +59,7 @@ def predictions_to_indices(
     pad_value: int,
     threshold: float = 1,
     cardinality_prediction: Optional[torch.Tensor] = None,
-    which_loss: str = "bce",
+    which_loss: IngredientPredictorCriterion = IngredientPredictorCriterion.bce,
 ) -> torch.Tensor:
     """
     Select the highest logit values, and produce a vector holding the indices of the predicted elements
@@ -66,7 +68,7 @@ def predictions_to_indices(
     :param pad_value: padding value (not a real prediction)
     :param threshold: the minimum threshold for an element to be selected
     :param cardinality_prediction: the number of elements to select - shape (batch_size,)
-    :param which_loss: either "bce" or "td"
+    :param which_loss: the kind of criterion used for the ingredient
     :return the filtered predictions - shape (batch_size, max_num_labels)
     """
 
@@ -79,7 +81,7 @@ def predictions_to_indices(
     idxs_clone = idxs.clone()
 
     # mask to identify elements within the top-max_num_labels ones which satisfy the threshold
-    if which_loss == "td":
+    if which_loss == IngredientPredictorCriterion.td:
         # cumulative threshold
         mask = torch.ones(probs.size()).type_as(probs).byte()
         for idx in range(probs.size(1)):

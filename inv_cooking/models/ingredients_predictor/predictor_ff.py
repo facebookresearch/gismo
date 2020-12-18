@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from inv_cooking.config import IngredientPredictorFFConfig, CardinalityPredictionType
+from inv_cooking.config import IngredientPredictorFFConfig, CardinalityPredictionType, IngredientPredictorCriterion
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.utils.criterion import SoftIoULoss, TargetDistributionLoss
@@ -57,15 +57,11 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
 
         # label and eos loss
         label_losses = {
-            "bce": nn.BCEWithLogitsLoss(reduction="mean")
-            if "ff" in config.model
-            else nn.BCELoss(reduction="mean"),
-            "iou": SoftIoULoss(reduction="mean"),
-            "td": TargetDistributionLoss(reduction="mean"),
+            IngredientPredictorCriterion.bce: nn.BCEWithLogitsLoss(reduction="mean"),
+            IngredientPredictorCriterion.iou: SoftIoULoss(reduction="mean"),
+            IngredientPredictorCriterion.td: TargetDistributionLoss(reduction="mean"),
         }
-        pad_value = vocab_size - 1
-        loss_key = {k for k in label_losses.keys() if k in config.model}.pop()
-        label_loss = label_losses[loss_key]
+        label_loss = label_losses[config.criterion]
 
         model = FeedForwardIngredientsPredictor(
             decoder,
@@ -73,8 +69,8 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             vocab_size,
             crit=label_loss,
             crit_cardinality=cardinality_loss,
-            pad_value=pad_value,
-            loss_label=loss_key,
+            pad_value=vocab_size - 1,
+            crit_type=config.criterion,
             card_type=cardinality_pred,
         )
 
@@ -91,7 +87,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         crit_cardinality=None,
         pad_value: int = 0,
         threshold: float = 0.5,
-        loss_label: str = "bce",
+        crit_type: IngredientPredictorCriterion = IngredientPredictorCriterion.bce,
         card_type: CardinalityPredictionType = CardinalityPredictionType.none,
         eps: float = 1e-8,
     ):
@@ -102,7 +98,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         self.threshold = threshold
         self.pad_value = pad_value
         self.crit_cardinality = crit_cardinality
-        self.loss_label = loss_label
+        self.crit_type = crit_type
         self.card_type = card_type
         self.eps = eps
         self.vocab_size = vocab_size
@@ -145,7 +141,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
                 cardinality = None
 
             # apply non-linearity to label logits
-            if self.loss_label == "td":
+            if self.crit_type == IngredientPredictorCriterion.td:
                 label_probs = nn.functional.softmax(label_logits, dim=-1)
             else:
                 label_probs = torch.sigmoid(label_logits)
@@ -157,7 +153,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
                 pad_value=self.pad_value,
                 threshold=self.threshold,
                 cardinality_prediction=cardinality,
-                which_loss=self.loss_label,
+                which_loss=self.crit_type,
             )
 
         return losses, predictions

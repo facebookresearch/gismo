@@ -12,6 +12,12 @@ class IngredientPredictorConfig:
     load_pretrained_from: str = MISSING
 
 
+class IngredientPredictorCriterion(Enum):
+    bce = 0
+    iou = 1
+    td = 2
+
+
 class CardinalityPredictionType(Enum):
     none = 0
     categorical = 1
@@ -21,6 +27,7 @@ class CardinalityPredictionType(Enum):
 class IngredientPredictorFFConfig(IngredientPredictorConfig):
     layers: int = MISSING
     dropout: float = MISSING
+    criterion: IngredientPredictorCriterion = MISSING
     cardinality_pred: CardinalityPredictionType = CardinalityPredictionType.none
 
 
