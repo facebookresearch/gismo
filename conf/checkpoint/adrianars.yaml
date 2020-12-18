@@ -1,0 +1,4 @@
+# @package _group_
+
+dir: '/checkpoint/adrianars/inversecooking2.0/debug/'
+log_folder: '/checkpoint/adrianars/log_runs'
