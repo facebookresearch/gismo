@@ -1,8 +1,12 @@
 import torch
 
-from inv_cooking.config import CardinalityPredictionType, IngredientPredictorFFConfig, IngredientPredictorConfig, \
-    IngredientPredictorCriterion, IngredientPredictorType
+from inv_cooking.config import (
+    CardinalityPredictionType,
+    IngredientPredictorConfig,
+    IngredientPredictorCriterion,
+)
 from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
+
 from .utils import FakeIngredientPredictorConfig
 
 
@@ -40,21 +44,26 @@ class TestIngredientPredictor:
             assert predictions.max() < self.vocab_size
 
     def test_ff_with_cardinality(self):
-        config = IngredientPredictorFFConfig(
-            model=IngredientPredictorType.ff,
-            embed_size=2048,
-            freeze=False,
-            load_pretrained_from="",
-            criterion=IngredientPredictorCriterion.bce,
-            cardinality_pred=CardinalityPredictionType.categorical,
-            layers=2,
-            dropout=0.0,
-        )
+        config = FakeIngredientPredictorConfig.ff_config()
+        config.cardinality_pred = CardinalityPredictionType.categorical
         losses, predictions = self._try_predictor(config)
         assert losses["label_loss"] is not None
         assert losses["cardinality_loss"] is not None
 
-    def _try_predictor(self, config: IngredientPredictorConfig, include_eos: bool = False):
+    def test_ff_with_all_losses(self):
+        config = FakeIngredientPredictorConfig.ff_config()
+        for criterion_type in [
+            IngredientPredictorCriterion.bce,
+            IngredientPredictorCriterion.iou,
+            IngredientPredictorCriterion.td,
+        ]:
+            config.criterion = criterion_type
+            losses, predictions = self._try_predictor(config)
+            assert losses["label_loss"] is not None
+
+    def _try_predictor(
+        self, config: IngredientPredictorConfig, include_eos: bool = False
+    ):
         image_features = torch.randn(size=(self.batch_size, config.embed_size, 49))
         max_num_labels = self.max_num_labels + 1 if include_eos else self.max_num_labels
         label_target = torch.randint(
