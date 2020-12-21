@@ -16,6 +16,5 @@ from .ingredient_predictor import (
     IngredientPredictorType,
 )
 from .optimization import OptimizationConfig
-from .raw_config import RawConfig
 from .recipe_generator import RecipeGeneratorConfig
 from .slurm import SlurmConfig

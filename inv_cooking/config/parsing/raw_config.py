@@ -1,44 +1,34 @@
-from dataclasses import dataclass, field
-from typing import Dict, Tuple
+from dataclasses import dataclass
+from typing import Tuple
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, DictConfig, OmegaConf
 
-from .config import CheckpointConfig, Config
-from .dataset import DatasetConfig
-from .image_encoder import ImageEncoderConfig
-from .ingredient_predictor import (
+from inv_cooking.config.config import CheckpointConfig, Config
+from inv_cooking.config.dataset import DatasetConfig
+from inv_cooking.config.image_encoder import ImageEncoderConfig
+from inv_cooking.config.ingredient_predictor import (
     IngredientPredictorConfig,
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
 )
-from .optimization import OptimizationConfig
-from .recipe_generator import RecipeGeneratorConfig
-from .slurm import SlurmConfig
+from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
+from inv_cooking.config.slurm import SlurmConfig
+from .experiment import Experiment, Experiments
 from .utils import untyped_config
-
-
-@dataclass
-class Experiment:
-    comment: str = ""
-    optimization: OptimizationConfig = OptimizationConfig()
-
-
-@dataclass
-class Experiments:
-    im2ingr: Dict[str, Experiment] = field(default_factory=dict)
-    im2recipe: Dict[str, Experiment] = field(default_factory=dict)
-    ingr2recipe: Dict[str, Experiment] = field(default_factory=dict)
 
 
 @dataclass
 class RawConfig:
     """
     The schema of the raw configuration as read by hydra:
-    * it contains the full DB of experiment
+    * it contains the full database of experiment
     * it contains the information needed to select the experiment
+    * it is partially untyped to allow for some complex mechanism like inheritance to be used
+
     This configuration is then transformed to be the configuration of one experiment.
+    Types are enforced during this transformation to catch the last remaining possible errors.
     """
 
     task: str = MISSING
