@@ -1,5 +1,6 @@
 import os
 import shutil
+from typing import List
 
 import hydra
 import submitit
@@ -8,12 +9,13 @@ from inv_cooking.config import Config
 from inv_cooking.trainer import run_training
 
 
-def schedule_job(cfg: Config) -> None:
+def schedule_jobs(configurations: List[Config]) -> None:
     _copy_source_code_to_cwd()  # Because Hydra create a new running folder
-    if cfg.slurm.partition == "local":
-        run_training(cfg, gpus=2, nodes=1, distributed_mode="dp")
-    else:
-        _schedule_job_on_slurm_using_dp(cfg)
+    for config in configurations:
+        if config.slurm.partition == "local":
+            run_training(config, gpus=2, nodes=1, distributed_mode="dp")
+        else:
+            _schedule_job_on_slurm_using_dp(config)
 
 
 def _copy_source_code_to_cwd():

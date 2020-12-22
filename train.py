@@ -1,13 +1,11 @@
 import hydra
 
-from inv_cooking.scheduler import schedule_job, RawConfig
+from inv_cooking.scheduler import schedule_jobs, RawConfig
 
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: RawConfig) -> None:
-    configs = RawConfig.to_config(cfg)
-    for config in configs:
-        schedule_job(config)
+    schedule_jobs(RawConfig.to_config(cfg))
 
 
 if __name__ == "__main__":
