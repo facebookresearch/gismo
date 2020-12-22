@@ -1,6 +1,6 @@
 import hydra
 
-from inv_cooking.config.parsing.raw_config import RawConfig
+from inv_cooking.scheduler import RawConfig
 from inv_cooking.datasets.recipe1m.preprocess import run_dataset_pre_processing
 
 

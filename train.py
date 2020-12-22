@@ -1,7 +1,6 @@
 import hydra
 
-from inv_cooking.config.parsing.raw_config import RawConfig
-from inv_cooking.scheduler import schedule_job
+from inv_cooking.scheduler import schedule_job, RawConfig
 
 
 @hydra.main(config_path="conf", config_name="config")

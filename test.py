@@ -3,7 +3,7 @@ import os
 import hydra
 from omegaconf import OmegaConf
 
-from inv_cooking.config.parsing.raw_config import RawConfig
+from inv_cooking.scheduler import RawConfig
 
 
 @hydra.main(config_path="conf", config_name="config")

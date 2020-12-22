@@ -3,7 +3,7 @@ from enum import Enum
 
 from omegaconf import MISSING, DictConfig
 
-from .parsing.utils import untyped_config
+from .utils import untyped_config
 
 
 class DatasetName(Enum):

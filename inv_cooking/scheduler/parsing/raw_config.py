@@ -15,8 +15,8 @@ from inv_cooking.config.ingredient_predictor import (
 )
 from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
 from inv_cooking.config.slurm import SlurmConfig
+from inv_cooking.config.utils import untyped_config
 from .experiment import Experiment, Experiments, parse_experiments
-from .utils import untyped_config
 
 
 @dataclass

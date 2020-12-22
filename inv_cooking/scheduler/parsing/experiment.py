@@ -35,7 +35,9 @@ def parse_experiments(config: Experiments, task: str, name: str) -> List[Experim
     Read the raw configuration, select the experiment matching the task and the name,
     and expand it as a list of configuration (in case of hyper-parameter searches)
     """
-    task_experiments = getattr(config, task)
+    task_experiments = getattr(config, task, None)
+    if task_experiments is None:
+        raise ValueError(f"Unknown task {task}")
 
     # Get all parents
     names = _get_parents_name(task_experiments, name)
@@ -45,7 +47,7 @@ def parse_experiments(config: Experiments, task: str, name: str) -> List[Experim
     OmegaConf.set_struct(task_experiments, False)
     configs = [task_experiments[name] for name in names]
     config = OmegaConf.merge(*configs)
-    del config["parent"]
+    config.pop("parent", default=None)
 
     # Now, expand the configuration in case it is a generator configuration
     experiments = []
@@ -136,7 +138,12 @@ def _get_parents_name(config: DictConfig, name: str) -> List[str]:
     """
     parents = []
     current_name = name
-    while "parent" in config[current_name]:
+    while True:
+        if current_name not in config:
+            raise ValueError(f"Could not find experiment named {current_name}")
+        if "parent" not in config[current_name]:
+            break
+
         parent_name = config[current_name]["parent"]
         if parent_name in parents:
             raise ValueError(f"Circular parents for configuration named {name}")
