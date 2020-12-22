@@ -1,3 +1,9 @@
+import string
+from typing import List
+
+from hypothesis import given
+from hypothesis.strategies import text, lists
+
 from inv_cooking.datasets.vocabulary import Vocabulary
 
 
@@ -15,6 +21,18 @@ def test_vocabulary():
     vocab.remove_eos()
     assert 5 == len(vocab), "<end> token should have been removed"
     assert len(vocab) == vocab.idx
+    assert_symmetric(vocab)
+
+
+@given(words=lists(text(alphabet=string.ascii_letters, min_size=1), min_size=1))
+def test_always_symmetric(words: List[str]):
+    vocab = Vocabulary()
+    vocab.add_word("<end>")
+    vocab.add_word("<pad>")
+    for word in words:
+        vocab.add_word(word)
+    assert_symmetric(vocab)
+    vocab.remove_eos()
     assert_symmetric(vocab)
 
 
