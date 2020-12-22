@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import List
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, DictConfig, OmegaConf
@@ -15,7 +15,7 @@ from inv_cooking.config.ingredient_predictor import (
 )
 from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
 from inv_cooking.config.slurm import SlurmConfig
-from .experiment import Experiment, Experiments, parse_experiment
+from .experiment import Experiment, Experiments, parse_experiments
 from .utils import untyped_config
 
 
@@ -42,24 +42,31 @@ class RawConfig:
     experiments: Experiments = Experiments()
 
     @classmethod
-    def to_config(cls, raw_config: "RawConfig") -> Config:
-        experiment = cls._get_experiment(raw_config)
-        config = OmegaConf.structured(Config)
-        config.task = raw_config.task
-        config.name = experiment.name
-        config.comment = experiment.comment
-        config.slurm = raw_config.slurm
-        config.dataset = raw_config.dataset  # TODO - search the right dataset
-        config.recipe_gen = raw_config.recipe_gen
-        config.image_encoder = raw_config.image_encoder
-        config.ingr_predictor = cls._get_ingr_predictor(raw_config.ingr_predictor)
-        config.checkpoint = raw_config.checkpoint
-        config.optimization = experiment.optimization
-        return config
+    def to_config(cls, raw_config: "RawConfig") -> List[Config]:
+        """
+        Read the raw configuration as read by Hydra and expand it as valid
+        configurations, each one describing a valid configuration to run
+        """
+        configs = []
+        experiments = cls._get_experiments(raw_config)
+        for experiment in experiments:
+            config = OmegaConf.structured(Config)
+            config.task = raw_config.task
+            config.name = experiment.name
+            config.comment = experiment.comment
+            config.slurm = raw_config.slurm
+            config.dataset = raw_config.dataset
+            config.recipe_gen = raw_config.recipe_gen
+            config.image_encoder = raw_config.image_encoder
+            config.ingr_predictor = cls._get_ingr_predictor(raw_config.ingr_predictor)
+            config.checkpoint = raw_config.checkpoint
+            config.optimization = experiment.optimization
+            configs.append(config)
+        return configs
 
     @staticmethod
-    def _get_experiment(raw_config: "RawConfig") -> Experiment:
-        return parse_experiment(raw_config.experiments, raw_config.task, raw_config.name or raw_config.task)
+    def _get_experiments(raw_config: "RawConfig") -> List[Experiment]:
+        return parse_experiments(raw_config.experiments, raw_config.task, raw_config.name or raw_config.task)
 
     @staticmethod
     def _get_ingr_predictor(ingr_predictor: DictConfig) -> IngredientPredictorConfig:
