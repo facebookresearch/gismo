@@ -77,6 +77,7 @@ class Im2Recipe(nn.Module):
         :param compute_predictions: whether or not to output the recipe prediction
         """
         ingr_predictions = None
+        losses = {}
         img_features = self.image_encoder(image)
 
         if use_ingr_pred:
@@ -87,6 +88,7 @@ class Im2Recipe(nn.Module):
                 compute_losses=compute_losses,
                 compute_predictions=True,
             )
+            losses.update(ingr_losses)
             ingr_features = self.ingr_encoder(ingr_predictions)
             ingr_mask = mask_from_eos(
                 ingr_predictions, eos_value=self.ingr_eos_value, mult_before=False
@@ -110,5 +112,5 @@ class Im2Recipe(nn.Module):
             compute_predictions=compute_predictions,
         )
 
-        losses = {"recipe_loss": loss}
+        losses["recipe_loss"] = loss
         return losses, ingr_predictions, recipe_predictions
