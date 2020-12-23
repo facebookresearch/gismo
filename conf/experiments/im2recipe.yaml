@@ -17,3 +17,8 @@ im2recipe:
       eos_loss: 0.0
       recipe_loss: 1.0
 
+search_example_im2recipe:
+  comment: 'example of hyper-parameter search for im2recipe'
+  parent: im2recipe
+  optimization:
+    seed: SEARCH[11,12]

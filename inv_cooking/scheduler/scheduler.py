@@ -1,20 +1,21 @@
 import os
 import shutil
+from typing import List
 
 import hydra
 import submitit
-from omegaconf import DictConfig
 
 from inv_cooking.config import Config
 from inv_cooking.trainer import run_training
 
 
-def schedule_job(cfg: Config) -> None:
+def schedule_jobs(configurations: List[Config]) -> None:
     _copy_source_code_to_cwd()  # Because Hydra create a new running folder
-    if cfg.slurm.partition == "local":
-        run_training(cfg, gpus=2, nodes=1, distributed_mode="dp")
-    else:
-        _schedule_job_on_slurm_using_dp(cfg)
+    for config in configurations:
+        if config.slurm.partition == "local":
+            run_training(config, gpus=2, nodes=1, distributed_mode="dp")
+        else:
+            _schedule_job_on_slurm_using_dp(config)
 
 
 def _copy_source_code_to_cwd():
@@ -34,11 +35,14 @@ def _copy_source_code_to_cwd():
 
 
 def _schedule_job_on_slurm_using_dp(cfg: Config):
+    """
+    Run the job whose configuration is given as parameter on SLURM
+    """
     nb_gpus = cfg.slurm.gpus_per_node
     executor = submitit.AutoExecutor(folder=cfg.checkpoint.log_folder)
     executor.update_parameters(
         name=cfg.name,
-        slurm_comment="",
+        slurm_comment=cfg.comment,
         slurm_partition=cfg.slurm.partition,
         slurm_constraint=cfg.slurm.gpu_type,
         timeout_min=cfg.slurm.timeout_min,
@@ -49,23 +53,4 @@ def _schedule_job_on_slurm_using_dp(cfg: Config):
         mem_gb=cfg.slurm.mem_by_gpu * nb_gpus,
     )
     job = executor.submit(run_training, cfg, nb_gpus, cfg.slurm.nodes, 'dp')
-    print(f"Submitted {job.job_id}")
-
-
-def _schedule_job_on_slurm_using_ddp(cfg: DictConfig):
-    nb_gpus = cfg.slurm.gpus_per_node
-    executor = submitit.AutoExecutor(folder=cfg.slurm.log_folder)
-    executor.update_parameters(
-        name="recipe1m_im2ingr_of1",  # TODO
-        slurm_comment="",  # TODO
-        slurm_partition=cfg.slurm.partition,
-        slurm_constraint=cfg.slurm.gpu_type,
-        timeout_min=cfg.slurm.timeout_min,
-        nodes=cfg.slurm.nodes,
-        cpus_per_task=cfg.slurm.cpus_per_task,
-        tasks_per_node=nb_gpus,
-        gpus_per_node=nb_gpus,
-        mem_gb=cfg.slurm.mem_by_gpu * nb_gpus,
-    )
-    job = executor.submit(run_training, cfg, nb_gpus, cfg.slurm.nodes, 'ddp')
     print(f"Submitted {job.job_id}")
