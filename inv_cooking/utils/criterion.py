@@ -66,24 +66,15 @@ class TargetDistributionLoss(nn.Module):
         return loss
 
 
+@torch.jit.script
 def _to_target_distribution(targets: torch.Tensor, epsilon: float):
-    # create target distribution
-    # check if the target is all 0s
-    cardinality_target = targets.sum(dim=-1).unsqueeze(1)
-    is_empty = (cardinality_target == 0).float()
-
-    # create flat distribution
-    flat_target = 1.0 / targets.size(-1)
-    flat_target = (
-        torch.FloatTensor(np.array(flat_target))
-            .unsqueeze(-1)
-            .unsqueeze(-1)
-            .type_as(is_empty)
-    )
-
-    # divide target by number of elements and add equal prob to all elements for the empty sets
-    target_distribution = (
-            targets.float() / (cardinality_target + epsilon)
-            + is_empty * flat_target
-    )
-    return target_distribution
+    """
+    Create the target distribution associated to the target labels
+    :param targets: shape (batch_size, nb_labels) where each label is set independently of the others
+    :param epsilon: to avoid division by zero
+    """
+    nb_target_by_sample = targets.sum(dim=-1, keepdim=True)
+    uniform_distribution = torch.tensor(1.0 / targets.size(-1), device=targets.device)
+    return torch.where(nb_target_by_sample == 0,
+                       uniform_distribution,
+                       targets.float() / (nb_target_by_sample + epsilon))
