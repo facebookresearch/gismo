@@ -1,6 +1,7 @@
 import torch
 
 from inv_cooking.utils.criterion import (
+    MaskedCrossEntropyCriterion,
     SoftIoULoss,
     TargetDistributionLoss,
     _to_target_distribution,
@@ -9,18 +10,8 @@ from inv_cooking.utils.criterion import (
 
 
 def test_soft_iou():
-    logits = torch.FloatTensor(
-        [
-            [12, 15, -10],
-            [17, -50, 30],
-        ]
-    )
-    targets = torch.LongTensor(
-        [
-            [1, 0, 0],
-            [1, 0, 1],
-        ]
-    )
+    logits = torch.FloatTensor([[12, 15, -10], [17, -50, 30],])
+    targets = torch.LongTensor([[1, 0, 0], [1, 0, 1],])
 
     out = soft_iou(logits, targets)
     expected = torch.tensor([[0.5], [1.0]])
@@ -37,13 +28,7 @@ def test_soft_iou():
 
 
 def test_target_distribution_construction():
-    targets = torch.LongTensor(
-        [
-            [1, 0, 0, 0],
-            [1, 0, 1, 0],
-            [0, 0, 0, 0],
-        ]
-    ).cuda()
+    targets = torch.LongTensor([[1, 0, 0, 0], [1, 0, 1, 0], [0, 0, 0, 0],]).cuda()
     distribution = _to_target_distribution(targets, epsilon=1e-8)
     expected = torch.tensor(
         [
@@ -56,18 +41,8 @@ def test_target_distribution_construction():
 
 
 def test_target_distribution_loss():
-    logits = torch.FloatTensor(
-        [
-            [12, 15, -10, 3],
-            [17, -50, 30, -10],
-        ]
-    )
-    targets = torch.LongTensor(
-        [
-            [1, 0, 0, 0],
-            [1, 0, 1, 0],
-        ]
-    )
+    logits = torch.FloatTensor([[12, 15, -10, 3], [17, -50, 30, -10],])
+    targets = torch.LongTensor([[1, 0, 0, 0], [1, 0, 1, 0],])
 
     td = TargetDistributionLoss(reduction="none")
     out = td(logits, targets)
@@ -80,12 +55,7 @@ def test_target_distribution_loss():
 
 def test_target_distribution_loss_relative_comparison():
     targets = torch.LongTensor(
-        [
-            [0, 0, 0, 0],
-            [1, 0, 0, 0],
-            [1, 0, 1, 0],
-            [1, 1, 1, 1],
-        ]
+        [[0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 1, 0], [1, 1, 1, 1],]
     )
     logits_good = torch.FloatTensor(
         [
@@ -103,3 +73,14 @@ def test_target_distribution_loss_relative_comparison():
     assert (loss_good <= loss_bad).sum() == targets.size(0)
     print(loss_good)
     print(loss_bad)
+
+
+def test_masked_cross_entropy_criterion():
+    torch.random.manual_seed(0)
+    vocab_size = 3
+    targets = torch.LongTensor([[1, 2, 1, 2, 0], [1, 2, 0, 0, 0],])
+    logits = torch.randn(size=(targets.size(0), targets.size(1) + 1, vocab_size))
+    criterion = MaskedCrossEntropyCriterion()
+    out = criterion(logits, targets)
+    expected = torch.tensor([1.6113, 1.6840])
+    assert torch.allclose(out, expected, atol=1e-4)
