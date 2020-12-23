@@ -123,7 +123,3 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
 
     # train
     trainer.fit(model, datamodule=dm)
-
-    # test
-    dm.setup("test")
-    trainer.test(datamodule=dm)
