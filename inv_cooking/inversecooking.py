@@ -15,7 +15,7 @@ from .models.im2ingr import Im2Ingr
 from .models.im2recipe import Im2Recipe
 from .models.ingr2recipe import Ingr2Recipe
 from .models.ingredients_predictor import label2_k_hots
-from .utils.metrics import OverallErrorCounts
+from .utils.metrics import DistributedF1, DistributedMetric, DistributedValLosses
 
 
 class LitInverseCooking(pl.LightningModule):
@@ -65,11 +65,6 @@ class LitInverseCooking(pl.LightningModule):
             raise NotImplementedError(f"Task {task} is not implemented yet")
 
         self.task = task
-        if self.task != TaskType.ingr2recipe:
-            self.pretrained_imenc = image_encoder_config.pretrained
-            self.pretrained_ingrpred = (
-                ingr_pred_config.load_pretrained_from != "None"
-            )  ## TODO: load model when pretrained
         self.lr = optim_config.lr
         self.scale_lr_pretrained = optim_config.scale_lr_pretrained
         self.lr_decay_rate = optim_config.lr_decay_rate
@@ -77,8 +72,25 @@ class LitInverseCooking(pl.LightningModule):
         self.weight_decay = optim_config.weight_decay
         self.loss_weights = optim_config.loss_weights
 
-        self.overall_error_counts = OverallErrorCounts()
-        self.overall_error_counts.reset(overall=True)
+        if self.task != TaskType.ingr2recipe:
+            # check if pretrained models
+            self.pretrained_imenc = image_encoder_config.pretrained
+            self.pretrained_ingrpred = (
+                ingr_pred_config.load_pretrained_from != "None"
+            )  ## TODO: load model when pretrained
+
+        # metrics to track at validation time
+        if self.task != TaskType.ingr2recipe:
+            self.o_f1 = DistributedF1(which_f1="o_f1", pad_value=self.model.ingr_vocab_size - 1, remove_eos=self.model.ingr_predictor.remove_eos, dist_sync_on_step=True)
+            self.c_f1 = DistributedF1(which_f1="c_f1", pad_value=self.model.ingr_vocab_size - 1, remove_eos=self.model.ingr_predictor.remove_eos, dist_sync_on_step=True)
+            self.i_f1 = DistributedF1(which_f1="i_f1", pad_value=self.model.ingr_vocab_size - 1, remove_eos=self.model.ingr_predictor.remove_eos, dist_sync_on_step=True)
+            self.val_losses = DistributedValLosses(weights=self.loss_weights, monitor_ingr_losses=ingr_pred_config.freeze, dist_sync_on_step=True)
+        else:
+            self.val_losses = DistributedValLosses(weights=self.loss_weights, dist_sync_on_step=True)
+        if self.task != TaskType.im2ingr:
+            self.perplexity = DistributedMetric()
+
+        
 
     def forward(
         self,
@@ -120,101 +132,57 @@ class LitInverseCooking(pl.LightningModule):
         return out[0]
 
     def validation_step(self, batch, batch_idx: int):
-        return self._evaluation_step(batch, prefix="val")
+        out = self._evaluation_step(batch, prefix="val")
+        return out
 
     def test_step(self, batch, batch_idx: int):
-        return self._evaluation_step(batch, prefix="test")
+        out = self._evaluation_step(batch, prefix="test")
+        return out
 
     def _evaluation_step(self, batch, prefix: str):
-        metrics = {}
-
         # get model outputs
         if self.task == TaskType.im2ingr:
-            out = self(img=batch["img"], split=prefix, compute_predictions=True)
+            out = self(**batch, split=prefix, compute_predictions=True, compute_losses=True)
+            out[0]["n_samples"] = batch["img"].shape[0]
         elif self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
-            if prefix == "val":
-                out = self(
-                    **batch,
-                    split=prefix,
-                    compute_predictions=False,
-                    compute_losses=True,
-                )
-            elif prefix == "test":
-                out = self(
-                    **batch,
-                    split=prefix,
-                    compute_predictions=False,
-                    compute_losses=True,
-                )
+            out = self(
+                **batch,
+                split=prefix,
+                compute_predictions=False,
+                compute_losses=True,
+            )
+            out[0]["n_samples"] = batch["recipe_gt"].shape[0]
 
-        # compute ingredient metrics
+        if self.task in [TaskType.im2recipe, TaskType.im2ingr]:
+            out[0]["ingr_pred"] = out[1][0]
+            out[0]["ingr_gt"] = batch["ingr_gt"]
+
+        return out[0]
+
+    def validation_epoch_end(self, out):
+        self._eval_epoch_end(split="val")
+
+    def test_epoch_end(self, out):
+        self._eval_epoch_end(split="test")
+
+    def _eval_epoch_end(self, split: str):
+        """
+        Compute and log metrics/losses
+        """
         if self.task == TaskType.im2ingr or (
-            TaskType.im2recipe and out[1][0] is not None
+            self.task == TaskType.im2recipe and split == 'test'
         ):
-            # convert model predictions and targets to k-hots
-            pred_k_hots = label2_k_hots(
-                out[1][0],
-                self.model.ingr_vocab_size - 1,
-                remove_eos=self.model.ingr_predictor.remove_eos,
-            )
-            target_k_hots = label2_k_hots(
-                batch["ingr_gt"],
-                self.model.ingr_vocab_size - 1,
-                remove_eos=self.model.ingr_predictor.remove_eos,
-            )
+            self.log(f"{split}_o_f1", self.o_f1.compute())
+            self.log(f"{split}_c_f1", self.c_f1.compute())
+            self.log(f"{split}_i_f1", self.i_f1.compute())
 
-            # update overall and per class error counts
-            self.overall_error_counts.update(
-                pred_k_hots, target_k_hots, which_metrics=["o_f1", "c_f1", "i_f1"],
-            )
-
-            # compute i_f1 metric
-            metrics = self.overall_error_counts.compute_metrics(which_metrics=["i_f1"])
-
-        # compute recipe metrics
         if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
-            metrics["perplexity"] = torch.exp(out[0]["recipe_loss"])
+            self.log(f"{split}_perplexity", self.perplexity.compute())
 
-        # save n_samples
-        if self.task == TaskType.im2ingr:
-            metrics["n_samples"] = batch["img"].shape[0]
-        else:
-            metrics["n_samples"] = batch["ingr_gt"].shape[0]
-
-        return metrics
-
-    def validation_epoch_end(self, valid_step_outputs: List[Any]):
-        self._eval_epoch_end(valid_step_outputs, split="val")
-
-    def test_epoch_end(self, test_step_outputs: List[Any]):
-        self._eval_epoch_end(test_step_outputs, split="test")
-
-    def _eval_epoch_end(self, eval_step_outputs: List[Any], split: str):
-        s = sum(self.overall_error_counts.counts.values())
-        if (isinstance(s, int) and s > 0) or (not isinstance(s, int) and s.any()):
-            # compute validation set metrics
-            overall_metrics = self.overall_error_counts.compute_metrics(
-                ["o_f1", "c_f1"]
-            )
-            self.log(f"{split}_o_f1", overall_metrics["o_f1"])
-            self.log(f"{split}_c_f1", overall_metrics["c_f1"])
-            self.overall_error_counts.reset(overall=True)
-
-        # init avg metrics to 0
-        avg_metrics = dict(
-            zip(eval_step_outputs[0].keys(), [0] * len(eval_step_outputs[0].keys()))
-        )
-
-        # update avg metrics
-        for out in eval_step_outputs:
-            for k in out.keys():
-                avg_metrics[k] += out[k]
-
-        # log all validation metrics
-        for k in avg_metrics.keys():
-            if k != "n_samples":
-                self.log(f"{split}_{k}", avg_metrics[k] / avg_metrics["n_samples"])
-
+        val_losses = self.val_losses.compute()
+        for k, v in val_losses.items():
+            self.log(f"{split}_{k}", v)     
+            
     def training_step_end(self, losses: Dict[str, torch.Tensor]):
         """
         Average the loss across all GPUs and combine these losses together as an overall loss
@@ -283,24 +251,32 @@ class LitInverseCooking(pl.LightningModule):
 
         return total_loss
 
-    def validation_step_end(self, metrics):
-        valid_step_outputs = self._evaluation_step_end(metrics)
-        return valid_step_outputs
+    def validation_step_end(self, step_output: Dict[str, Any]):
+       self._evaluation_step_end(step_output)
 
-    def test_step_end(self, metrics):
-        test_step_outputs = self._evaluation_step_end(metrics)
-        return test_step_outputs
+    def test_step_end(self, step_output: Dict[str, Any]):
+        self._evaluation_step_end(step_output)
 
-    def _evaluation_step_end(self, metrics: Dict[str, List[float]]) -> Dict[str, float]:
+    def _evaluation_step_end(self, step_output: Dict[str, Any]):
         """
-        Sum metrics withing mini-batches and reset the per sample error counts
+        Update distributed metrics
         """
-        eval_step_outputs = {}
-        for k in metrics.keys():
-            eval_step_outputs[k] = sum(metrics[k])
-        self.overall_error_counts.reset(per_image=True)
-        return eval_step_outputs
+        # compute ingredient metrics
+        if self.task in [TaskType.im2ingr, TaskType.im2recipe]: 
+            # update f1 metrics
+            if step_output["ingr_pred"] is not None:
+                self.o_f1(step_output["ingr_pred"], step_output["ingr_gt"])
+                self.c_f1(step_output["ingr_pred"], step_output["ingr_gt"])
+                self.i_f1(step_output["ingr_pred"], step_output["ingr_gt"])
 
+        # update recipe metrics
+        if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
+            self.perplexity(torch.exp(step_output["recipe_loss"]))
+
+        # update losses
+        self.val_losses(step_output)
+
+            
     def configure_optimizers(self):
         opt_arguments = []
         pretrained_lr = self.lr * self.scale_lr_pretrained
