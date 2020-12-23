@@ -59,3 +59,26 @@ def test_target_distribution_loss():
     td = TargetDistributionLoss(reduction="mean")
     out = td(logits, targets)
     assert torch.allclose(out, torch.tensor(4.7743), atol=1e-4)
+
+
+def test_target_distribution_loss_relative_comparison():
+    targets = torch.LongTensor([
+        [0, 0, 0, 0],
+        [1, 0, 0, 0],
+        [1, 0, 1, 0],
+        [1, 1, 1, 1],
+    ])
+    logits_good = torch.FloatTensor([
+        [-10, -10, -10, -10],
+        [10, -10, -10, -10],
+        [10, -10, 10, -10],
+        [10, 10, 10, 10],
+    ])
+    logits_bad = -1 * logits_good
+
+    td = TargetDistributionLoss(reduction="none")
+    loss_good = td(logits_good, targets)
+    loss_bad = td(logits_bad, targets)
+    assert (loss_good <= loss_bad).sum() == targets.size(0)
+    print(loss_good)
+    print(loss_bad)

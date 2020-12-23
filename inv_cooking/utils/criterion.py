@@ -3,7 +3,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 import torch
 import torch.nn as nn
 
@@ -42,7 +41,11 @@ class SoftIoULoss(nn.Module):
 
 class TargetDistributionLoss(nn.Module):
     """
-    Compare the target distribution with the actual distribution
+    Compute the difference between the target distribution with the actual distribution
+    by computing the cross-entropy.
+
+    The cross-entropy represent the expected message length when encoding one distributing
+    with the other and is minimized when the two distributions are aligned.
     """
 
     def __init__(self, reduction: str = "none", epsilon: float = 1e-8):
@@ -60,10 +63,10 @@ class TargetDistributionLoss(nn.Module):
         """
         target_distr = _to_target_distribution(targets, epsilon=self.epsilon)
         cross_entropy = target_distr * nn.functional.log_softmax(logits, dim=-1)
-        loss = -torch.sum(cross_entropy, dim=-1)
+        cross_entropy = -torch.sum(cross_entropy, dim=-1)
         if self.reduction == "mean":
-            loss = loss.mean()
-        return loss
+            cross_entropy = cross_entropy.mean()
+        return cross_entropy
 
 
 @torch.jit.script
