@@ -1,6 +1,6 @@
 """
 The idea behind the experiment is to have a way to inherit from another configuration
-- each experiment is an entry in a DB
+- each experiment is an entry in a database
 - each experiment can be launched just by name
 - meta-experiments allow to run a batch of experiments
 """
@@ -17,23 +17,31 @@ from inv_cooking.config.optimization import OptimizationConfig
 
 
 @dataclass
-class Experiment:
-    name: str = ""
-    comment: str = ""
-    optimization: OptimizationConfig = OptimizationConfig()
-
-
-@dataclass
 class Experiments:
+    """
+    The experiment database, as read by Hydra: it contains the configuration
+    of all experiments, in a potentially factorized format (inheritance)
+    """
     im2ingr: Dict[str, Any] = field(default_factory=dict)
     im2recipe: Dict[str, Any] = field(default_factory=dict)
     ingr2recipe: Dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class Experiment:
+    """
+    A specific experiment, once read from the experiment database, and fully
+    expanded (inheritance is replaced by the actual values)
+    """
+    name: str = ""
+    comment: str = ""
+    optimization: OptimizationConfig = OptimizationConfig()
+
+
 def parse_experiments(config: Experiments, task: str, name: str) -> List[Experiment]:
     """
-    Read the raw configuration, select the experiment matching the task and the name,
-    and expand it as a list of configuration (in case of hyper-parameter searches)
+    Read the experiment database, and expand the entry matching the task and name as
+    a list of experiment configurations (multiplicity possible due to hyper-parameter searches)
     """
     task_experiments = getattr(config, task, None)
     if task_experiments is None:
