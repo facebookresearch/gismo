@@ -13,7 +13,10 @@ from typing import Any, Dict, List, Tuple
 
 from omegaconf import DictConfig, OmegaConf
 
+from inv_cooking.config.image_encoder import ImageEncoderConfig
+from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
 from inv_cooking.config.optimization import OptimizationConfig
+from inv_cooking.config.utils import untyped_config
 
 
 @dataclass
@@ -22,6 +25,7 @@ class Experiments:
     The experiment database, as read by Hydra: it contains the configuration
     of all experiments, in a potentially factorized format (inheritance)
     """
+    common: Dict[str, Any] = field(default_factory=dict)
     im2ingr: Dict[str, Any] = field(default_factory=dict)
     im2recipe: Dict[str, Any] = field(default_factory=dict)
     ingr2recipe: Dict[str, Any] = field(default_factory=dict)
@@ -35,15 +39,18 @@ class Experiment:
     """
     name: str = ""
     comment: str = ""
+    recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
+    image_encoder: ImageEncoderConfig = ImageEncoderConfig()
+    ingr_predictor: DictConfig = untyped_config()
     optimization: OptimizationConfig = OptimizationConfig()
 
 
-def parse_experiments(config: Experiments, task: str, name: str) -> List[Experiment]:
+def parse_experiments(db: Experiments, task: str, name: str) -> List[Experiment]:
     """
     Read the experiment database, and expand the entry matching the task and name as
     a list of experiment configurations (multiplicity possible due to hyper-parameter searches)
     """
-    task_experiments = getattr(config, task, None)
+    task_experiments = getattr(db, task, None)
     if task_experiments is None:
         raise ValueError(f"Unknown task {task}")
 
@@ -57,6 +64,9 @@ def parse_experiments(config: Experiments, task: str, name: str) -> List[Experim
     config = OmegaConf.merge(*configs)
     config.pop("parent", default=None)
 
+    # Join with the configuration of referred architectures
+    _replace_load_statements(db.common, config, schema=OmegaConf.structured(Experiment))
+
     # Now, expand the configuration in case it is a generator configuration
     experiments = []
     configs = _expand_search(config)
@@ -65,6 +75,30 @@ def parse_experiments(config: Experiments, task: str, name: str) -> List[Experim
         schema.name = name
         experiments.append(OmegaConf.merge(schema, config))
     return experiments
+
+
+def _replace_load_statements(environment: Dict[str, Any], config: DictConfig, schema: DictConfig):
+    """
+    Look for references to elements of the 'environment' (list of common available objects) to
+    reference and replace references to these common elements with the elements themselves.
+    The replacement is done by detecting anomaly in structure that could be solved by replacement.
+    """
+    to_visit = deque(config.keys())
+    while to_visit:
+        path = to_visit.popleft()
+        node = OmegaConf.select(config, path)
+        if OmegaConf.is_dict(node):
+            for key in node.keys():
+                to_visit.append(path + "." + key)
+        elif OmegaConf.is_list(node):
+            for i in range(len(node)):
+                to_visit.append(path + "." + str(i))
+        elif isinstance(node, str):
+            node_schema = OmegaConf.select(schema, path)
+            if OmegaConf.is_dict(node_schema):
+                loaded = environment.get(node, None)
+                if loaded:
+                    OmegaConf.update(config, path, loaded, merge=False)
 
 
 SEARCH_PREFIX = "SEARCH"

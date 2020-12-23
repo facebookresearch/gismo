@@ -1,0 +1,41 @@
+# @package _group_
+
+resnet50_encoder:
+  model: resnet50
+  pretrained: True
+  dropout: 0.0
+  freeze: 'none'
+
+ingr_predictor_ff:
+  model: ff
+  embed_size: 2048
+  freeze: False  # setting freeze to True will also freeze the image encoder
+  load_pretrained_from: None
+  layers: 2
+  dropout: 0.0
+  criterion: bce
+
+ingr_predictor_lstm:
+  model: lstm
+  embed_size: 2048
+  freeze: False  # setting freeze to True will also freeze the image encoder
+  load_pretrained_from: None
+  with_set_prediction: true
+  dropout: 0.1
+
+ingr_predictor_tf:
+  model: tf
+  layers: 0
+  embed_size: 2048
+  freeze: False  # setting freeze to True will also freeze the image encoder
+  load_pretrained_from: None
+  with_set_prediction: false
+  n_att: 8
+  dropout: 0.3
+
+recipe_gen_tf:
+  dropout: 0.5
+  embed_size: 2048
+  n_att_heads: 8
+  layers: 2
+  normalize_before: True
