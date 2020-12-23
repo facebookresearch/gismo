@@ -10,9 +10,15 @@ from inv_cooking.models.ingredients_predictor import label2_k_hots
 
 
 class DistributedF1(pl.metrics.Metric):
-    def __init__(self, which_f1: str, pad_value: int, remove_eos: bool, dist_sync_on_step: bool=False):
+    def __init__(
+        self,
+        which_f1: str,
+        pad_value: int,
+        remove_eos: bool,
+        dist_sync_on_step: bool = False,
+    ):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
-        
+
         assert which_f1 in ["i_f1", "o_f1", "c_f1"]
 
         self.which_f1 = which_f1
@@ -27,10 +33,16 @@ class DistributedF1(pl.metrics.Metric):
             self.add_state("pp", default=torch.tensor(0.0), dist_reduce_fx="sum")
             self.add_state("ap", default=torch.tensor(0.0), dist_reduce_fx="sum")
         else:
-            self.add_state("tp", default=torch.zeros(self.pad_value-1), dist_reduce_fx="sum")
-            self.add_state("pp", default=torch.zeros(self.pad_value-1), dist_reduce_fx="sum")
-            self.add_state("ap", default=torch.zeros(self.pad_value-1), dist_reduce_fx="sum")            
-        
+            self.add_state(
+                "tp", default=torch.zeros(self.pad_value - 1), dist_reduce_fx="sum"
+            )
+            self.add_state(
+                "pp", default=torch.zeros(self.pad_value - 1), dist_reduce_fx="sum"
+            )
+            self.add_state(
+                "ap", default=torch.zeros(self.pad_value - 1), dist_reduce_fx="sum"
+            )
+
     def update(self, pred: torch.Tensor, gt: torch.Tensor):
         assert pred.shape == gt.shape
 
@@ -76,20 +88,20 @@ class DistributedF1(pl.metrics.Metric):
             f1 = self._computef1()
         elif self.which_f1 == "i_f1":
             f1 = self.f1 / self.n_samples
-            
+
         return f1
 
 
 class DistributedMetric(pl.metrics.Metric):
     def __init__(self, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
-        
+
         self.add_state("quantity", default=torch.tensor(0.0), dist_reduce_fx="sum")
         self.add_state("n_samples", default=torch.tensor(0.0), dist_reduce_fx="sum")
-        
+
     def update(self, quantity: torch.Tensor):
-            self.quantity += quantity.sum()
-            self.n_samples += quantity.shape[0]
+        self.quantity += quantity.sum()
+        self.n_samples += quantity.shape[0]
 
     def compute(self):
         return self.quantity / self.n_samples
@@ -101,17 +113,35 @@ class DistributedValLosses(pl.metrics.Metric):
 
         self.weights = weights
 
-        if monitor_ingr_losses and "label_loss" in self.weights.keys() and self.weights["label_loss"] > 0:
-            self.add_state("label_loss", default=torch.tensor(0.0), dist_reduce_fx="sum")
-        if monitor_ingr_losses and "cardinality_loss" in self.weights.keys() and self.weights["cardinality_loss"] > 0:
-            self.add_state("cardinality_loss", default=torch.tensor(0.0), dist_reduce_fx="sum")
-        if monitor_ingr_losses and "eos_loss" in self.weights.keys() and self.weights["eos_loss"] > 0:
+        if (
+            monitor_ingr_losses
+            and "label_loss" in self.weights.keys()
+            and self.weights["label_loss"] > 0
+        ):
+            self.add_state(
+                "label_loss", default=torch.tensor(0.0), dist_reduce_fx="sum"
+            )
+        if (
+            monitor_ingr_losses
+            and "cardinality_loss" in self.weights.keys()
+            and self.weights["cardinality_loss"] > 0
+        ):
+            self.add_state(
+                "cardinality_loss", default=torch.tensor(0.0), dist_reduce_fx="sum"
+            )
+        if (
+            monitor_ingr_losses
+            and "eos_loss" in self.weights.keys()
+            and self.weights["eos_loss"] > 0
+        ):
             self.add_state("eos_loss", default=torch.tensor(0.0), dist_reduce_fx="sum")
         if "recipe_loss" in self.weights.keys() and self.weights["recipe_loss"] > 0:
-            self.add_state("recipe_loss", default=torch.tensor(0.0), dist_reduce_fx="sum")     
+            self.add_state(
+                "recipe_loss", default=torch.tensor(0.0), dist_reduce_fx="sum"
+            )
 
-        self.add_state("n_samples", default=torch.tensor(0.0), dist_reduce_fx="sum")                    
-        
+        self.add_state("n_samples", default=torch.tensor(0.0), dist_reduce_fx="sum")
+
     def update(self, quantities):
         if hasattr(self, "label_loss"):
             self.label_loss += quantities["label_loss"].sum()
@@ -129,15 +159,21 @@ class DistributedValLosses(pl.metrics.Metric):
         ret_dict["total_loss"] = 0
         if hasattr(self, "label_loss"):
             ret_dict["label_loss"] = self.label_loss / self.n_samples
-            ret_dict["total_loss"] += self.weights["label_loss"] * ret_dict["label_loss"]
+            ret_dict["total_loss"] += (
+                self.weights["label_loss"] * ret_dict["label_loss"]
+            )
         if hasattr(self, "cardinality_loss"):
             ret_dict["cardinality_loss"] = self.cardinality_loss / self.n_samples
-            ret_dict["total_loss"] += self.weights["cardinality_loss"] * ret_dict["cardinality_loss"]
+            ret_dict["total_loss"] += (
+                self.weights["cardinality_loss"] * ret_dict["cardinality_loss"]
+            )
         if hasattr(self, "eos_loss"):
             ret_dict["eos_loss"] = self.eos_loss / self.n_samples
             ret_dict["total_loss"] += self.weights["eos_loss"] * ret_dict["eos_loss"]
         if hasattr(self, "recipe_loss"):
             ret_dict["recipe_loss"] = self.recipe_loss / self.n_samples
-            ret_dict["total_loss"] += self.weights["recipe_loss"] * ret_dict["recipe_loss"]
+            ret_dict["total_loss"] += (
+                self.weights["recipe_loss"] * ret_dict["recipe_loss"]
+            )
 
         return ret_dict

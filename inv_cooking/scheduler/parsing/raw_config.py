@@ -13,6 +13,7 @@ from inv_cooking.config.ingredient_predictor import (
     IngredientPredictorTransformerConfig,
 )
 from inv_cooking.config.slurm import SlurmConfig
+
 from .experiment import Experiment, Experiments, parse_experiments
 
 
@@ -60,7 +61,9 @@ class RawConfig:
 
     @staticmethod
     def _get_experiments(raw_config: "RawConfig") -> List[Experiment]:
-        return parse_experiments(raw_config.experiments, raw_config.task, raw_config.name or raw_config.task)
+        return parse_experiments(
+            raw_config.experiments, raw_config.task, raw_config.name or raw_config.task
+        )
 
     @staticmethod
     def _get_ingr_predictor(ingr_predictor: DictConfig) -> IngredientPredictorConfig:

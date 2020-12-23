@@ -32,7 +32,9 @@ class SinusoidalPositionalEmbedding(nn.Module):
         self.padding_idx = padding_idx
         self.left_pad = left_pad
         self.weights = SinusoidalPositionalEmbedding.get_embedding(
-            init_size, embedding_dim, padding_idx,
+            init_size,
+            embedding_dim,
+            padding_idx,
         )
         self.register_buffer("_float_tensor", torch.FloatTensor())
 
@@ -65,7 +67,9 @@ class SinusoidalPositionalEmbedding(nn.Module):
         max_pos = self.padding_idx + 1 + seq_len
         if self.weights is None or max_pos > self.weights.size(0):
             self.weights = SinusoidalPositionalEmbedding.get_embedding(
-                max_pos, self.embedding_dim, self.padding_idx,
+                max_pos,
+                self.embedding_dim,
+                self.padding_idx,
             )
         self.weights = self.weights.type_as(self._float_tensor)
 

@@ -131,7 +131,8 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
                 # subtract 1 from num_target because 1st label corresponds to value 1
                 offset = 1
                 losses["cardinality_loss"] = self.crit_cardinality(
-                    cardinality_logits, (cardinality_target.squeeze() - offset).long(),
+                    cardinality_logits,
+                    (cardinality_target.squeeze() - offset).long(),
                 )
 
         if compute_predictions:

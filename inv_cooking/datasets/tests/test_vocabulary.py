@@ -2,7 +2,7 @@ import string
 from typing import List
 
 from hypothesis import given
-from hypothesis.strategies import text, lists
+from hypothesis.strategies import lists, text
 
 from inv_cooking.datasets.vocabulary import Vocabulary
 

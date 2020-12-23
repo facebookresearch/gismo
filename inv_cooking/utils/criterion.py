@@ -9,7 +9,9 @@ from torch.nn.modules.loss import _WeightedLoss
 
 
 @torch.jit.script
-def soft_iou(logits: torch.Tensor, target: torch.Tensor, epsilon: float = 1e-8) -> torch.Tensor:
+def soft_iou(
+    logits: torch.Tensor, target: torch.Tensor, epsilon: float = 1e-8
+) -> torch.Tensor:
     """
     Compute the Intersection over Union between the logits and the target
     :param logits: shape (batch_size, nb_labels)
@@ -69,6 +71,7 @@ class TargetDistributionLoss(nn.Module):
             cross_entropy = cross_entropy.mean()
         return cross_entropy
 
+
 @torch.jit.script
 def _to_target_distribution(targets: torch.Tensor, epsilon: float):
     """
@@ -78,13 +81,14 @@ def _to_target_distribution(targets: torch.Tensor, epsilon: float):
     """
     nb_target_by_sample = targets.sum(dim=-1, keepdim=True)
     uniform_distribution = torch.tensor(1.0 / targets.size(-1), device=targets.device)
-    return torch.where(nb_target_by_sample == 0,
-                       uniform_distribution,
-                       targets.float() / (nb_target_by_sample + epsilon))
+    return torch.where(
+        nb_target_by_sample == 0,
+        uniform_distribution,
+        targets.float() / (nb_target_by_sample + epsilon),
+    )
 
 
 class MaskedCrossEntropyCriterion(_WeightedLoss):
-
     def __init__(self, ignore_index=-100, reduce=False):
         super(MaskedCrossEntropyCriterion, self).__init__()
         self.padding_idx = ignore_index
@@ -93,9 +97,7 @@ class MaskedCrossEntropyCriterion(_WeightedLoss):
     def forward(self, outputs, targets):
 
         outputs = outputs[:, :-1, :].contiguous()
-        outputs = outputs.view(
-            outputs.size(0) * outputs.size(1), -1
-        )
+        outputs = outputs.view(outputs.size(0) * outputs.size(1), -1)
         # log softmax of outputs
         lprobs = nn.functional.log_softmax(outputs, dim=-1)
         # lprobs = lprobs.view(-1, lprobs.size(-1))
@@ -110,7 +112,7 @@ class MaskedCrossEntropyCriterion(_WeightedLoss):
 
         # apply mask and obtain one loss per element in batch
         loss = loss.view(targets_sz)
-        loss = torch.sum(loss*mask, dim=-1) / torch.sum(mask, dim=-1)
+        loss = torch.sum(loss * mask, dim=-1) / torch.sum(mask, dim=-1)
 
         # reduce loss across batch
         if self.reduce:

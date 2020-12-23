@@ -1,17 +1,26 @@
 import torch
 
-from inv_cooking.utils.criterion import soft_iou, SoftIoULoss, TargetDistributionLoss, _to_target_distribution
+from inv_cooking.utils.criterion import (
+    SoftIoULoss,
+    TargetDistributionLoss,
+    _to_target_distribution,
+    soft_iou,
+)
 
 
 def test_soft_iou():
-    logits = torch.FloatTensor([
-        [12, 15, -10],
-        [17, -50, 30],
-    ])
-    targets = torch.LongTensor([
-        [1, 0, 0],
-        [1, 0, 1],
-    ])
+    logits = torch.FloatTensor(
+        [
+            [12, 15, -10],
+            [17, -50, 30],
+        ]
+    )
+    targets = torch.LongTensor(
+        [
+            [1, 0, 0],
+            [1, 0, 1],
+        ]
+    )
 
     out = soft_iou(logits, targets)
     expected = torch.tensor([[0.5], [1.0]])
@@ -28,29 +37,37 @@ def test_soft_iou():
 
 
 def test_target_distribution_construction():
-    targets = torch.LongTensor([
-        [1, 0, 0, 0],
-        [1, 0, 1, 0],
-        [0, 0, 0, 0],
-    ]).cuda()
+    targets = torch.LongTensor(
+        [
+            [1, 0, 0, 0],
+            [1, 0, 1, 0],
+            [0, 0, 0, 0],
+        ]
+    ).cuda()
     distribution = _to_target_distribution(targets, epsilon=1e-8)
-    expected = torch.tensor([
-        [1.0000, 0.0000, 0.0000, 0.0000],
-        [0.5000, 0.0000, 0.5000, 0.0000],
-        [0.2500, 0.2500, 0.2500, 0.2500],
-    ])
+    expected = torch.tensor(
+        [
+            [1.0000, 0.0000, 0.0000, 0.0000],
+            [0.5000, 0.0000, 0.5000, 0.0000],
+            [0.2500, 0.2500, 0.2500, 0.2500],
+        ]
+    )
     assert torch.allclose(distribution.cpu(), expected, atol=1e-4)
 
 
 def test_target_distribution_loss():
-    logits = torch.FloatTensor([
-        [12, 15, -10, 3],
-        [17, -50, 30, -10],
-    ])
-    targets = torch.LongTensor([
-        [1, 0, 0, 0],
-        [1, 0, 1, 0],
-    ])
+    logits = torch.FloatTensor(
+        [
+            [12, 15, -10, 3],
+            [17, -50, 30, -10],
+        ]
+    )
+    targets = torch.LongTensor(
+        [
+            [1, 0, 0, 0],
+            [1, 0, 1, 0],
+        ]
+    )
 
     td = TargetDistributionLoss(reduction="none")
     out = td(logits, targets)
@@ -62,18 +79,22 @@ def test_target_distribution_loss():
 
 
 def test_target_distribution_loss_relative_comparison():
-    targets = torch.LongTensor([
-        [0, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 0, 1, 0],
-        [1, 1, 1, 1],
-    ])
-    logits_good = torch.FloatTensor([
-        [-10, -10, -10, -10],
-        [10, -10, -10, -10],
-        [10, -10, 10, -10],
-        [10, 10, 10, 10],
-    ])
+    targets = torch.LongTensor(
+        [
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [1, 0, 1, 0],
+            [1, 1, 1, 1],
+        ]
+    )
+    logits_good = torch.FloatTensor(
+        [
+            [-10, -10, -10, -10],
+            [10, -10, -10, -10],
+            [10, -10, 10, -10],
+            [10, 10, 10, 10],
+        ]
+    )
     logits_bad = -1 * logits_good
 
     td = TargetDistributionLoss(reduction="none")

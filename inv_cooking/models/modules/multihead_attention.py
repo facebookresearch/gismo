@@ -151,7 +151,10 @@ class MultiheadAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
             attn_weights = (
                 attn_weights.float()
-                .masked_fill(key_padding_mask.unsqueeze(1).unsqueeze(2), float("-inf"),)
+                .masked_fill(
+                    key_padding_mask.unsqueeze(1).unsqueeze(2),
+                    float("-inf"),
+                )
                 .type_as(attn_weights)
             )  # FP16 support: cast to float and back
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
@@ -218,9 +221,19 @@ class MultiheadAttention(nn.Module):
             self._set_input_buffer(incremental_state, input_buffer)
 
     def _get_input_buffer(self, incremental_state):
-        return get_incremental_state(self, incremental_state, "attn_state",) or {}
+        return (
+            get_incremental_state(
+                self,
+                incremental_state,
+                "attn_state",
+            )
+            or {}
+        )
 
     def _set_input_buffer(self, incremental_state, buffer):
         set_incremental_state(
-            self, incremental_state, "attn_state", buffer,
+            self,
+            incremental_state,
+            "attn_state",
+            buffer,
         )

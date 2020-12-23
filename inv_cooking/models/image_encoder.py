@@ -15,7 +15,9 @@ class ImageEncoder(nn.Module):
     """
 
     def __init__(
-        self, embed_size: int, config: ImageEncoderConfig,
+        self,
+        embed_size: int,
+        config: ImageEncoderConfig,
     ):
         super().__init__()
 

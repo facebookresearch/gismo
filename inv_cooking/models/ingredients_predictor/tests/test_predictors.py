@@ -76,5 +76,8 @@ class TestIngredientPredictor:
             eos_value=0,
         )
         return model(
-            image_features, label_target, compute_losses=True, compute_predictions=True,
+            image_features,
+            label_target,
+            compute_losses=True,
+            compute_predictions=True,
         )

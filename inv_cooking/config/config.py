@@ -29,6 +29,7 @@ class Config:
     Configuration fed to the main scheduler of experiment.
     It contains all information necessary to run a single job.
     """
+
     task: TaskType = TaskType.im2ingr
     name: str = MISSING
     comment: str = MISSING
@@ -39,4 +40,3 @@ class Config:
     image_encoder: ImageEncoderConfig = ImageEncoderConfig()
     ingr_predictor: IngredientPredictorConfig = MISSING
     slurm: SlurmConfig = SlurmConfig()
-

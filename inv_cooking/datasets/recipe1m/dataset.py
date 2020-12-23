@@ -22,7 +22,7 @@ class Recipe1M(data.Dataset):
         return_recipe=False,
         transform=None,
         use_lmdb=False,
-        selected_indices: np.ndarray=None,
+        selected_indices: np.ndarray = None,
         include_eos=False,
     ):
         self.image_dir = os.path.join(data_dir, "images", split)
@@ -30,7 +30,9 @@ class Recipe1M(data.Dataset):
         self.split = split
         self.max_num_images = filtering.max_num_images
         self.max_num_labels = filtering.max_num_labels
-        self.max_seq_length = filtering.max_num_instructions * filtering.max_instruction_length
+        self.max_seq_length = (
+            filtering.max_num_instructions * filtering.max_instruction_length
+        )
         self.return_img = return_img
         self.return_ingr = return_ingr
         self.return_recipe = return_recipe
@@ -46,7 +48,9 @@ class Recipe1M(data.Dataset):
         if self.return_ingr:
             self.ingr_vocab = pickle.load(
                 open(
-                    os.path.join(self.pre_processed_dir, "final_recipe1m_vocab_ingrs.pkl"),
+                    os.path.join(
+                        self.pre_processed_dir, "final_recipe1m_vocab_ingrs.pkl"
+                    ),
                     "rb",
                 )
             )
@@ -64,7 +68,9 @@ class Recipe1M(data.Dataset):
         if self.return_recipe:
             self.instr_vocab = pickle.load(
                 open(
-                    os.path.join(self.pre_processed_dir, "final_recipe1m_vocab_toks.pkl"),
+                    os.path.join(
+                        self.pre_processed_dir, "final_recipe1m_vocab_toks.pkl"
+                    ),
                     "rb",
                 )
             )
@@ -73,7 +79,9 @@ class Recipe1M(data.Dataset):
         if self.return_img or self.return_ingr or self.return_recipe:
             self.dataset = pickle.load(
                 open(
-                    os.path.join(self.pre_processed_dir, "final_recipe1m_" + split + ".pkl"),
+                    os.path.join(
+                        self.pre_processed_dir, "final_recipe1m_" + split + ".pkl"
+                    ),
                     "rb",
                 )
             )
@@ -125,12 +133,12 @@ class Recipe1M(data.Dataset):
             true_ingr_idxs.append(self.ingr_vocab("<end>"))
 
         ret_ingr = true_ingr_idxs + [self.ingr_pad_value] * (
-                self.max_num_labels + self.include_eos - len(true_ingr_idxs)
+            self.max_num_labels + self.include_eos - len(true_ingr_idxs)
         )
         return ret_ingr
 
     def _load_image(self, index: int):
-        paths = self.dataset[index]["images"][0:self.max_num_images]
+        paths = self.dataset[index]["images"][0 : self.max_num_images]
         if not paths:
             return torch.zeros(size=(3, 224, 224))  # TODO: ???
 
@@ -174,9 +182,9 @@ class Recipe1M(data.Dataset):
         ret_rec = []
         ret_rec = self.recipe_to_idxs(tokens, ret_rec)
         ret_rec.append(self.instr_vocab("<end>"))
-        ret_rec = ret_rec[0: self.max_seq_length]
+        ret_rec = ret_rec[0 : self.max_seq_length]
         ret_rec = ret_rec + [self.instr_vocab("<pad>")] * (
-                self.max_seq_length - len(ret_rec)
+            self.max_seq_length - len(ret_rec)
         )
         return ret_rec
 

@@ -52,5 +52,5 @@ def _schedule_job_on_slurm_using_dp(cfg: Config):
         gpus_per_node=nb_gpus,
         mem_gb=cfg.slurm.mem_by_gpu * nb_gpus,
     )
-    job = executor.submit(run_training, cfg, nb_gpus, cfg.slurm.nodes, 'dp')
+    job = executor.submit(run_training, cfg, nb_gpus, cfg.slurm.nodes, "dp")
     print(f"Submitted {job.job_id}")

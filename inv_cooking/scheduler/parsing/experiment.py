@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Tuple
 from omegaconf import DictConfig, OmegaConf
 
 from inv_cooking.config.image_encoder import ImageEncoderConfig
-from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
 from inv_cooking.config.optimization import OptimizationConfig
+from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
 from inv_cooking.config.utils import untyped_config
 
 
@@ -25,6 +25,7 @@ class Experiments:
     The experiment database, as read by Hydra: it contains the configuration
     of all experiments, in a potentially factorized format (inheritance)
     """
+
     common: Dict[str, Any] = field(default_factory=dict)
     im2ingr: Dict[str, Any] = field(default_factory=dict)
     im2recipe: Dict[str, Any] = field(default_factory=dict)
@@ -37,6 +38,7 @@ class Experiment:
     A specific experiment, once read from the experiment database, and fully
     expanded (inheritance is replaced by the actual values)
     """
+
     name: str = ""
     comment: str = ""
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
@@ -77,7 +79,9 @@ def parse_experiments(db: Experiments, task: str, name: str) -> List[Experiment]
     return experiments
 
 
-def _replace_load_statements(environment: Dict[str, Any], config: DictConfig, schema: DictConfig):
+def _replace_load_statements(
+    environment: Dict[str, Any], config: DictConfig, schema: DictConfig
+):
     """
     Look for references to elements of the 'environment' (list of common available objects) to
     reference and replace references to these common elements with the elements themselves.

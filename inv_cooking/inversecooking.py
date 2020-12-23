@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import pytorch_lightning as pl
 import torch
@@ -14,7 +14,6 @@ from .config import (
 from .models.im2ingr import Im2Ingr
 from .models.im2recipe import Im2Recipe
 from .models.ingr2recipe import Ingr2Recipe
-from .models.ingredients_predictor import label2_k_hots
 from .utils.metrics import DistributedF1, DistributedMetric, DistributedValLosses
 
 
@@ -81,16 +80,35 @@ class LitInverseCooking(pl.LightningModule):
 
         # metrics to track at validation time
         if self.task != TaskType.ingr2recipe:
-            self.o_f1 = DistributedF1(which_f1="o_f1", pad_value=self.model.ingr_vocab_size - 1, remove_eos=self.model.ingr_predictor.remove_eos, dist_sync_on_step=True)
-            self.c_f1 = DistributedF1(which_f1="c_f1", pad_value=self.model.ingr_vocab_size - 1, remove_eos=self.model.ingr_predictor.remove_eos, dist_sync_on_step=True)
-            self.i_f1 = DistributedF1(which_f1="i_f1", pad_value=self.model.ingr_vocab_size - 1, remove_eos=self.model.ingr_predictor.remove_eos, dist_sync_on_step=True)
-            self.val_losses = DistributedValLosses(weights=self.loss_weights, monitor_ingr_losses=ingr_pred_config.freeze, dist_sync_on_step=True)
+            self.o_f1 = DistributedF1(
+                which_f1="o_f1",
+                pad_value=self.model.ingr_vocab_size - 1,
+                remove_eos=self.model.ingr_predictor.remove_eos,
+                dist_sync_on_step=True,
+            )
+            self.c_f1 = DistributedF1(
+                which_f1="c_f1",
+                pad_value=self.model.ingr_vocab_size - 1,
+                remove_eos=self.model.ingr_predictor.remove_eos,
+                dist_sync_on_step=True,
+            )
+            self.i_f1 = DistributedF1(
+                which_f1="i_f1",
+                pad_value=self.model.ingr_vocab_size - 1,
+                remove_eos=self.model.ingr_predictor.remove_eos,
+                dist_sync_on_step=True,
+            )
+            self.val_losses = DistributedValLosses(
+                weights=self.loss_weights,
+                monitor_ingr_losses=ingr_pred_config.freeze,
+                dist_sync_on_step=True,
+            )
         else:
-            self.val_losses = DistributedValLosses(weights=self.loss_weights, dist_sync_on_step=True)
+            self.val_losses = DistributedValLosses(
+                weights=self.loss_weights, dist_sync_on_step=True
+            )
         if self.task != TaskType.im2ingr:
             self.perplexity = DistributedMetric()
-
-        
 
     def forward(
         self,
@@ -142,7 +160,9 @@ class LitInverseCooking(pl.LightningModule):
     def _evaluation_step(self, batch, prefix: str):
         # get model outputs
         if self.task == TaskType.im2ingr:
-            out = self(**batch, split=prefix, compute_predictions=True, compute_losses=True)
+            out = self(
+                **batch, split=prefix, compute_predictions=True, compute_losses=True
+            )
             out[0]["n_samples"] = batch["img"].shape[0]
         elif self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
             out = self(
@@ -170,7 +190,7 @@ class LitInverseCooking(pl.LightningModule):
         Compute and log metrics/losses
         """
         if self.task == TaskType.im2ingr or (
-            self.task == TaskType.im2recipe and split == 'test'
+            self.task == TaskType.im2recipe and split == "test"
         ):
             self.log(f"{split}_o_f1", self.o_f1.compute())
             self.log(f"{split}_c_f1", self.c_f1.compute())
@@ -181,8 +201,8 @@ class LitInverseCooking(pl.LightningModule):
 
         val_losses = self.val_losses.compute()
         for k, v in val_losses.items():
-            self.log(f"{split}_{k}", v)     
-            
+            self.log(f"{split}_{k}", v)
+
     def training_step_end(self, losses: Dict[str, torch.Tensor]):
         """
         Average the loss across all GPUs and combine these losses together as an overall loss
@@ -252,7 +272,7 @@ class LitInverseCooking(pl.LightningModule):
         return total_loss
 
     def validation_step_end(self, step_output: Dict[str, Any]):
-       self._evaluation_step_end(step_output)
+        self._evaluation_step_end(step_output)
 
     def test_step_end(self, step_output: Dict[str, Any]):
         self._evaluation_step_end(step_output)
@@ -262,7 +282,7 @@ class LitInverseCooking(pl.LightningModule):
         Update distributed metrics
         """
         # compute ingredient metrics
-        if self.task in [TaskType.im2ingr, TaskType.im2recipe]: 
+        if self.task in [TaskType.im2ingr, TaskType.im2recipe]:
             # update f1 metrics
             if step_output["ingr_pred"] is not None:
                 self.o_f1(step_output["ingr_pred"], step_output["ingr_gt"])
@@ -276,7 +296,6 @@ class LitInverseCooking(pl.LightningModule):
         # update losses
         self.val_losses(step_output)
 
-            
     def configure_optimizers(self):
         opt_arguments = []
         pretrained_lr = self.lr * self.scale_lr_pretrained

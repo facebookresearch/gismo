@@ -14,8 +14,9 @@ from inv_cooking.config import (
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
+
 from .predictor import IngredientsPredictor
-from .utils import mask_from_eos, label2_k_hots
+from .utils import label2_k_hots, mask_from_eos
 
 
 class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
@@ -25,11 +26,11 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
     @classmethod
     def create_tf_from_config(
-            cls,
-            config: IngredientPredictorTransformerConfig,
-            max_num_labels: int,
-            vocab_size: int,
-            eos_value: int,
+        cls,
+        config: IngredientPredictorTransformerConfig,
+        max_num_labels: int,
+        vocab_size: int,
+        eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
         max_num_labels += 1  # required for EOS token
         print(
@@ -59,11 +60,11 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
     @classmethod
     def create_lstm_from_config(
-            cls,
-            config: IngredientPredictorLSTMConfig,
-            max_num_labels: int,
-            vocab_size: int,
-            eos_value: int,
+        cls,
+        config: IngredientPredictorLSTMConfig,
+        max_num_labels: int,
+        vocab_size: int,
+        eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
         max_num_labels += 1  # required for EOS token
         print(
@@ -83,11 +84,12 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
     @staticmethod
     def from_decoder(
-            config: IngredientPredictorLSTMConfig,
-            decoder: nn.Module,
-            max_num_labels: int,
-            vocab_size: int,
-            eos_value: int):
+        config: IngredientPredictorLSTMConfig,
+        decoder: nn.Module,
+        max_num_labels: int,
+        vocab_size: int,
+        eos_value: int,
+    ):
         pad_value = vocab_size - 1
         if config.with_set_prediction:
             label_loss = nn.BCELoss(reduction="mean")
@@ -112,16 +114,16 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         return model
 
     def __init__(
-            self,
-            decoder: nn.Module,
-            max_num_labels: int,
-            vocab_size: int,
-            crit=None,
-            crit_eos=None,
-            pad_value: int = 0,
-            eos_value: int = 0,
-            perminv: bool = True,
-            eps: float = 1e-8,
+        self,
+        decoder: nn.Module,
+        max_num_labels: int,
+        vocab_size: int,
+        crit=None,
+        crit_eos=None,
+        pad_value: int = 0,
+        eos_value: int = 0,
+        perminv: bool = True,
+        eps: float = 1e-8,
     ):
         super().__init__(remove_eos=False)
         self.decoder = decoder
@@ -135,11 +137,11 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         self.vocab_size = vocab_size
 
     def _forward_impl(
-            self,
-            img_features: torch.Tensor,
-            label_target: Optional[torch.Tensor] = None,
-            compute_losses: bool = False,
-            compute_predictions: bool = False,
+        self,
+        img_features: torch.Tensor,
+        label_target: Optional[torch.Tensor] = None,
+        compute_losses: bool = False,
+        compute_predictions: bool = False,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         losses: Dict[str, torch.Tensor] = {}
@@ -149,7 +151,10 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         # output label_logits is only used to compute losses in case of self.perminv (no teacher forcing)
         # predictions output is used for all auto-regressive models
         predictions, label_logits = self.decoder.sample(
-            img_features, None, first_token_value=0, replacement=False,
+            img_features,
+            None,
+            first_token_value=0,
+            replacement=False,
         )
 
         if compute_predictions:
@@ -163,8 +168,8 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             # add dummy first word to sequence and remove last
             first_word = torch.zeros(len(label_target)).type_as(label_target)
             shift_target = torch.cat([first_word.unsqueeze(-1), label_target], -1)[
-                           :, :-1
-                           ]
+                :, :-1
+            ]
 
             # autoregressive mode for decoder when training with permutation invariant objective
             if self.perminv:
@@ -181,7 +186,9 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
                 eos_pos = label_target == self.eos_value
 
                 # 1s for gt label positions, 0s starting from eos position in the gt
-                eos_head = (label_target != self.pad_value) & (label_target != self.eos_value)
+                eos_head = (label_target != self.pad_value) & (
+                    label_target != self.eos_value
+                )
 
                 # 0s for gt label positions, 1s starting from eos position in the gt
                 eos_target = ~eos_head
@@ -205,12 +212,12 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
                 # eos loss is computed for all timesteps <= eos in gt and
                 # equally penalizes the head (all 0s) and the true eos position (1)
                 losses["eos_loss"] = (
-                        0.5
-                        * (eos_loss * eos_pos.float()).sum(1)
-                        / (eos_pos.float().sum(1) + self.eps)
-                        + 0.5
-                        * (eos_loss * eos_head.float()).sum(1)
-                        / (eos_head.float().sum(1) + self.eps)
+                    0.5
+                    * (eos_loss * eos_pos.float()).sum(1)
+                    / (eos_pos.float().sum(1) + self.eps)
+                    + 0.5
+                    * (eos_loss * eos_head.float()).sum(1)
+                    / (eos_head.float().sum(1) + self.eps)
                 ).mean()
 
             else:

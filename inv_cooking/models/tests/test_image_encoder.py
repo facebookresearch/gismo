@@ -17,8 +17,8 @@ def test_image_encoder(embed_size: int, expected: List[int]):
             dropout=0.5,
             model="resnet50",
             pretrained=True,
-            freeze=ImageEncoderFreezeType.none
-        )
+            freeze=ImageEncoderFreezeType.none,
+        ),
     )
     x = torch.randn(size=(1, 3, 224, 224))
     y = encoder(x)

@@ -28,7 +28,7 @@ class RecipeGenerator(nn.Module):
         self.criterion = MaskedCrossEntropyCriterion(
             ignore_index=instr_vocab_size - 1, reduce=False
         )
-        
+
     def forward(
         self,
         ingr_features: torch.Tensor,
@@ -51,8 +51,8 @@ class RecipeGenerator(nn.Module):
                 other_features=img_features,
             )
 
-            # compute loss            
-            loss = self.criterion(output_logits, recipe_gt[:,1:])
+            # compute loss
+            loss = self.criterion(output_logits, recipe_gt[:, 1:])
 
         if compute_predictions:
             predictions, _ = self.model.sample(

@@ -2,8 +2,8 @@ import pytest
 from omegaconf import OmegaConf
 
 from inv_cooking.scheduler.parsing.experiment import (
-    Search,
     Experiments,
+    Search,
     _all_variables_assignments,
     _collect_variable_paths,
     _expand_search,
@@ -54,70 +54,69 @@ def test_hyper_parameter_search_with_list():
 
 
 def test_parse_experiments():
-    conf = OmegaConf.create({
-        "common": {
-            "resnet50_encoder": {
-                "model": "model1",
-            }
-        },
-        "im2ingr": {
-            "exp1":
-                {
+    conf = OmegaConf.create(
+        {
+            "common": {
+                "resnet50_encoder": {
+                    "model": "model1",
+                }
+            },
+            "im2ingr": {
+                "exp1": {
                     "comment": "comment1",
                     "image_encoder": "resnet50_encoder",
                     "optimization": {"lr": 1.0},
                 }
-        },
-        "im2recipe": {
-            "exp2":
-                {
+            },
+            "im2recipe": {
+                "exp2": {
                     "comment": "comment2",
                     "optimization": {"lr": "SEARCH[1.0,2.0]"},
                 }
-        },
-        "ingr2recipe": {
-            "exp3":
-                {
+            },
+            "ingr2recipe": {
+                "exp3": {
                     "comment": "comment3",
                     "optimization": {"lr": 1.0},
                 },
-            "exp4":
-                {
+                "exp4": {
                     "parent": "exp3",
                     "optimization": {"lr": "SEARCH[1.0,2.0]"},
                 },
-            "bad_exp6":
-                {
+                "bad_exp6": {
                     "parent": "exp5",
                 },
+            },
         }
-    })
+    )
     schema = OmegaConf.structured(Experiments)
     conf = OmegaConf.merge(schema, conf)
 
     # Test standard configuration (no hyper-parameters and no inheritance)
     out = parse_experiments(conf, "im2ingr", "exp1")
     assert len(out) == 1
-    assert out[0]['name'] == "exp1"
-    assert out[0]['comment'] == "comment1"
-    assert out[0]['image_encoder']['model'] == "model1", "automatically reference common elements"
-    assert out[0]['optimization']["lr"] == 1.0
+    assert out[0]["name"] == "exp1"
+    assert out[0]["comment"] == "comment1"
+    assert (
+        out[0]["image_encoder"]["model"] == "model1"
+    ), "automatically reference common elements"
+    assert out[0]["optimization"]["lr"] == 1.0
 
     # Test hyper-parameter search
     out = parse_experiments(conf, "im2recipe", "exp2")
     assert len(out) == 2
-    assert out[0]['name'] == "exp2"
-    assert out[0]['comment'] == "comment2"
-    assert out[0]['optimization']["lr"] == 1.0
-    assert out[1]['optimization']["lr"] == 2.0
+    assert out[0]["name"] == "exp2"
+    assert out[0]["comment"] == "comment2"
+    assert out[0]["optimization"]["lr"] == 1.0
+    assert out[1]["optimization"]["lr"] == 2.0
 
     # Test inheritance plus hyper-parameter search
     out = parse_experiments(conf, "ingr2recipe", "exp4")
     assert len(out) == 2
-    assert out[0]['name'] == "exp4"
-    assert out[0]['comment'] == "comment3"
-    assert out[0]['optimization']["lr"] == 1.0
-    assert out[1]['optimization']["lr"] == 2.0
+    assert out[0]["name"] == "exp4"
+    assert out[0]["comment"] == "comment3"
+    assert out[0]["optimization"]["lr"] == 1.0
+    assert out[1]["optimization"]["lr"] == 2.0
 
     # Test missing experiment (as parent or direct target)
     with pytest.raises(ValueError, match="Could not find experiment named exp5"):
@@ -128,4 +127,3 @@ def test_parse_experiments():
     # Test missing task
     with pytest.raises(ValueError, match="Unknown task bad"):
         parse_experiments(conf, "bad", "exp1")
-

@@ -1,14 +1,14 @@
 from inv_cooking.config import (
     CardinalityPredictionType,
+    IngredientPredictorCriterion,
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
-    IngredientPredictorCriterion, IngredientPredictorType,
+    IngredientPredictorType,
 )
 
 
 class FakeIngredientPredictorConfig:
-
     @staticmethod
     def ff_config() -> IngredientPredictorFFConfig:
         return IngredientPredictorFFConfig(
@@ -34,7 +34,9 @@ class FakeIngredientPredictorConfig:
         )
 
     @staticmethod
-    def tf_config(with_set_prediction: bool = False) -> IngredientPredictorTransformerConfig:
+    def tf_config(
+        with_set_prediction: bool = False,
+    ) -> IngredientPredictorTransformerConfig:
         return IngredientPredictorTransformerConfig(
             model=IngredientPredictorType.tf,
             layers=0,

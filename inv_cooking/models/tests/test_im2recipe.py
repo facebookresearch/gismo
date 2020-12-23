@@ -1,8 +1,10 @@
 import torch
 
 from inv_cooking.models.im2recipe import Im2Recipe
+from inv_cooking.models.ingredients_predictor.tests.utils import (
+    FakeIngredientPredictorConfig,
+)
 from inv_cooking.models.tests.utils import FakeConfig
-from inv_cooking.models.ingredients_predictor.tests.utils import FakeIngredientPredictorConfig
 
 
 def test_Im2Recipe():

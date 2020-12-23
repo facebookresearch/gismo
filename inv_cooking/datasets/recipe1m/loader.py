@@ -4,10 +4,10 @@ from typing import Optional
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import torch.utils.data as data
 import torchvision.transforms as transforms
 
 from inv_cooking.config import DatasetConfig
+
 from .dataset import Recipe1M
 from .preprocess import run_dataset_pre_processing
 
@@ -37,7 +37,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def prepare_data(self):
         if not os.path.isdir(self.dataset_config.pre_processing.save_path):
             print("Pre-processing Recipe1M dataset.")
-            run_dataset_pre_processing(self.dataset_config.path, self.dataset_config.pre_processing)
+            run_dataset_pre_processing(
+                self.dataset_config.path, self.dataset_config.pre_processing
+            )
 
     def setup(self, stage: Optional[str] = None):
         if stage == "fit":

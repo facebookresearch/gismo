@@ -31,10 +31,18 @@ class TransformerDecoderLayer(nn.Module):
         self.normalize_before = normalize_before
 
         # self attention
-        self.self_attn = MultiheadAttention(self.embed_dim, n_att, dropout=dropout,)
+        self.self_attn = MultiheadAttention(
+            self.embed_dim,
+            n_att,
+            dropout=dropout,
+        )
 
         # encoder attention
-        self.encoder_attn = MultiheadAttention(self.embed_dim, n_att, dropout=dropout,)
+        self.encoder_attn = MultiheadAttention(
+            self.embed_dim,
+            n_att,
+            dropout=dropout,
+        )
 
         self.fc1 = Linear(self.embed_dim, self.embed_dim)
         self.fc2 = Linear(self.embed_dim, self.embed_dim)

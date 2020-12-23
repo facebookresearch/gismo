@@ -427,5 +427,8 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
         recipe_split_path = os.path.join(
             config.save_path, "final_recipe1m_" + split + ".pkl"
         )
-        with open(recipe_split_path, "wb",) as f:
+        with open(
+            recipe_split_path,
+            "wb",
+        ) as f:
             pickle.dump(dataset[split], f)
