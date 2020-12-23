@@ -6,16 +6,13 @@ from omegaconf import MISSING, DictConfig, OmegaConf
 
 from inv_cooking.config.config import CheckpointConfig, Config
 from inv_cooking.config.dataset import DatasetConfig
-from inv_cooking.config.image_encoder import ImageEncoderConfig
 from inv_cooking.config.ingredient_predictor import (
     IngredientPredictorConfig,
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
 )
-from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
 from inv_cooking.config.slurm import SlurmConfig
-from inv_cooking.config.utils import untyped_config
 from .experiment import Experiment, Experiments, parse_experiments
 
 
@@ -33,9 +30,6 @@ class RawConfig:
 
     task: str = MISSING
     name: str = MISSING
-    recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
-    image_encoder: ImageEncoderConfig = ImageEncoderConfig()
-    ingr_predictor: DictConfig = untyped_config()
     checkpoint: CheckpointConfig = CheckpointConfig()
     dataset: DatasetConfig = DatasetConfig()
     slurm: SlurmConfig = SlurmConfig()
@@ -56,9 +50,9 @@ class RawConfig:
             config.comment = experiment.comment
             config.slurm = raw_config.slurm
             config.dataset = raw_config.dataset
-            config.recipe_gen = raw_config.recipe_gen
-            config.image_encoder = raw_config.image_encoder
-            config.ingr_predictor = cls._get_ingr_predictor(raw_config.ingr_predictor)
+            config.recipe_gen = experiment.recipe_gen
+            config.image_encoder = experiment.image_encoder
+            config.ingr_predictor = cls._get_ingr_predictor(experiment.ingr_predictor)
             config.checkpoint = raw_config.checkpoint
             config.optimization = experiment.optimization
             configs.append(config)

@@ -1,14 +1,12 @@
 hydra:
   run:
-    dir: ${checkpoint.dir}/${task}-${ingr_predictor.model}/${now:%Y-%m-%d_%H-%M-%S}
+    dir: ${checkpoint.dir}/${task}-${name}/${now:%Y-%m-%d_%H-%M-%S}
 
 defaults:
   - dataset: recipe1m
   - slurm: local
   - checkpoint: qduval
-  - image_encoder: resnet50
-  - ingr_predictor: ff
-  - recipe_gen: default
+  - experiments@experiments.common: common
   - experiments@experiments.im2ingr: im2ingr
   - experiments@experiments.im2recipe: im2recipe
   - experiments@experiments.ingr2recipe: ingr2recipe

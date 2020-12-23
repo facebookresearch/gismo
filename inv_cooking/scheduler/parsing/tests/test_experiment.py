@@ -55,10 +55,16 @@ def test_hyper_parameter_search_with_list():
 
 def test_parse_experiments():
     conf = OmegaConf.create({
+        "common": {
+            "resnet50_encoder": {
+                "model": "model1",
+            }
+        },
         "im2ingr": {
             "exp1":
                 {
                     "comment": "comment1",
+                    "image_encoder": "resnet50_encoder",
                     "optimization": {"lr": 1.0},
                 }
         },
@@ -94,6 +100,7 @@ def test_parse_experiments():
     assert len(out) == 1
     assert out[0]['name'] == "exp1"
     assert out[0]['comment'] == "comment1"
+    assert out[0]['image_encoder']['model'] == "model1", "automatically reference common elements"
     assert out[0]['optimization']["lr"] == 1.0
 
     # Test hyper-parameter search

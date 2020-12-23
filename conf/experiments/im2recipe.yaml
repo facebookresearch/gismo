@@ -2,6 +2,9 @@
 
 im2recipe:
   comment: 'default configuration for im2recipe'
+  image_encoder: resnet50_encoder
+  ingr_predictor: ingr_predictor_ff
+  recipe_gen: recipe_gen_tf
   optimization:
     seed: 1235
     lr: 0.001

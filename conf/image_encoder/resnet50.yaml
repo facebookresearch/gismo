@@ -1,6 +1,0 @@
-# @package _group_
-
-model: "resnet50"
-pretrained: True
-dropout: 0.0
-freeze: 'none'

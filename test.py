@@ -9,6 +9,7 @@ from inv_cooking.scheduler import RawConfig
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: RawConfig) -> None:
     print(os.getcwd())
+    print(OmegaConf.to_yaml(cfg))
     configs = RawConfig.to_config(cfg)
     for i, config in enumerate(configs):
         print("-" * 50)
