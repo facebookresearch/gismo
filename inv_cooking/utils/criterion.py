@@ -78,7 +78,7 @@ def _to_target_distribution(targets: torch.Tensor, epsilon: float):
         torch.FloatTensor(np.array(flat_target))
             .unsqueeze(-1)
             .unsqueeze(-1)
-            .type_as(cardinality_target)
+            .type_as(is_empty)
     )
 
     # divide target by number of elements and add equal prob to all elements for the empty sets

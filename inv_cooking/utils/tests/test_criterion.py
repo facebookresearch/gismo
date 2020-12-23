@@ -31,11 +31,13 @@ def test_target_distribution_construction():
     targets = torch.LongTensor([
         [1, 0, 0, 0],
         [1, 0, 1, 0],
+        [0, 0, 0, 0],
     ])
     distribution = _to_target_distribution(targets, epsilon=1e-8)
     expected = torch.tensor([
         [1.0000, 0.0000, 0.0000, 0.0000],
         [0.5000, 0.0000, 0.5000, 0.0000],
+        [0.2500, 0.2500, 0.2500, 0.2500],
     ])
     assert torch.allclose(distribution, expected, atol=1e-4)
 
