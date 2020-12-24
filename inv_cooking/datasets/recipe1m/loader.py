@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 
 from inv_cooking.config import DatasetConfig
 
-from .dataset import Recipe1M
+from .dataset import Recipe1M, LoadingOptions
 from .preprocess import run_dataset_pre_processing
 
 
@@ -16,23 +16,17 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def __init__(
         self,
         dataset_config: DatasetConfig,
-        include_eos: bool = False,
+        loading_options: LoadingOptions,
         seed: int = 1234,
         checkpoint=None,
-        return_img: bool = False,
-        return_ingr: bool = False,
-        return_recipe: bool = False,
     ):
         super().__init__()
         self.dataset_config = dataset_config
-        self.include_eos = include_eos
         self.seed = seed
+        self.loading_options = loading_options
         self.checkpoint = (
             checkpoint  ## TODO: check how checkpoint is performed in lightning
         )
-        self.return_img = return_img
-        self.return_ingr = return_ingr
-        self.return_recipe = return_recipe
 
     def prepare_data(self):
         if not os.path.isdir(self.dataset_config.pre_processing.save_path):
@@ -106,10 +100,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             transform=self._get_transforms(stage=stage),
             use_lmdb=False,  # TODO - check if necessary
             selected_indices=selected_indices,
-            include_eos=self.include_eos,
-            return_img=self.return_img,
-            return_ingr=self.return_ingr,
-            return_recipe=self.return_recipe,
+            loading=self.loading_options,
         )
         return dataset
 

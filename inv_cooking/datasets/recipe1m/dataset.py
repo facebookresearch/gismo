@@ -1,5 +1,6 @@
 import os
 import pickle
+from dataclasses import dataclass
 from typing import Tuple
 
 import lmdb
@@ -11,19 +12,27 @@ from PIL import Image
 from inv_cooking.config import DatasetFilterConfig
 
 
+@dataclass
+class LoadingOptions:
+    with_image: bool = False
+    with_ingredient: bool = False
+    with_ingredient_eos: bool = False
+    with_recipe: bool = False
+
+    def need_load(self) -> bool:
+        return self.with_image or self.with_ingredient or self.with_recipe
+
+
 class Recipe1M(data.Dataset):
     def __init__(
         self,
         data_dir: str,
         split: str,
         filtering: DatasetFilterConfig,
-        return_img: bool = False,
-        return_ingr: bool = False,
-        return_recipe: bool = False,
+        loading: LoadingOptions,
         transform=None,
         use_lmdb: bool = False,
         selected_indices: np.ndarray = None,
-        include_eos: bool = False,
     ):
         self.image_dir = os.path.join(data_dir, "images", split)
         self.pre_processed_dir = os.path.join(data_dir, "preprocessed")
@@ -33,19 +42,16 @@ class Recipe1M(data.Dataset):
         self.max_seq_length = (
             filtering.max_num_instructions * filtering.max_instruction_length
         )
-        self.return_img = return_img
-        self.return_ingr = return_ingr
-        self.return_recipe = return_recipe
+        self.loading = loading
         self.transform = transform
         self.use_lmdb = use_lmdb
-        self.include_eos = include_eos
 
         self.ingr_vocab = []
         self.instr_vocab = []
         self.dataset = []
 
         # load ingredient voc
-        if self.return_ingr:
+        if self.loading.with_ingredient:
             self.ingr_vocab = pickle.load(
                 open(
                     os.path.join(
@@ -56,7 +62,7 @@ class Recipe1M(data.Dataset):
             )
 
             # remove eos from vocabulary list if not needed
-            if not self.include_eos:
+            if not self.loading.with_ingredient_eos:
                 self.ingr_vocab.remove_eos()
                 self.ingr_pad_value = self.get_ingr_vocab_size() - 1
                 self.ingr_eos_value = self.ingr_pad_value
@@ -65,7 +71,7 @@ class Recipe1M(data.Dataset):
                 self.ingr_eos_value = self.ingr_vocab("<end>")
 
         # load recipe instructions voc
-        if self.return_recipe:
+        if self.loading.with_recipe:
             self.instr_vocab = pickle.load(
                 open(
                     os.path.join(
@@ -76,7 +82,7 @@ class Recipe1M(data.Dataset):
             )
 
         # load dataset
-        if self.return_img or self.return_ingr or self.return_recipe:
+        if self.loading.need_load():
             self.dataset = pickle.load(
                 open(
                     os.path.join(
@@ -115,9 +121,9 @@ class Recipe1M(data.Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "recipe"]:
-        image = self._load_image(index) if self.return_img else None
-        ret_ingr = self._load_ingredients(index) if self.return_ingr else None
-        recipee = self._load_recipe(index) if self.return_recipe else None
+        image = self._load_image(index) if self.loading.with_image else None
+        ret_ingr = self._load_ingredients(index) if self.loading.with_ingredient else None
+        recipee = self._load_recipe(index) if self.loading.with_recipe else None
         return image, ret_ingr, recipee
 
     def _load_ingredients(self, index: int):
@@ -129,11 +135,11 @@ class Recipe1M(data.Dataset):
             true_ingr_idxs.append(self.ingr_vocab(ingr[i]))
         true_ingr_idxs = list(set(true_ingr_idxs))
 
-        if self.include_eos:
+        if self.loading.with_ingredient_eos:
             true_ingr_idxs.append(self.ingr_vocab("<end>"))
 
         ret_ingr = true_ingr_idxs + [self.ingr_pad_value] * (
-            self.max_num_labels + self.include_eos - len(true_ingr_idxs)
+            self.max_num_labels + self.loading.with_ingredient_eos - len(true_ingr_idxs)
         )
         return ret_ingr
 

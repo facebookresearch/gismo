@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
@@ -6,6 +7,7 @@ from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from inv_cooking.config import Config, IngredientPredictorType, TaskType
+from inv_cooking.datasets.recipe1m.dataset import LoadingOptions
 from inv_cooking.datasets.recipe1m.loader import Recipe1MDataModule
 from inv_cooking.inversecooking import LitInverseCooking
 
@@ -19,36 +21,11 @@ def run_training(
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
 
-    if cfg.task == TaskType.im2ingr:
-        return_img = True
-        return_ingr = True
-        return_recipe = False
-        monitor_metric = "val_o_f1"
-        best_metric = "max"
-    elif cfg.task == TaskType.im2recipe:
-        return_img = True
-        return_ingr = True
-        return_recipe = True
-        monitor_metric = "val_perplexity"
-        best_metric = "min"
-    elif cfg.task == TaskType.ingr2recipe:
-        return_img = False
-        return_ingr = True
-        return_recipe = True
-        monitor_metric = "val_perplexity"
-        best_metric = "min"
-    else:
-        raise ValueError(f"Unknown task: {cfg.task}.")
-
     # data module
-    include_eos = cfg.ingr_predictor.model != IngredientPredictorType.ff
     dm = Recipe1MDataModule(
         dataset_config=cfg.dataset,
-        include_eos=include_eos,
         seed=cfg.optimization.seed,
-        return_img=return_img,
-        return_ingr=return_ingr,
-        return_recipe=return_recipe
+        loading_options=_get_loading_options(cfg),
         # checkpoint=None ## TODO: check how this would work
     )
     dm.prepare_data()
@@ -62,8 +39,7 @@ def run_training(
         recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
         optim_config=cfg.optimization,
         max_num_labels=cfg.dataset.filtering.max_num_labels,
-        max_recipe_len=cfg.dataset.filtering.max_num_instructions
-        * cfg.dataset.filtering.max_instruction_length,
+        max_recipe_len=cfg.dataset.filtering.max_num_instructions * cfg.dataset.filtering.max_instruction_length,
         ingr_vocab_size=dm.ingr_vocab_size,
         instr_vocab_size=dm.instr_vocab_size,
         ingr_eos_value=dm.ingr_eos_value,
@@ -73,7 +49,8 @@ def run_training(
         os.path.join(cfg.checkpoint.dir, "logs"), name=cfg.task.name + "-" + cfg.name,
     )
 
-    # checkpointing
+    # checkpointing and early stopping
+    monitor_metric, best_metric = _get_monitored_metric(cfg)
     checkpoint_callback = ModelCheckpoint(
         monitor=monitor_metric,
         dirpath=checkpoint_dir,
@@ -82,8 +59,6 @@ def run_training(
         mode=best_metric,
         save_top_k=1,
     )
-
-    # early stopping
     early_stop_callback = EarlyStopping(
         monitor=monitor_metric,
         min_delta=0.00,
@@ -125,3 +100,39 @@ def run_training(
     if cfg.eval_on_test:
         dm.setup("test")
         trainer.test(datamodule=dm)
+
+
+def _get_loading_options(cfg: Config) -> LoadingOptions:
+    include_eos = cfg.ingr_predictor.model != IngredientPredictorType.ff
+    if cfg.task == TaskType.im2ingr:
+        return LoadingOptions(
+            with_image=True,
+            with_ingredient=True,
+            with_ingredient_eos=include_eos,
+        )
+    elif cfg.task == TaskType.im2recipe:
+        return LoadingOptions(
+            with_image=True,
+            with_ingredient=True,
+            with_ingredient_eos=include_eos,
+            with_recipe=True,
+        )
+    elif cfg.task == TaskType.ingr2recipe:
+        return LoadingOptions(
+            with_ingredient=True,
+            with_ingredient_eos=include_eos,
+            with_recipe=True,
+        )
+    else:
+        raise ValueError(f"Unknown task: {cfg.task}.")
+
+
+def _get_monitored_metric(cfg) -> Tuple[str, str]:
+    if cfg.task == TaskType.im2ingr:
+        return "val_o_f1", "max"
+    elif cfg.task == TaskType.im2recipe:
+        return "val_perplexity", "min"
+    elif cfg.task == TaskType.ingr2recipe:
+        return "val_perplexity", "min"
+    else:
+        raise ValueError(f"Unknown task: {cfg.task}.")
