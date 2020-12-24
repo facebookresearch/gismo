@@ -11,14 +11,9 @@ from inv_cooking.inversecooking import LitInverseCooking
 
 
 def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
-
-    # fix seed
     seed_everything(cfg.optimization.seed)
 
-    # checkpointing
-    checkpoint_dir = os.path.join(
-        cfg.checkpoint.dir, cfg.task.name + "-" + cfg.ingr_predictor.model.name
-    )
+    checkpoint_dir = os.path.join(cfg.checkpoint.dir, cfg.task.name + "-" + cfg.name)
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
 
@@ -65,8 +60,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
         optim_config=cfg.optimization,
         max_num_labels=cfg.dataset.filtering.max_num_labels,
-        max_recipe_len=cfg.dataset.filtering.max_num_instructions
-                       * cfg.dataset.filtering.max_instruction_length,
+        max_recipe_len=cfg.dataset.filtering.max_num_instructions * cfg.dataset.filtering.max_instruction_length,
         ingr_vocab_size=dm.ingr_vocab_size,
         instr_vocab_size=dm.instr_vocab_size if "recipe" in cfg.task.name else None,
         ingr_eos_value=dm.ingr_eos_value,
