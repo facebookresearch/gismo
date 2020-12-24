@@ -62,14 +62,13 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         max_num_labels=cfg.dataset.filtering.max_num_labels,
         max_recipe_len=cfg.dataset.filtering.max_num_instructions * cfg.dataset.filtering.max_instruction_length,
         ingr_vocab_size=dm.ingr_vocab_size,
-        instr_vocab_size=dm.instr_vocab_size if "recipe" in cfg.task.name else None,
+        instr_vocab_size=dm.instr_vocab_size,
         ingr_eos_value=dm.ingr_eos_value,
     )
 
-    # logger
-    tb_logger = pl_loggers.TensorBoardLogger(
-        os.path.join(cfg.checkpoint.dir, "logs/"),
-        name=cfg.task.name + "-" + cfg.ingr_predictor.model.name,
+    logger = pl_loggers.TensorBoardLogger(
+        os.path.join(cfg.checkpoint.dir, "logs"),
+        name=cfg.task.name + "-" + cfg.name,
     )
 
     # checkpointing
@@ -106,7 +105,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
             checkpoint_callback,
             early_stop_callback,
         ],  # need to overwrite ModelCheckpoint callback? check loader/iterator state
-        logger=tb_logger,
+        logger=logger,
         # log_every_n_steps=10,
         # flush_logs_every_n_steps=50,
         # resume_from_checkpoint=cfg.checkpoint.resume_from,
