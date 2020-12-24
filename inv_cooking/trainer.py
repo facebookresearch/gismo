@@ -11,7 +11,7 @@ from inv_cooking.inversecooking import LitInverseCooking
 
 
 def run_training(
-    cfg: Config, gpus: int, nodes: int, distributed_mode: str, load_checkpoint: bool
+    cfg: Config, gpus: int, nodes: int, distributed_mode: str, load_checkpoint: bool,
 ) -> None:
     seed_everything(cfg.optimization.seed)
 
@@ -93,6 +93,7 @@ def run_training(
     )
 
     # trainer
+    is_local = cfg.slurm.partition == "local"
     trainer = pl.Trainer(
         gpus=gpus,
         num_nodes=nodes,
@@ -115,6 +116,7 @@ def run_training(
         # weights_save_path=checkpoint_dir,
         # limit_train_batches=10,
         fast_dev_run=cfg.debug_mode,
+        progress_bar_refresh_rate=1 if is_local else 0,
     )
 
     trainer.fit(model, datamodule=dm)
