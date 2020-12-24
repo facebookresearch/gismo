@@ -36,23 +36,23 @@ class Ingr2Recipe(nn.Module):
 
     def forward(
         self,
-        recipe_gt: torch.Tensor,
-        ingr_gt: torch.Tensor,
+        ingredients: torch.Tensor,
+        target_recipe: torch.Tensor,
         compute_losses: bool = False,
         compute_predictions: bool = False,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
         """
         Transform the ingredients into a recipe
-        :param ingr_gt: the input ingredients to make a recipe from - shape (N, num_ingredient)
-        :param recipe_gt: the ground truth to reach - shape (N, max_recipe_len)
+        :param ingredients: the input ingredients to make a recipe from - shape (N, num_ingredient)
+        :param target_recipe: the ground truth to reach - shape (N, max_recipe_len)
         :param compute_losses: whether or not to compute the loss (requires recipe ground truth)
         :param compute_predictions: whether or not to output the recipe prediction
         """
 
         # encode ingredients
-        ingr_features = self.ingr_encoder(ingr_gt)
+        ingr_features = self.ingr_encoder(ingredients)
         ingr_mask = mask_from_eos(
-            ingr_gt, eos_value=self.ingr_eos_value, mult_before=False
+            ingredients, eos_value=self.ingr_eos_value, mult_before=False
         )
         ingr_mask = ingr_mask.float().unsqueeze(1)
 
@@ -61,7 +61,7 @@ class Ingr2Recipe(nn.Module):
             img_features=None,
             ingr_features=ingr_features,
             ingr_mask=ingr_mask,
-            recipe_gt=recipe_gt,
+            recipe_gt=target_recipe,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
         )

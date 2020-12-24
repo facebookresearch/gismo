@@ -42,21 +42,21 @@ class Im2Ingr(nn.Module):
     def forward(
         self,
         image: torch.Tensor,
-        label_target: Optional[torch.Tensor] = None,
+        target_ingredients: Optional[torch.Tensor] = None,
         compute_losses: bool = False,
         compute_predictions: bool = False,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
         """
         Predict a set of ingredients from an image
         :param image: input image - shape is (N, C, H, W)
-        :param label_target: ground truth of ingredients to predict - shape is (N, max_num_labels)
+        :param target_ingredients: ground truth of ingredients to predict - shape is (N, max_num_labels)
         :param compute_losses: whether or not to compute the loss
         :param compute_predictions: whether or not to output the ingredients prediction
         """
         img_features = self.image_encoder(image)
         return self.ingr_predictor(
             img_features,
-            label_target=label_target,
+            label_target=target_ingredients,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
         )

@@ -18,11 +18,11 @@ def test_Ingr2Recipe():
     )
 
     batch_size = 5
-    recipe_target = torch.randint(low=0, high=vocab_size, size=(batch_size, 10))
+    target_recipe = torch.randint(low=0, high=vocab_size, size=(batch_size, 10))
     ingredients = torch.randint(low=0, high=vocab_size, size=(batch_size, 10))
 
     losses, predictions = model(
-        recipe_target, ingredients, compute_losses=True, compute_predictions=True
+        ingredients, target_recipe, compute_losses=True, compute_predictions=True
     )
     assert losses["recipe_loss"] is not None
     assert predictions is not None

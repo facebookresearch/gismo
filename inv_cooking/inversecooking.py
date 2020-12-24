@@ -113,57 +113,56 @@ class LitInverseCooking(pl.LightningModule):
     def forward(
         self,
         split: str,
-        img: Optional[torch.Tensor] = None,
-        ingr_gt: Optional[torch.Tensor] = None,
-        recipe_gt: Optional[torch.Tensor] = None,
+        image: Optional[torch.Tensor] = None,
+        ingredients: Optional[torch.Tensor] = None,
+        recipe: Optional[torch.Tensor] = None,
         compute_losses: bool = False,
         compute_predictions: bool = False,
     ):
         if self.task == TaskType.im2ingr:
             out = self.model(
-                image=img,
-                label_target=ingr_gt,
+                image=image,
+                target_ingredients=ingredients,
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
             )
         elif self.task == TaskType.im2recipe:
             out = self.model(
-                image=img,
-                recipe_gt=recipe_gt,
-                ingr_gt=ingr_gt,
+                image=image,
+                target_recipe=recipe,
+                target_ingredients=ingredients,
                 use_ingr_pred=True if split == "test" else False,
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
             )
         elif self.task == TaskType.ingr2recipe:
             out = self.model(
-                recipe_gt=recipe_gt,
-                ingr_gt=ingr_gt,
+                ingredients=ingredients,
+                target_recipe=recipe,
                 compute_losses=compute_losses,
                 compute_predictions=compute_predictions,
             )
-
         return out[0], out[1:]
 
-    def training_step(self, batch, batch_idx: int):
+    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
         out = self(compute_losses=True, split="train", **batch)
         return out[0]
 
-    def validation_step(self, batch, batch_idx: int):
+    def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
         out = self._evaluation_step(batch, prefix="val")
         return out
 
-    def test_step(self, batch, batch_idx: int):
+    def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
         out = self._evaluation_step(batch, prefix="test")
         return out
 
-    def _evaluation_step(self, batch, prefix: str):
+    def _evaluation_step(self, batch: Dict[str, torch.Tensor], prefix: str):
         # get model outputs
         if self.task == TaskType.im2ingr:
             out = self(
                 **batch, split=prefix, compute_predictions=True, compute_losses=True
             )
-            out[0]["n_samples"] = batch["img"].shape[0]
+            out[0]["n_samples"] = batch["image"].shape[0]
         elif self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
             out = self(
                 **batch,
@@ -171,11 +170,11 @@ class LitInverseCooking(pl.LightningModule):
                 compute_predictions=False,
                 compute_losses=True,
             )
-            out[0]["n_samples"] = batch["recipe_gt"].shape[0]
+            out[0]["n_samples"] = batch["recipe"].shape[0]
 
         if self.task in [TaskType.im2recipe, TaskType.im2ingr]:
             out[0]["ingr_pred"] = out[1][0]
-            out[0]["ingr_gt"] = batch["ingr_gt"]
+            out[0]["ingr_gt"] = batch["ingredients"]
 
         return out[0]
 

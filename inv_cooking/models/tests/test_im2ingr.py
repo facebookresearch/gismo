@@ -40,7 +40,7 @@ def test_Im2Ingr():
         )
 
         losses, predictions = model(
-            image, label_target=labels, compute_losses=True, compute_predictions=True
+            image, target_ingredients=labels, compute_losses=True, compute_predictions=True
         )
 
         assert losses["label_loss"] is not None

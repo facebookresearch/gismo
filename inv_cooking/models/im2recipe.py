@@ -61,8 +61,8 @@ class Im2Recipe(nn.Module):
     def forward(
         self,
         image: torch.Tensor,
-        recipe_gt: torch.Tensor,
-        ingr_gt: Optional[torch.Tensor] = None,
+        target_recipe: torch.Tensor,
+        target_ingredients: Optional[torch.Tensor] = None,
         use_ingr_pred: bool = False,
         compute_losses: bool = False,
         compute_predictions: bool = False,
@@ -70,8 +70,8 @@ class Im2Recipe(nn.Module):
         """
         Predict the ingredients and the recipe for the provided image
         :param image: input image from which to predict ingredient and recipe - shape (N, C, H, W)
-        :param recipe_gt: target recipe to predict - shape (N, max_recipe_len)
-        :param ingr_gt: target ingredients to predict - shape (N, max_num_labels)
+        :param target_recipe: target recipe to predict - shape (N, max_recipe_len)
+        :param target_ingredients: target ingredients to predict - shape (N, max_num_labels)
         :param use_ingr_pred: whether or not predict the ingredient or use the ground truth
         :param compute_losses: whether or not to compute the loss
         :param compute_predictions: whether or not to output the recipe prediction
@@ -84,7 +84,7 @@ class Im2Recipe(nn.Module):
             # predict ingredients (do not use the ground truth)
             ingr_losses, ingr_predictions = self.ingr_predictor(
                 img_features,
-                label_target=ingr_gt,
+                label_target=target_ingredients,
                 compute_losses=compute_losses,
                 compute_predictions=True,
             )
@@ -96,9 +96,9 @@ class Im2Recipe(nn.Module):
             ingr_mask = ingr_mask.float().unsqueeze(1)
         else:
             # encode ingredients (using ground truth ingredients)
-            ingr_features = self.ingr_encoder(ingr_gt)
+            ingr_features = self.ingr_encoder(target_ingredients)
             ingr_mask = mask_from_eos(
-                ingr_gt, eos_value=self.ingr_eos_value, mult_before=False
+                target_ingredients, eos_value=self.ingr_eos_value, mult_before=False
             )
             ingr_mask = ingr_mask.float().unsqueeze(1)
 
@@ -107,7 +107,7 @@ class Im2Recipe(nn.Module):
             img_features=img_features,
             ingr_features=ingr_features,
             ingr_mask=ingr_mask,
-            recipe_gt=recipe_gt,
+            recipe_gt=target_recipe,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
         )

@@ -200,11 +200,11 @@ class Recipe1M(data.Dataset):
         ret = {}
         # Merge images, ingredients and recipes in minibatch
         if img[0] is not None:
-            ret["img"] = torch.stack(img, 0)
+            ret["image"] = torch.stack(img, 0)
         if ingr[0] is not None:
-            ret["ingr_gt"] = torch.tensor(ingr)
+            ret["ingredients"] = torch.tensor(ingr)
         if recipe[0] is not None:
-            ret["recipe_gt"] = torch.tensor(recipe)
+            ret["recipe"] = torch.tensor(recipe)
         return ret
 
     def get_ingr_vocab(self):
