@@ -14,7 +14,7 @@ from inv_cooking.config import (
 )
 from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.models.modules.utils import freeze_fn
-from inv_cooking.utils.criterion import SoftIoULoss, TargetDistributionLoss
+from inv_cooking.utils.criterion import SoftIoUCriterion, TargetDistributionCriterion
 
 from .predictor import IngredientsPredictor
 from .utils import label2_k_hots, predictions_to_indices
@@ -61,8 +61,8 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         # label and eos loss
         label_losses = {
             IngredientPredictorCriterion.bce: nn.BCEWithLogitsLoss(reduction="mean"),
-            IngredientPredictorCriterion.iou: SoftIoULoss(reduction="mean"),
-            IngredientPredictorCriterion.td: TargetDistributionLoss(reduction="mean"),
+            IngredientPredictorCriterion.iou: SoftIoUCriterion(reduction="mean"),
+            IngredientPredictorCriterion.td: TargetDistributionCriterion(reduction="mean"),
         }
         label_loss = label_losses[config.criterion]
 
