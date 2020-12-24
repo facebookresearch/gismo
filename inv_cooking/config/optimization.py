@@ -14,4 +14,5 @@ class OptimizationConfig:
     weight_decay: float = MISSING
     max_epochs: int = MISSING
     patience: int = MISSING
+    sync_batchnorm: bool = False
     loss_weights: Dict[str, float] = field(default_factory=dict)

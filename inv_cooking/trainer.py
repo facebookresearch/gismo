@@ -110,11 +110,10 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         # log_every_n_steps=10,
         # flush_logs_every_n_steps=50,
         # resume_from_checkpoint=cfg.checkpoint.resume_from,
-        # sync_batchnorm=True,
+        sync_batchnorm=cfg.optimization.sync_batchnorm,
         # weights_save_path=checkpoint_dir,
         # limit_train_batches=10,
-        fast_dev_run=True,  # set to true for debugging
+        fast_dev_run=cfg.debug_mode,
     )
 
-    # train
     trainer.fit(model, datamodule=dm)

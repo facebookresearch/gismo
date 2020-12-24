@@ -31,6 +31,7 @@ class RawConfig:
 
     task: str = MISSING
     name: str = MISSING
+    debug_mode: bool = MISSING
     checkpoint: CheckpointConfig = CheckpointConfig()
     dataset: DatasetConfig = DatasetConfig()
     slurm: SlurmConfig = SlurmConfig()
@@ -49,6 +50,7 @@ class RawConfig:
             config.task = raw_config.task
             config.name = experiment.name
             config.comment = experiment.comment
+            config.debug_mode = raw_config.debug_mode
             config.slurm = raw_config.slurm
             config.dataset = raw_config.dataset
             config.recipe_gen = experiment.recipe_gen

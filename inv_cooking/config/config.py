@@ -33,6 +33,7 @@ class Config:
     task: TaskType = TaskType.im2ingr
     name: str = MISSING
     comment: str = MISSING
+    debug_mode: bool = MISSING
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
     optimization: OptimizationConfig = OptimizationConfig()
     checkpoint: CheckpointConfig = CheckpointConfig()

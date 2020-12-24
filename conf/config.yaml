@@ -13,3 +13,4 @@ defaults:
 
 task: im2recipe
 name: ""
+debug_mode: true
