@@ -37,7 +37,7 @@ def _copy_source_code_to_cwd():
 
 def _schedule_job_locally(cfg: Config):
     nb_gpu = torch.cuda.device_count()
-    run_training(cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp")
+    run_training(cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp", load_checkpoint=False)
 
 
 def _schedule_job_on_slurm(cfg: Config):
@@ -55,5 +55,35 @@ def _schedule_job_on_slurm(cfg: Config):
         gpus_per_node=nb_gpus,
         mem_gb=cfg.slurm.mem_by_gpu * nb_gpus,
     )
-    job = executor.submit(run_training, cfg, nb_gpus, cfg.slurm.nodes, "ddp")
+    trainer = ResumableTrainer(config=cfg, nb_gpu=nb_gpus, nb_node=cfg.slurm.nodes)
+    job = executor.submit(trainer,)
     print(f"Submitted {job.job_id}")
+
+
+class ResumableTrainer:
+    """
+    A training function that can be resumed from a checkpoint
+    """
+
+    def __init__(
+        self, config: Config, nb_gpu: int, nb_node: int, load_checkpoint: bool = False
+    ):
+        self.config = config
+        self.nb_gpu = nb_gpu
+        self.nb_node = nb_node
+        self.load_checkpoint = load_checkpoint
+
+    def __call__(self):
+        run_training(
+            self.config,
+            self.nb_gpu,
+            self.nb_node,
+            distributed_mode="ddp",
+            load_checkpoint=self.load_checkpoint,
+        )
+
+    def checkpoint(self):
+        trainer = ResumableTrainer(
+            config=self.config, nb_gpu=self.nb_gpu, nb_node=self.nb_node, load_checkpoint=True
+        )
+        return submitit.helpers.DelayedSubmission(trainer,)

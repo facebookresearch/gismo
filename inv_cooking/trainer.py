@@ -10,7 +10,9 @@ from inv_cooking.datasets.recipe1m.loader import Recipe1MDataModule
 from inv_cooking.inversecooking import LitInverseCooking
 
 
-def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
+def run_training(
+    cfg: Config, gpus: int, nodes: int, distributed_mode: str, load_checkpoint: bool
+) -> None:
     seed_everything(cfg.optimization.seed)
 
     checkpoint_dir = os.path.join(cfg.checkpoint.dir, cfg.task.name + "-" + cfg.name)
@@ -60,15 +62,15 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
         optim_config=cfg.optimization,
         max_num_labels=cfg.dataset.filtering.max_num_labels,
-        max_recipe_len=cfg.dataset.filtering.max_num_instructions * cfg.dataset.filtering.max_instruction_length,
+        max_recipe_len=cfg.dataset.filtering.max_num_instructions
+        * cfg.dataset.filtering.max_instruction_length,
         ingr_vocab_size=dm.ingr_vocab_size,
         instr_vocab_size=dm.instr_vocab_size,
         ingr_eos_value=dm.ingr_eos_value,
     )
 
     logger = pl_loggers.TensorBoardLogger(
-        os.path.join(cfg.checkpoint.dir, "logs"),
-        name=cfg.task.name + "-" + cfg.name,
+        os.path.join(cfg.checkpoint.dir, "logs"), name=cfg.task.name + "-" + cfg.name,
     )
 
     # checkpointing
@@ -108,7 +110,7 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         logger=logger,
         # log_every_n_steps=10,
         # flush_logs_every_n_steps=50,
-        # resume_from_checkpoint=cfg.checkpoint.resume_from,
+        resume_from_checkpoint=checkpoint_dir if load_checkpoint else None,
         sync_batchnorm=cfg.optimization.sync_batchnorm,
         # weights_save_path=checkpoint_dir,
         # limit_train_batches=10,
