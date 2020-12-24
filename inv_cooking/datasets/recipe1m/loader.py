@@ -16,12 +16,12 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def __init__(
         self,
         dataset_config: DatasetConfig,
-        include_eos=False,
-        seed=1234,
+        include_eos: bool = False,
+        seed: int = 1234,
         checkpoint=None,
-        return_img=False,
-        return_ingr=False,
-        return_recipe=False,
+        return_img: bool = False,
+        return_ingr: bool = False,
+        return_recipe: bool = False,
     ):
         super().__init__()
         self.dataset_config = dataset_config
@@ -68,7 +68,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             num_workers=self.dataset_config.loading.num_workers,
             drop_last=True,
             pin_memory=True,
-            collate_fn=Recipe1M._collate_fn,
+            collate_fn=Recipe1M.collate_fn,
             worker_init_fn=self._worker_init_fn,
         )
         return data_loader
@@ -87,7 +87,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             num_workers=self.dataset_config.loading.num_workers,
             drop_last=False,
             pin_memory=True,
-            collate_fn=Recipe1M._collate_fn,
+            collate_fn=Recipe1M.collate_fn,
             worker_init_fn=self._worker_init_fn,
         )
         return data_loader

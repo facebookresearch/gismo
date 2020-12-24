@@ -17,13 +17,13 @@ class Recipe1M(data.Dataset):
         data_dir: str,
         split: str,
         filtering: DatasetFilterConfig,
-        return_img=False,
-        return_ingr=False,
-        return_recipe=False,
+        return_img: bool = False,
+        return_ingr: bool = False,
+        return_recipe: bool = False,
         transform=None,
-        use_lmdb=False,
+        use_lmdb: bool = False,
         selected_indices: np.ndarray = None,
-        include_eos=False,
+        include_eos: bool = False,
     ):
         self.image_dir = os.path.join(data_dir, "images", split)
         self.pre_processed_dir = os.path.join(data_dir, "preprocessed")
@@ -189,7 +189,7 @@ class Recipe1M(data.Dataset):
         return ret_rec
 
     @staticmethod
-    def _collate_fn(data):
+    def collate_fn(data):
         img, ingr, recipe = zip(*data)
         ret = {}
         # Merge images, ingredients and recipes in minibatch
