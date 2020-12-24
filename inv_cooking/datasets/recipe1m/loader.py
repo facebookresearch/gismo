@@ -119,4 +119,4 @@ class Recipe1MDataModule(pl.LightningDataModule):
         return transforms.Compose(pipeline)
 
     def _worker_init_fn(self, worker_id: int):
-        np.random.seed(self.seed)
+        np.random.seed(self.seed + worker_id)
