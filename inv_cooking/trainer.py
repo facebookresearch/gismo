@@ -117,6 +117,7 @@ def run_training(
         # limit_train_batches=10,
         fast_dev_run=cfg.debug_mode,
         progress_bar_refresh_rate=1 if is_local else 0,
+        weights_summary=None,  # for it otherwise logs lots of useless information
     )
 
     trainer.fit(model, datamodule=dm)
