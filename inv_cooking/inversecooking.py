@@ -25,8 +25,8 @@ class LitInverseCooking(pl.LightningModule):
         ingr_pred_config: IngredientPredictorConfig,
         recipe_gen_config: RecipeGeneratorConfig,
         optim_config: OptimizationConfig,
-        maxnumlabels: int,
-        maxrecipelen: int,
+        max_num_labels: int,
+        max_recipe_len: int,
         ingr_vocab_size: int,
         instr_vocab_size: int,
         ingr_eos_value: int,
@@ -38,7 +38,7 @@ class LitInverseCooking(pl.LightningModule):
                 image_encoder_config,
                 ingr_pred_config,
                 ingr_vocab_size,
-                maxnumlabels,
+                max_num_labels,
                 ingr_eos_value,
             )
         elif task == TaskType.im2recipe:
@@ -48,8 +48,8 @@ class LitInverseCooking(pl.LightningModule):
                 recipe_gen_config,
                 ingr_vocab_size,
                 instr_vocab_size,
-                maxnumlabels,
-                maxrecipelen,
+                max_num_labels,
+                max_recipe_len,
                 ingr_eos_value,
             )
         elif task == TaskType.ingr2recipe:
@@ -57,7 +57,7 @@ class LitInverseCooking(pl.LightningModule):
                 recipe_gen_config,
                 ingr_vocab_size,
                 instr_vocab_size,
-                max_recipe_len=maxrecipelen,
+                max_recipe_len=max_recipe_len,
                 ingr_eos_value=ingr_eos_value,
             )
         else:

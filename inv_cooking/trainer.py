@@ -64,9 +64,9 @@ def run_training(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> N
         ingr_pred_config=cfg.ingr_predictor if "im" in cfg.task.name else None,
         recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
         optim_config=cfg.optimization,
-        maxnumlabels=cfg.dataset.filtering.max_num_labels,
-        maxrecipelen=cfg.dataset.filtering.max_num_instructions
-        * cfg.dataset.filtering.max_instruction_length,
+        max_num_labels=cfg.dataset.filtering.max_num_labels,
+        max_recipe_len=cfg.dataset.filtering.max_num_instructions
+                       * cfg.dataset.filtering.max_instruction_length,
         ingr_vocab_size=dm.ingr_vocab_size,
         instr_vocab_size=dm.instr_vocab_size if "recipe" in cfg.task.name else None,
         ingr_eos_value=dm.ingr_eos_value,
