@@ -64,12 +64,7 @@ class LitInverseCooking(pl.LightningModule):
             raise NotImplementedError(f"Task {task} is not implemented yet")
 
         self.task = task
-        self.lr = optim_config.lr
-        self.scale_lr_pretrained = optim_config.scale_lr_pretrained
-        self.lr_decay_rate = optim_config.lr_decay_rate
-        self.lr_decay_every = optim_config.lr_decay_every
-        self.weight_decay = optim_config.weight_decay
-        self.loss_weights = optim_config.loss_weights
+        self.optimization = optim_config
 
         if self.task != TaskType.ingr2recipe:
             # check if pretrained models
@@ -99,13 +94,13 @@ class LitInverseCooking(pl.LightningModule):
                 dist_sync_on_step=True,
             )
             self.val_losses = DistributedValLosses(
-                weights=self.loss_weights,
+                weights=self.optimization.loss_weights,
                 monitor_ingr_losses=ingr_pred_config.freeze,
                 dist_sync_on_step=True,
             )
         else:
             self.val_losses = DistributedValLosses(
-                weights=self.loss_weights, dist_sync_on_step=True
+                weights=self.optimization.loss_weights, dist_sync_on_step=True
             )
         if self.task != TaskType.im2ingr:
             self.perplexity = DistributedMetric()
@@ -165,10 +160,7 @@ class LitInverseCooking(pl.LightningModule):
             out[0]["n_samples"] = batch["image"].shape[0]
         elif self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
             out = self(
-                **batch,
-                split=prefix,
-                compute_predictions=False,
-                compute_losses=True,
+                **batch, split=prefix, compute_predictions=False, compute_losses=True,
             )
             out[0]["n_samples"] = batch["recipe"].shape[0]
 
@@ -207,11 +199,12 @@ class LitInverseCooking(pl.LightningModule):
         Average the loss across all GPUs and combine these losses together as an overall loss
         """
 
-        total_loss = 0
-
         # avg losses across gpus
         for k in losses.keys():
             losses[k] = losses[k].mean()
+
+        total_loss = 0
+        loss_weights = self.optimization.loss_weights
 
         if "label_loss" in losses.keys():
             self.log(
@@ -222,7 +215,7 @@ class LitInverseCooking(pl.LightningModule):
                 prog_bar=True,
                 logger=True,
             )
-            total_loss += losses["label_loss"] * self.loss_weights["label_loss"]
+            total_loss += losses["label_loss"] * loss_weights["label_loss"]
 
         if "cardinality_loss" in losses.keys():
             self.log(
@@ -233,9 +226,7 @@ class LitInverseCooking(pl.LightningModule):
                 prog_bar=True,
                 logger=True,
             )
-            total_loss += (
-                losses["cardinality_loss"] * self.loss_weights["cardinality_loss"]
-            )
+            total_loss += losses["cardinality_loss"] * loss_weights["cardinality_loss"]
 
         if "eos_loss" in losses.keys():
             self.log(
@@ -246,7 +237,7 @@ class LitInverseCooking(pl.LightningModule):
                 prog_bar=True,
                 logger=True,
             )
-            total_loss += losses["eos_loss"] * self.loss_weights["eos_loss"]
+            total_loss += losses["eos_loss"] * loss_weights["eos_loss"]
 
         if "recipe_loss" in losses.keys():
             self.log(
@@ -257,7 +248,7 @@ class LitInverseCooking(pl.LightningModule):
                 prog_bar=True,
                 logger=True,
             )
-            total_loss += losses["recipe_loss"] * self.loss_weights["recipe_loss"]
+            total_loss += losses["recipe_loss"] * loss_weights["recipe_loss"]
 
         self.log(
             "train_loss",
@@ -297,7 +288,7 @@ class LitInverseCooking(pl.LightningModule):
 
     def configure_optimizers(self):
         opt_arguments = []
-        pretrained_lr = self.lr * self.scale_lr_pretrained
+        pretrained_lr = self.optimization.lr * self.optimization.scale_lr_pretrained
 
         if hasattr(self.model, "image_encoder"):
             params_imenc = filter(
@@ -312,7 +303,9 @@ class LitInverseCooking(pl.LightningModule):
                 opt_arguments += [
                     {
                         "params": params_imenc,
-                        "lr": pretrained_lr if self.pretrained_imenc else self.lr,
+                        "lr": pretrained_lr
+                        if self.pretrained_imenc
+                        else self.optimization.lr,
                     }
                 ]
 
@@ -329,7 +322,9 @@ class LitInverseCooking(pl.LightningModule):
                 opt_arguments += [
                     {
                         "params": params_ingrpred,
-                        "lr": pretrained_lr if self.pretrained_ingrpred else self.lr,
+                        "lr": pretrained_lr
+                        if self.pretrained_ingrpred
+                        else self.optimization.lr,
                     }
                 ]
 
@@ -343,16 +338,18 @@ class LitInverseCooking(pl.LightningModule):
             )
 
             if num_params_recgen > 0:
-                opt_arguments += [{"params": params_recgen, "lr": self.lr}]
+                opt_arguments += [{"params": params_recgen, "lr": self.optimization.lr}]
 
         optimizer = torch.optim.Adam(
-            opt_arguments, lr=self.lr, weight_decay=self.weight_decay
+            opt_arguments,
+            lr=self.optimization.lr,
+            weight_decay=self.optimization.weight_decay,
         )
 
         scheduler = {
-            "scheduler": ExponentialLR(optimizer, self.lr_decay_rate),
+            "scheduler": ExponentialLR(optimizer, self.optimization.lr_decay_rate),
             "interval": "epoch",
-            "frequency": self.lr_decay_every,
+            "frequency": self.optimization.lr_decay_every,
         }
 
         return [optimizer], [scheduler]
