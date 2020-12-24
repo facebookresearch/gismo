@@ -120,3 +120,7 @@ def run_training(
     )
 
     trainer.fit(model, datamodule=dm)
+
+    if cfg.eval_on_test:
+        dm.setup("test")
+        trainer.test(datamodule=dm)
