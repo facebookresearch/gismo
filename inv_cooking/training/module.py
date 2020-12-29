@@ -14,7 +14,11 @@ from inv_cooking.config import (
 from inv_cooking.models.im2ingr import Im2Ingr
 from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.models.ingr2recipe import Ingr2Recipe
-from inv_cooking.utils.metrics import DistributedF1, DistributedMetric, DistributedValLosses
+from inv_cooking.utils.metrics import (
+    DistributedF1,
+    DistributedMetric,
+    DistributedValLosses,
+)
 
 
 class LitInverseCooking(pl.LightningModule):
@@ -152,7 +156,6 @@ class LitInverseCooking(pl.LightningModule):
         return out
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor], prefix: str):
-        # get model outputs
         if self.task == TaskType.im2ingr:
             out = self(
                 **batch, split=prefix, compute_predictions=True, compute_losses=True
@@ -167,7 +170,6 @@ class LitInverseCooking(pl.LightningModule):
         if self.task in [TaskType.im2recipe, TaskType.im2ingr]:
             out[0]["ingr_pred"] = out[1][0]
             out[0]["ingr_gt"] = batch["ingredients"]
-
         return out[0]
 
     def validation_epoch_end(self, out):
@@ -207,59 +209,28 @@ class LitInverseCooking(pl.LightningModule):
         loss_weights = self.optimization.loss_weights
 
         if "label_loss" in losses.keys():
-            self.log(
-                "label_loss",
-                losses["label_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
+            self._log_loss("label_loss", losses["label_loss"])
             total_loss += losses["label_loss"] * loss_weights["label_loss"]
 
         if "cardinality_loss" in losses.keys():
-            self.log(
-                "cardinality_loss",
-                losses["cardinality_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
+            self._log_loss("cardinality_loss", losses["cardinality_loss"])
             total_loss += losses["cardinality_loss"] * loss_weights["cardinality_loss"]
 
         if "eos_loss" in losses.keys():
-            self.log(
-                "eos_loss",
-                losses["eos_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
+            self._log_loss("eos_loss", losses["eos_loss"])
             total_loss += losses["eos_loss"] * loss_weights["eos_loss"]
 
         if "recipe_loss" in losses.keys():
-            self.log(
-                "recipe_loss",
-                losses["recipe_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
+            self._log_loss("recipe_loss", losses["recipe_loss"])
             total_loss += losses["recipe_loss"] * loss_weights["recipe_loss"]
 
-        self.log(
-            "train_loss",
-            total_loss,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            logger=True,
-        )
-
+        self._log_loss("train_loss", total_loss)
         return total_loss
+
+    def _log_loss(self, key: str, value: Any):
+        self.log(
+            key, value, on_step=True, on_epoch=True, prog_bar=True, logger=True,
+        )
 
     def validation_step_end(self, step_output: Dict[str, Any]):
         self._evaluation_step_end(step_output)
