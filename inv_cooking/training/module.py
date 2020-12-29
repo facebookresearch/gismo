@@ -172,30 +172,6 @@ class LitInverseCooking(pl.LightningModule):
             out[0]["ingr_gt"] = batch["ingredients"]
         return out[0]
 
-    def validation_epoch_end(self, out):
-        self._eval_epoch_end(split="val")
-
-    def test_epoch_end(self, out):
-        self._eval_epoch_end(split="test")
-
-    def _eval_epoch_end(self, split: str):
-        """
-        Compute and log metrics/losses
-        """
-        if self.task == TaskType.im2ingr or (
-            self.task == TaskType.im2recipe and split == "test"
-        ):
-            self.log(f"{split}_o_f1", self.o_f1.compute())
-            self.log(f"{split}_c_f1", self.c_f1.compute())
-            self.log(f"{split}_i_f1", self.i_f1.compute())
-
-        if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
-            self.log(f"{split}_perplexity", self.perplexity.compute())
-
-        val_losses = self.val_losses.compute()
-        for k, v in val_losses.items():
-            self.log(f"{split}_{k}", v)
-
     def training_step_end(self, losses: Dict[str, torch.Tensor]):
         """
         Average the loss across all GPUs and combine these losses together as an overall loss
@@ -256,6 +232,30 @@ class LitInverseCooking(pl.LightningModule):
 
         # update losses
         self.val_losses(step_output)
+
+    def validation_epoch_end(self, out):
+        self._eval_epoch_end(split="val")
+
+    def test_epoch_end(self, out):
+        self._eval_epoch_end(split="test")
+
+    def _eval_epoch_end(self, split: str):
+        """
+        Compute and log metrics/losses
+        """
+        if self.task == TaskType.im2ingr or (
+            self.task == TaskType.im2recipe and split == "test"
+        ):
+            self.log(f"{split}_o_f1", self.o_f1.compute())
+            self.log(f"{split}_c_f1", self.c_f1.compute())
+            self.log(f"{split}_i_f1", self.i_f1.compute())
+
+        if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
+            self.log(f"{split}_perplexity", self.perplexity.compute())
+
+        val_losses = self.val_losses.compute()
+        for k, v in val_losses.items():
+            self.log(f"{split}_{k}", v)
 
     def configure_optimizers(self):
         opt_arguments = []
