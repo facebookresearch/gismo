@@ -92,21 +92,6 @@ class DistributedF1(pl.metrics.Metric):
         return f1
 
 
-class DistributedMetric(pl.metrics.Metric):
-    def __init__(self, dist_sync_on_step=False):
-        super().__init__(dist_sync_on_step=dist_sync_on_step)
-
-        self.add_state("quantity", default=torch.tensor(0.0), dist_reduce_fx="sum")
-        self.add_state("n_samples", default=torch.tensor(0.0), dist_reduce_fx="sum")
-
-    def update(self, quantity: torch.Tensor):
-        self.quantity += quantity.sum()
-        self.n_samples += quantity.shape[0]
-
-    def compute(self):
-        return self.quantity / self.n_samples
-
-
 class DistributedValLosses(pl.metrics.Metric):
     def __init__(self, weights, monitor_ingr_losses=False, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)

@@ -16,7 +16,7 @@ from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.models.ingr2recipe import Ingr2Recipe
 from inv_cooking.utils.metrics import (
     DistributedF1,
-    DistributedMetric,
+    DistributedAverage,
     DistributedValLosses,
 )
 
@@ -107,7 +107,7 @@ class LitInverseCooking(pl.LightningModule):
                 weights=self.optimization.loss_weights, dist_sync_on_step=True
             )
         if self.task != TaskType.im2ingr:
-            self.perplexity = DistributedMetric()
+            self.perplexity = DistributedAverage()
 
     def forward(
         self,
