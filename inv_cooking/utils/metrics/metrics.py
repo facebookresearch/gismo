@@ -136,12 +136,10 @@ class DistributedValLosses(pl.metrics.Metric):
             self.eos_loss += quantities["eos_loss"].sum()
         if hasattr(self, "recipe_loss"):
             self.recipe_loss += quantities["recipe_loss"].sum()
-
-        self.n_samples += torch.Tensor(quantities["n_samples"]).sum()
+        self.n_samples += torch.tensor(quantities["n_samples"]).sum()
 
     def compute(self):
-        ret_dict = {}
-        ret_dict["total_loss"] = 0
+        ret_dict = {"total_loss": 0}
         if hasattr(self, "label_loss"):
             ret_dict["label_loss"] = self.label_loss / self.n_samples
             ret_dict["total_loss"] += (
