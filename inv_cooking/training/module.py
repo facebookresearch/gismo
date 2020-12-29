@@ -275,18 +275,15 @@ class LitInverseCooking(pl.LightningModule):
         pretrained_lr = self.optimization.lr * self.optimization.scale_lr_pretrained
 
         if hasattr(self.model, "image_encoder"):
-            params_imenc = filter(
-                lambda p: p.requires_grad, self.model.image_encoder.parameters()
-            )
-            num_params_imenc = sum([p.numel() for p in params_imenc])
+            params = [p for p in self.model.image_encoder.parameters() if p.requires_grad]
+            nb_params = sum([p.numel() for p in params])
             print(
-                f"Number of trainable parameters in the image encoder is {num_params_imenc}."
+                f"Number of trainable parameters in the image encoder is {nb_params}."
             )
-
-            if num_params_imenc > 0:
+            if nb_params > 0:
                 opt_arguments += [
                     {
-                        "params": params_imenc,
+                        "params": params,
                         "lr": pretrained_lr
                         if self.pretrained_imenc
                         else self.optimization.lr,
@@ -294,32 +291,26 @@ class LitInverseCooking(pl.LightningModule):
                 ]
 
         if hasattr(self.model, "ingr_encoder"):
-            params_ingr_enc = filter(
-                lambda p: p.requires_grad, self.model.ingr_encoder.parameters()
-            )
-            num_params_ingr_enc = sum([p.numel() for p in params_ingr_enc])
+            params = [p for p in self.model.ingr_encoder.parameters() if p.requires_grad]
+            nb_params = sum([p.numel() for p in params])
             print(
-                f"Number of trainable parameters in the ingredient encoder is {num_params_ingr_enc}."
+                f"Number of trainable parameters in the ingredient encoder is {nb_params}."
             )
-
-            if num_params_ingr_enc > 0:
+            if nb_params > 0:
                 opt_arguments += [
-                    {"params": params_ingr_enc, "lr": self.optimization.lr,}
+                    {"params": params, "lr": self.optimization.lr,}
                 ]
 
         if hasattr(self.model, "ingr_predictor"):
-            params_ingrpred = filter(
-                lambda p: p.requires_grad, self.model.ingr_predictor.parameters()
-            )
-            num_params_ingrpred = sum([p.numel() for p in params_ingrpred])
+            params = [p for p in self.model.ingr_predictor.parameters() if p.requires_grad]
+            nb_params = sum([p.numel() for p in params])
             print(
-                f"Number of trainable parameters in the ingredient predictor is {num_params_ingrpred}."
+                f"Number of trainable parameters in the ingredient predictor is {nb_params}."
             )
-
-            if num_params_ingrpred > 0:
+            if nb_params > 0:
                 opt_arguments += [
                     {
-                        "params": params_ingrpred,
+                        "params": params,
                         "lr": pretrained_lr
                         if self.pretrained_ingrpred
                         else self.optimization.lr,
@@ -327,15 +318,12 @@ class LitInverseCooking(pl.LightningModule):
                 ]
 
         if hasattr(self.model, "recipe_gen"):
-            params_recgen = filter(
-                lambda p: p.requires_grad, self.model.recipe_gen.parameters()
-            )
-            num_params_recgen = sum([p.numel() for p in params_recgen])
+            params = [p for p in self.model.recipe_gen.parameters() if p.requires_grad]
+            nb_params = sum([p.numel() for p in params])
             print(
-                f"Number of trainable parameters in the recipe generator is {num_params_recgen}."
+                f"Number of trainable parameters in the recipe generator is {nb_params}."
             )
-
-            if num_params_recgen > 0:
-                opt_arguments += [{"params": params_recgen, "lr": self.optimization.lr}]
+            if nb_params > 0:
+                opt_arguments += [{"params": params, "lr": self.optimization.lr}]
 
         return opt_arguments
