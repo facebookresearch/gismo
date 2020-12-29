@@ -1,7 +1,7 @@
 import hydra
 
 from inv_cooking.scheduler import RawConfig
-from inv_cooking.datasets.recipe1m.preprocess import run_dataset_pre_processing
+from inv_cooking.datasets.recipe1m import run_dataset_pre_processing
 
 
 @hydra.main(config_path="conf", config_name="config")

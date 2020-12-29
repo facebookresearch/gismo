@@ -7,8 +7,7 @@ from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from inv_cooking.config import Config, IngredientPredictorType, TaskType
-from inv_cooking.datasets.recipe1m.dataset import LoadingOptions
-from inv_cooking.datasets.recipe1m.loader import Recipe1MDataModule
+from inv_cooking.datasets.recipe1m import LoadingOptions, Recipe1MDataModule
 from inv_cooking.inversecooking import LitInverseCooking
 
 
