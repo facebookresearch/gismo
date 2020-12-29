@@ -49,6 +49,12 @@ class TestModule:
         )
         recipe = None
 
+        # Try building an optimizer
+        assert len(module.create_parameter_groups()) == 2
+        optimizers, schedulers = module.configure_optimizers()
+        assert len(optimizers) == 1
+        assert len(schedulers) == 1
+
         # Try "train" forward pass
         losses, predictions = module(
             split="train",
@@ -109,6 +115,12 @@ class TestModule:
             low=0, high=self.RECIPE_VOCAB_SIZE, size=(batch_size, self.MAX_RECIPE_LEN)
         )
 
+        # Try building an optimizer
+        assert len(module.create_parameter_groups()) == 2
+        optimizers, schedulers = module.configure_optimizers()
+        assert len(optimizers) == 1
+        assert len(schedulers) == 1
+
         # Try "train" forward pass
         losses, predictions = module(
             split="train",
@@ -165,6 +177,12 @@ class TestModule:
         recipe = torch.randint(
             low=0, high=self.RECIPE_VOCAB_SIZE, size=(batch_size, self.MAX_RECIPE_LEN)
         )
+
+        # Try building an optimizer
+        assert len(module.create_parameter_groups()) == 4
+        optimizers, schedulers = module.configure_optimizers()
+        assert len(optimizers) == 1
+        assert len(schedulers) == 1
 
         # Try "train" forward pass
         losses, predictions = module(

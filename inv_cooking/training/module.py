@@ -258,6 +258,19 @@ class LitInverseCooking(pl.LightningModule):
             self.log(f"{split}_{k}", v)
 
     def configure_optimizers(self):
+        optimizer = torch.optim.Adam(
+            self.create_parameter_groups(),
+            lr=self.optimization.lr,
+            weight_decay=self.optimization.weight_decay,
+        )
+        scheduler = {
+            "scheduler": ExponentialLR(optimizer, self.optimization.lr_decay_rate),
+            "interval": "epoch",
+            "frequency": self.optimization.lr_decay_every,
+        }
+        return [optimizer], [scheduler]
+
+    def create_parameter_groups(self):
         opt_arguments = []
         pretrained_lr = self.optimization.lr * self.optimization.scale_lr_pretrained
 
@@ -278,6 +291,20 @@ class LitInverseCooking(pl.LightningModule):
                         if self.pretrained_imenc
                         else self.optimization.lr,
                     }
+                ]
+
+        if hasattr(self.model, "ingr_encoder"):
+            params_ingr_enc = filter(
+                lambda p: p.requires_grad, self.model.ingr_encoder.parameters()
+            )
+            num_params_ingr_enc = sum([p.numel() for p in params_ingr_enc])
+            print(
+                f"Number of trainable parameters in the ingredient encoder is {num_params_ingr_enc}."
+            )
+
+            if num_params_ingr_enc > 0:
+                opt_arguments += [
+                    {"params": params_ingr_enc, "lr": self.optimization.lr,}
                 ]
 
         if hasattr(self.model, "ingr_predictor"):
@@ -311,16 +338,4 @@ class LitInverseCooking(pl.LightningModule):
             if num_params_recgen > 0:
                 opt_arguments += [{"params": params_recgen, "lr": self.optimization.lr}]
 
-        optimizer = torch.optim.Adam(
-            opt_arguments,
-            lr=self.optimization.lr,
-            weight_decay=self.optimization.weight_decay,
-        )
-
-        scheduler = {
-            "scheduler": ExponentialLR(optimizer, self.optimization.lr_decay_rate),
-            "interval": "epoch",
-            "frequency": self.optimization.lr_decay_every,
-        }
-
-        return [optimizer], [scheduler]
+        return opt_arguments
