@@ -7,7 +7,7 @@ import submitit
 import torch
 
 from inv_cooking.config import Config
-from inv_cooking.trainer import run_training
+from inv_cooking.training import run_training
 
 
 def schedule_jobs(configurations: List[Config]) -> None:

@@ -4,17 +4,17 @@ import pytorch_lightning as pl
 import torch
 from torch.optim.lr_scheduler import ExponentialLR
 
-from .config import (
+from inv_cooking.config import (
     ImageEncoderConfig,
     IngredientPredictorConfig,
     OptimizationConfig,
     RecipeGeneratorConfig,
     TaskType,
 )
-from .models.im2ingr import Im2Ingr
-from .models.im2recipe import Im2Recipe
-from .models.ingr2recipe import Ingr2Recipe
-from .utils.metrics import DistributedF1, DistributedMetric, DistributedValLosses
+from inv_cooking.models.im2ingr import Im2Ingr
+from inv_cooking.models.im2recipe import Im2Recipe
+from inv_cooking.models.ingr2recipe import Ingr2Recipe
+from inv_cooking.utils.metrics import DistributedF1, DistributedMetric, DistributedValLosses
 
 
 class LitInverseCooking(pl.LightningModule):

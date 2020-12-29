@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 from inv_cooking.config import Config, IngredientPredictorType, TaskType
 from inv_cooking.datasets.recipe1m import LoadingOptions, Recipe1MDataModule
-from inv_cooking.inversecooking import LitInverseCooking
+from .inversecooking import LitInverseCooking
 
 
 def run_training(
