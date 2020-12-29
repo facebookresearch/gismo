@@ -32,15 +32,18 @@ def run_training(
     dm.setup("fit")
 
     # model
+    max_recipe_length = (
+        cfg.dataset.filtering.max_num_instructions
+        * cfg.dataset.filtering.max_instruction_length
+    )
     model = LitInverseCooking(
         task=cfg.task,
-        image_encoder_config=cfg.image_encoder if "im" in cfg.task.name else None,
-        ingr_pred_config=cfg.ingr_predictor if "im" in cfg.task.name else None,
-        recipe_gen_config=cfg.recipe_gen if "recipe" in cfg.task.name else None,
+        image_encoder_config=cfg.image_encoder,
+        ingr_pred_config=cfg.ingr_predictor,
+        recipe_gen_config=cfg.recipe_gen,
         optim_config=cfg.optimization,
         max_num_labels=cfg.dataset.filtering.max_num_labels,
-        max_recipe_len=cfg.dataset.filtering.max_num_instructions
-        * cfg.dataset.filtering.max_instruction_length,
+        max_recipe_len=max_recipe_length,
         ingr_vocab_size=dm.ingr_vocab_size,
         instr_vocab_size=dm.instr_vocab_size,
         ingr_eos_value=dm.ingr_eos_value,
