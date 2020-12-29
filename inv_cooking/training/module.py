@@ -176,30 +176,12 @@ class LitInverseCooking(pl.LightningModule):
         """
         Average the loss across all GPUs and combine these losses together as an overall loss
         """
-
-        # avg losses across gpus
-        for k in losses.keys():
-            losses[k] = losses[k].mean()
-
         total_loss = 0
-        loss_weights = self.optimization.loss_weights
-
-        if "label_loss" in losses.keys():
-            self._log_loss("label_loss", losses["label_loss"])
-            total_loss += losses["label_loss"] * loss_weights["label_loss"]
-
-        if "cardinality_loss" in losses.keys():
-            self._log_loss("cardinality_loss", losses["cardinality_loss"])
-            total_loss += losses["cardinality_loss"] * loss_weights["cardinality_loss"]
-
-        if "eos_loss" in losses.keys():
-            self._log_loss("eos_loss", losses["eos_loss"])
-            total_loss += losses["eos_loss"] * loss_weights["eos_loss"]
-
-        if "recipe_loss" in losses.keys():
-            self._log_loss("recipe_loss", losses["recipe_loss"])
-            total_loss += losses["recipe_loss"] * loss_weights["recipe_loss"]
-
+        for loss_key in ["label_loss", "cardinality_loss", "eos_loss", "recipe_loss"]:
+            if loss_key in losses.keys():
+                loss = losses[loss_key].mean()  # Average across GPUs
+                self._log_loss(loss_key, loss)
+                total_loss += loss * self.optimization.loss_weights[loss_key]
         self._log_loss("train_loss", total_loss)
         return total_loss
 
@@ -275,7 +257,9 @@ class LitInverseCooking(pl.LightningModule):
         pretrained_lr = self.optimization.lr * self.optimization.scale_lr_pretrained
 
         if hasattr(self.model, "image_encoder"):
-            params = [p for p in self.model.image_encoder.parameters() if p.requires_grad]
+            params = [
+                p for p in self.model.image_encoder.parameters() if p.requires_grad
+            ]
             nb_params = sum([p.numel() for p in params])
             print(
                 f"Number of trainable parameters in the image encoder is {nb_params}."
@@ -291,18 +275,20 @@ class LitInverseCooking(pl.LightningModule):
                 ]
 
         if hasattr(self.model, "ingr_encoder"):
-            params = [p for p in self.model.ingr_encoder.parameters() if p.requires_grad]
+            params = [
+                p for p in self.model.ingr_encoder.parameters() if p.requires_grad
+            ]
             nb_params = sum([p.numel() for p in params])
             print(
                 f"Number of trainable parameters in the ingredient encoder is {nb_params}."
             )
             if nb_params > 0:
-                opt_arguments += [
-                    {"params": params, "lr": self.optimization.lr,}
-                ]
+                opt_arguments += [{"params": params, "lr": self.optimization.lr,}]
 
         if hasattr(self.model, "ingr_predictor"):
-            params = [p for p in self.model.ingr_predictor.parameters() if p.requires_grad]
+            params = [
+                p for p in self.model.ingr_predictor.parameters() if p.requires_grad
+            ]
             nb_params = sum([p.numel() for p in params])
             print(
                 f"Number of trainable parameters in the ingredient predictor is {nb_params}."
