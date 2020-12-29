@@ -122,9 +122,11 @@ class Recipe1M(data.Dataset):
 
     def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "recipe"]:
         image = self._load_image(index) if self.loading.with_image else None
-        ret_ingr = self._load_ingredients(index) if self.loading.with_ingredient else None
-        recipee = self._load_recipe(index) if self.loading.with_recipe else None
-        return image, ret_ingr, recipee
+        ret_ingr = (
+            self._load_ingredients(index) if self.loading.with_ingredient else None
+        )
+        recipe = self._load_recipe(index) if self.loading.with_recipe else None
+        return image, ret_ingr, recipe
 
     def _load_ingredients(self, index: int):
         ingr = self.dataset[index]["ingredients"]
