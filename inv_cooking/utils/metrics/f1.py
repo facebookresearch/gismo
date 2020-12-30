@@ -26,42 +26,36 @@ class DistributedF1(pl.metrics.Metric):
         self.remove_eos = remove_eos
 
         if self.which_f1 == "i_f1":
+            # One F1-score cross-cateogry, but computed on each worker independently
             self.add_state("n_samples", default=torch.tensor(0.0), dist_reduce_fx="sum")
             self.add_state("f1", default=torch.tensor(0.0), dist_reduce_fx="sum")
         elif self.which_f1 == "o_f1":
+            # One F1-score cross-category
             self.add_state("tp", default=torch.tensor(0.0), dist_reduce_fx="sum")
             self.add_state("pp", default=torch.tensor(0.0), dist_reduce_fx="sum")
             self.add_state("ap", default=torch.tensor(0.0), dist_reduce_fx="sum")
         else:
-            self.add_state(
-                "tp", default=torch.zeros(self.pad_value - 1), dist_reduce_fx="sum"
-            )
-            self.add_state(
-                "pp", default=torch.zeros(self.pad_value - 1), dist_reduce_fx="sum"
-            )
-            self.add_state(
-                "ap", default=torch.zeros(self.pad_value - 1), dist_reduce_fx="sum"
-            )
+            # One F1-score for each category
+            vocab_size = self.pad_value - 1
+            if not self.remove_eos:
+                vocab_size += 1
+            self.add_state("tp", default=torch.zeros(vocab_size), dist_reduce_fx="sum")
+            self.add_state("pp", default=torch.zeros(vocab_size), dist_reduce_fx="sum")
+            self.add_state("ap", default=torch.zeros(vocab_size), dist_reduce_fx="sum")
 
     def update(self, pred: torch.Tensor, gt: torch.Tensor):
         assert pred.shape == gt.shape
 
         # convert model predictions and targets to k-hots
         y_pred = label2_k_hots(
-            pred,
-            self.pad_value,
-            self.remove_eos,
+            pred, pad_value=self.pad_value, remove_eos=self.remove_eos
         )
-        y_true = label2_k_hots(
-            gt,
-            self.pad_value,
-            self.remove_eos,
-        )
+        y_true = label2_k_hots(gt, pad_value=self.pad_value, remove_eos=self.remove_eos)
 
         if self.which_f1 == "i_f1":
-            self.tp = (y_pred * y_true).sum(1)
-            self.pp = y_pred.sum(1)
-            self.ap = y_true.sum(1)
+            self.tp = (y_pred * y_true).sum(dim=1)
+            self.pp = y_pred.sum(dim=1)
+            self.ap = y_true.sum(dim=1)
             self.f1 += self._computef1().sum()
             self.n_samples += y_pred.shape[0]
         elif self.which_f1 == "o_f1":
@@ -69,9 +63,9 @@ class DistributedF1(pl.metrics.Metric):
             self.pp += y_pred.sum()
             self.ap += y_true.sum()
         elif self.which_f1 == "c_f1":
-            self.tp += (y_pred * y_true).sum(0)
-            self.pp += y_pred.sum(0)
-            self.ap += y_true.sum(0)
+            self.tp += (y_pred * y_true).sum(dim=0)
+            self.pp += y_pred.sum(dim=0)
+            self.ap += y_true.sum(dim=0)
 
     def _computef1(self, eps: float = 1e-8):
         pre = (self.tp + eps) / (self.pp + eps)
@@ -88,4 +82,3 @@ class DistributedF1(pl.metrics.Metric):
         elif self.which_f1 == "i_f1":
             f1 = self.f1 / self.n_samples
         return f1
-

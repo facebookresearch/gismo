@@ -18,3 +18,7 @@ im2ingr:
       label_loss: 1.0
       cardinality_loss: 0.0
       eos_loss: 0.0
+
+im2ingr_tf:
+  parent: im2ingr
+  ingr_predictor: ingr_predictor_tf
