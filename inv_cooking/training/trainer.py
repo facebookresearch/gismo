@@ -23,28 +23,19 @@ def run_training(
         os.makedirs(checkpoint_dir)
 
     # data module
-    dm = Recipe1MDataModule(
-        dataset_config=cfg.dataset,
-        seed=cfg.optimization.seed,
-        loading_options=_get_loading_options(cfg),
-        # checkpoint=None ## TODO: check how this would work
-    )
-    dm.prepare_data()
-    dm.setup("fit")
+    data_module = _load_data_set(cfg)
+    data_module.prepare_data()
+    data_module.setup("fit")
 
     # model
-    model = _create_model(
-        cfg,
-        ingr_vocab_size=dm.ingr_vocab_size,
-        instr_vocab_size=dm.instr_vocab_size,
-        ingr_eos_value=dm.ingr_eos_value,
-    )
+    model = _create_model(cfg, data_module)
 
+    # logging
     logger = pl_loggers.TensorBoardLogger(
         os.path.join(cfg.checkpoint.dir, "logs"), name=cfg.task.name + "-" + cfg.name,
     )
 
-    # checkpointing and early stopping
+    # check-pointing and early stopping
     monitored_metric = model.get_monitored_metric()
     checkpoint_callback = ModelCheckpoint(
         monitor=monitored_metric.name,
@@ -63,7 +54,6 @@ def run_training(
     )
 
     # trainer
-    is_local = cfg.slurm.partition == "local"
     trainer = pl.Trainer(
         gpus=gpus,
         num_nodes=nodes,
@@ -86,57 +76,24 @@ def run_training(
         # weights_save_path=checkpoint_dir,
         # limit_train_batches=10,
         fast_dev_run=cfg.debug_mode,
-        progress_bar_refresh_rate=1 if is_local else 0,
+        progress_bar_refresh_rate=1 if cfg.slurm.partition == "local" else 0,
         weights_summary=None,  # for it otherwise logs lots of useless information
     )
 
-    trainer.fit(model, datamodule=dm)
+    trainer.fit(model, datamodule=data_module)
 
     if cfg.eval_on_test:
-        dm.setup("test")
-        trainer.test(datamodule=dm)
+        data_module.setup("test")
+        trainer.test(datamodule=data_module)
 
 
-def _create_model(
-    cfg: Config, ingr_vocab_size: int, instr_vocab_size: int, ingr_eos_value: int,
-):
-    max_num_labels = cfg.dataset.filtering.max_num_labels
-    max_recipe_len = (
-        cfg.dataset.filtering.max_num_instructions
-        * cfg.dataset.filtering.max_instruction_length
+def _load_data_set(cfg):
+    return Recipe1MDataModule(
+        dataset_config=cfg.dataset,
+        seed=cfg.optimization.seed,
+        loading_options=_get_loading_options(cfg),
+        # checkpoint=None ## TODO: check how this would work
     )
-    if cfg.task == TaskType.im2ingr:
-        return ImageToIngredients(
-            cfg.image_encoder,
-            cfg.ingr_predictor,
-            cfg.optimization,
-            max_num_labels,
-            ingr_vocab_size,
-            ingr_eos_value,
-        )
-    elif cfg.task == TaskType.im2recipe:
-        return ImageToRecipe(
-            cfg.image_encoder,
-            cfg.ingr_predictor,
-            cfg.recipe_gen,
-            cfg.optimization,
-            max_num_labels,
-            max_recipe_len,
-            ingr_vocab_size,
-            instr_vocab_size,
-            ingr_eos_value,
-        )
-    elif cfg.task == TaskType.ingr2recipe:
-        return IngredientToRecipe(
-            cfg.recipe_gen,
-            cfg.optimization,
-            max_recipe_len,
-            ingr_vocab_size,
-            instr_vocab_size,
-            ingr_eos_value,
-        )
-    else:
-        raise ValueError(f"Unknown task: {cfg.task.name}.")
 
 
 def _get_loading_options(cfg: Config) -> LoadingOptions:
@@ -155,6 +112,46 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
     elif cfg.task == TaskType.ingr2recipe:
         return LoadingOptions(
             with_ingredient=True, with_ingredient_eos=include_eos, with_recipe=True,
+        )
+    else:
+        raise ValueError(f"Unknown task: {cfg.task.name}.")
+
+
+def _create_model(cfg: Config, data_module: Recipe1MDataModule):
+    max_num_labels = cfg.dataset.filtering.max_num_labels
+    max_recipe_len = (
+        cfg.dataset.filtering.max_num_instructions
+        * cfg.dataset.filtering.max_instruction_length
+    )
+    if cfg.task == TaskType.im2ingr:
+        return ImageToIngredients(
+            cfg.image_encoder,
+            cfg.ingr_predictor,
+            cfg.optimization,
+            max_num_labels=max_num_labels,
+            ingr_vocab_size=data_module.ingr_vocab_size,
+            ingr_eos_value=data_module.ingr_eos_value,
+        )
+    elif cfg.task == TaskType.im2recipe:
+        return ImageToRecipe(
+            cfg.image_encoder,
+            cfg.ingr_predictor,
+            cfg.recipe_gen,
+            cfg.optimization,
+            max_num_labels=max_num_labels,
+            max_recipe_len=max_recipe_len,
+            ingr_vocab_size=data_module.ingr_vocab_size,
+            instr_vocab_size=data_module.instr_vocab_size,
+            ingr_eos_value=data_module.ingr_eos_value,
+        )
+    elif cfg.task == TaskType.ingr2recipe:
+        return IngredientToRecipe(
+            cfg.recipe_gen,
+            cfg.optimization,
+            max_recipe_len=max_recipe_len,
+            ingr_vocab_size=data_module.ingr_vocab_size,
+            instr_vocab_size=data_module.instr_vocab_size,
+            ingr_eos_value=data_module.ingr_eos_value,
         )
     else:
         raise ValueError(f"Unknown task: {cfg.task.name}.")
