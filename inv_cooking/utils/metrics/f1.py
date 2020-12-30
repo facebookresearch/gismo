@@ -20,13 +20,12 @@ class DistributedF1(pl.metrics.Metric):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
 
         assert which_f1 in ["i_f1", "o_f1", "c_f1"]
-
         self.which_f1 = which_f1
         self.pad_value = pad_value
         self.remove_eos = remove_eos
 
         if self.which_f1 == "i_f1":
-            # One F1-score cross-cateogry, but computed on each worker independently
+            # One F1-score cross-category, but computed on sample independently, and then averaged
             self.add_state("n_samples", default=torch.tensor(0.0), dist_reduce_fx="sum")
             self.add_state("f1", default=torch.tensor(0.0), dist_reduce_fx="sum")
         elif self.which_f1 == "o_f1":
@@ -43,7 +42,12 @@ class DistributedF1(pl.metrics.Metric):
             self.add_state("pp", default=torch.zeros(vocab_size), dist_reduce_fx="sum")
             self.add_state("ap", default=torch.zeros(vocab_size), dist_reduce_fx="sum")
 
-    def update(self, pred: torch.Tensor, gt: torch.Tensor):
+    def update(self, pred: torch.Tensor, gt: torch.Tensor) -> None:
+        """
+        :param pred: predictions - shape (batch_size, num_category)
+        :param gt: ground truth - shape (batch_size, num_category)
+        """
+        assert len(pred.shape) == 2
         assert pred.shape == gt.shape
 
         # convert model predictions and targets to k-hots
@@ -53,10 +57,10 @@ class DistributedF1(pl.metrics.Metric):
         y_true = label2_k_hots(gt, pad_value=self.pad_value, remove_eos=self.remove_eos)
 
         if self.which_f1 == "i_f1":
-            self.tp = (y_pred * y_true).sum(dim=1)
-            self.pp = y_pred.sum(dim=1)
-            self.ap = y_true.sum(dim=1)
-            self.f1 += self._computef1().sum()
+            tp = (y_pred * y_true).sum(dim=1)
+            pp = y_pred.sum(dim=1)
+            ap = y_true.sum(dim=1)
+            self.f1 += compute_f1(tp, pp, ap).sum()
             self.n_samples += y_pred.shape[0]
         elif self.which_f1 == "o_f1":
             self.tp += (y_pred * y_true).sum()
@@ -67,18 +71,21 @@ class DistributedF1(pl.metrics.Metric):
             self.pp += y_pred.sum(dim=0)
             self.ap += y_true.sum(dim=0)
 
-    def _computef1(self, eps: float = 1e-8):
-        pre = (self.tp + eps) / (self.pp + eps)
-        rec = (self.tp + eps) / (self.ap + eps)
-        f1 = 2 * (pre * rec) / (pre + rec)
-        return f1
-
-    def compute(self):
-        if self.which_f1 == "c_f1":
-            f1 = self._computef1()
-            f1 = f1.mean()
+    def compute(self) -> torch.Tensor:
+        if self.which_f1 == "i_f1":
+            return self.f1 / self.n_samples
         elif self.which_f1 == "o_f1":
-            f1 = self._computef1()
-        elif self.which_f1 == "i_f1":
-            f1 = self.f1 / self.n_samples
-        return f1
+            return compute_f1(self.tp, self.pp, self.ap)
+        elif self.which_f1 == "c_f1":
+            return compute_f1(self.tp, self.pp, self.ap).mean()
+
+
+def compute_f1(
+    true_positive: torch.Tensor,
+    pred_positive: torch.Tensor,
+    real_positive: torch.Tensor,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    precision = (true_positive + eps) / (pred_positive + eps)
+    recall = (true_positive + eps) / (real_positive + eps)
+    return 2 * (precision * recall) / (precision + recall)
