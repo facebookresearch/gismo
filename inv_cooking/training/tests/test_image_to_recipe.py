@@ -37,10 +37,10 @@ class TestImageToRecipe(_BaseTest):
 
         # Try "train" forward pass
         losses, predictions = module(
-            split="train",
             image=image,
             ingredients=ingredients,
             recipe=recipe,
+            use_ingr_pred=False,
             compute_losses=True,
             compute_predictions=True,
         )
@@ -56,10 +56,10 @@ class TestImageToRecipe(_BaseTest):
 
         # Try "valid" forward step
         losses, predictions = module(
-            split="val",
             image=image,
             ingredients=ingredients,
             recipe=recipe,
+            use_ingr_pred=False,
             compute_losses=True,
             compute_predictions=True,
         )
@@ -78,10 +78,10 @@ class TestImageToRecipe(_BaseTest):
 
         # Try "test" forward step
         losses, predictions = module(
-            split="test",
             image=image,
             ingredients=ingredients,
             recipe=recipe,
+            use_ingr_pred=True,
             compute_losses=True,
             compute_predictions=True,
         )

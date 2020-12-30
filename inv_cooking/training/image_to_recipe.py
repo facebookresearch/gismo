@@ -82,10 +82,10 @@ class ImageToRecipe(_BaseModule):
 
     def forward(
         self,
-        split: str,
         image: Optional[torch.Tensor] = None,
         ingredients: Optional[torch.Tensor] = None,
         recipe: Optional[torch.Tensor] = None,
+        use_ingr_pred: bool = False,
         compute_losses: bool = False,
         compute_predictions: bool = False,
     ):
@@ -93,27 +93,25 @@ class ImageToRecipe(_BaseModule):
             image=image,
             target_recipe=recipe,
             target_ingredients=ingredients,
-            use_ingr_pred=True if split == "test" else False,
+            use_ingr_pred=use_ingr_pred,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
         )
         return out[0], out[1:]
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self(compute_losses=True, split="train", **batch)
+        out = self(compute_losses=True, **batch)
         return out[0]
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self._evaluation_step(batch, prefix="val")
-        return out
+        return self._evaluation_step(batch, use_ingr_pred=False)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self._evaluation_step(batch, prefix="test")
-        return out
+        return self._evaluation_step(batch, use_ingr_pred=True)
 
-    def _evaluation_step(self, batch: Dict[str, torch.Tensor], prefix: str):
+    def _evaluation_step(self, batch: Dict[str, torch.Tensor], use_ingr_pred: bool):
         out = self(
-            **batch, split=prefix, compute_predictions=False, compute_losses=True,
+            **batch, use_ingr_pred=use_ingr_pred, compute_predictions=False, compute_losses=True,
         )
         out[0]["n_samples"] = batch["recipe"].shape[0]
         out[0]["ingr_pred"] = out[1][0]
