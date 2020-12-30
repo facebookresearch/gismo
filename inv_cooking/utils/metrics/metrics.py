@@ -2,11 +2,13 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from typing import Dict
 
 import pytorch_lightning as pl
 import torch
 
 from inv_cooking.models.ingredients_predictor import label2_k_hots
+from inv_cooking.utils.metrics.average import DistributedCompositeAverage
 
 
 class DistributedF1(pl.metrics.Metric):
@@ -92,71 +94,23 @@ class DistributedF1(pl.metrics.Metric):
         return f1
 
 
-class DistributedValLosses(pl.metrics.Metric):
-    def __init__(self, weights, monitor_ingr_losses=False, dist_sync_on_step=False):
-        super().__init__(dist_sync_on_step=dist_sync_on_step)
+class DistributedValLosses(DistributedCompositeAverage):
+    def __init__(self, weights: Dict[str, float], monitor_ingr_losses=False, dist_sync_on_step=False):
+        super().__init__(
+            weights=self.filter_weights(weights, monitor_ingr_losses),
+            total="total_loss",
+            dist_sync_on_step=dist_sync_on_step
+        )
 
-        self.weights = weights
-
-        if (
-            monitor_ingr_losses
-            and "label_loss" in self.weights.keys()
-            and self.weights["label_loss"] > 0
-        ):
-            self.add_state(
-                "label_loss", default=torch.tensor(0.0), dist_reduce_fx="sum"
-            )
-        if (
-            monitor_ingr_losses
-            and "cardinality_loss" in self.weights.keys()
-            and self.weights["cardinality_loss"] > 0
-        ):
-            self.add_state(
-                "cardinality_loss", default=torch.tensor(0.0), dist_reduce_fx="sum"
-            )
-        if (
-            monitor_ingr_losses
-            and "eos_loss" in self.weights.keys()
-            and self.weights["eos_loss"] > 0
-        ):
-            self.add_state("eos_loss", default=torch.tensor(0.0), dist_reduce_fx="sum")
-        if "recipe_loss" in self.weights.keys() and self.weights["recipe_loss"] > 0:
-            self.add_state(
-                "recipe_loss", default=torch.tensor(0.0), dist_reduce_fx="sum"
-            )
-
-        self.add_state("n_samples", default=torch.tensor(0.0), dist_reduce_fx="sum")
-
-    def update(self, quantities):
-        if hasattr(self, "label_loss"):
-            self.label_loss += quantities["label_loss"].sum()
-        if hasattr(self, "cardinality_loss"):
-            self.cardinality_loss += quantities["cardinality_loss"].sum()
-        if hasattr(self, "eos_loss"):
-            self.eos_loss += quantities["eos_loss"].sum()
-        if hasattr(self, "recipe_loss"):
-            self.recipe_loss += quantities["recipe_loss"].sum()
-        self.n_samples += torch.tensor(quantities["n_samples"]).sum()
-
-    def compute(self):
-        ret_dict = {"total_loss": 0}
-        if hasattr(self, "label_loss"):
-            ret_dict["label_loss"] = self.label_loss / self.n_samples
-            ret_dict["total_loss"] += (
-                self.weights["label_loss"] * ret_dict["label_loss"]
-            )
-        if hasattr(self, "cardinality_loss"):
-            ret_dict["cardinality_loss"] = self.cardinality_loss / self.n_samples
-            ret_dict["total_loss"] += (
-                self.weights["cardinality_loss"] * ret_dict["cardinality_loss"]
-            )
-        if hasattr(self, "eos_loss"):
-            ret_dict["eos_loss"] = self.eos_loss / self.n_samples
-            ret_dict["total_loss"] += self.weights["eos_loss"] * ret_dict["eos_loss"]
-        if hasattr(self, "recipe_loss"):
-            ret_dict["recipe_loss"] = self.recipe_loss / self.n_samples
-            ret_dict["total_loss"] += (
-                self.weights["recipe_loss"] * ret_dict["recipe_loss"]
-            )
-
-        return ret_dict
+    @staticmethod
+    def filter_weights(weights: Dict[str, float], monitor_ingr_losses: bool):
+        filtered_weights = {}
+        if monitor_ingr_losses and "label_loss" in weights:
+            filtered_weights["label_loss"] = weights["label_loss"]
+        if monitor_ingr_losses and "cardinality_loss" in weights:
+            filtered_weights["cardinality_loss"] = weights["cardinality_loss"]
+        if monitor_ingr_losses and "eos_loss" in weights:
+            filtered_weights["eos_loss"] = weights["eos_loss"]
+        if "recipe_loss" in weights:
+            filtered_weights["recipe_loss"] = weights["recipe_loss"]
+        return filtered_weights
