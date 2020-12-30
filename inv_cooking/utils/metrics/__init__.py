@@ -1,2 +1,3 @@
 from .average import DistributedAverage
-from .metrics import DistributedF1, DistributedValLosses
+from .f1 import DistributedF1
+from .val_loss import DistributedValLosses

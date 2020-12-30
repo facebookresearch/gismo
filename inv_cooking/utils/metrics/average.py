@@ -9,6 +9,10 @@ import torch
 
 
 class DistributedAverage(pl.metrics.Metric):
+    """
+    Metric to compute the average of a value, distributed among several workers
+    """
+
     def __init__(self, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
         self.add_state("quantity", default=torch.tensor(0.0), dist_reduce_fx="sum")
@@ -23,6 +27,10 @@ class DistributedAverage(pl.metrics.Metric):
 
 
 class DistributedCompositeAverage(pl.metrics.Metric):
+    """
+    Metric to compute the average of a set of values, distributed among several workers
+    """
+
     def __init__(self, weights: Dict[str, float], total: str, dist_sync_on_step: bool = False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
         self.weights = {key: weight for key, weight in weights.items() if weight > 0.0}
