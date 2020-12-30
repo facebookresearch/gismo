@@ -2,6 +2,7 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+from typing import List
 
 import pytorch_lightning as pl
 import torch
@@ -10,6 +11,24 @@ from inv_cooking.models.ingredients_predictor import label2_k_hots
 
 
 class DistributedF1(pl.metrics.Metric):
+
+    @staticmethod
+    def create_all(
+        which_f1: List[str],
+        pad_value: int,
+        remove_eos: bool,
+        dist_sync_on_step: bool = False,
+    ) -> List["DistributedF1"]:
+        return [
+            DistributedF1(
+                f1_type,
+                pad_value=pad_value,
+                remove_eos=remove_eos,
+                dist_sync_on_step=dist_sync_on_step,
+            )
+            for f1_type in which_f1
+        ]
+
     def __init__(
         self,
         which_f1: str,

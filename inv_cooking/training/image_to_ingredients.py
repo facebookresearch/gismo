@@ -36,20 +36,9 @@ class ImageToIngredients(_BaseModule):
         # check if pre-trained image encoder
         self.pretrained_imenc = image_encoder_config.pretrained
 
-        self.o_f1 = DistributedF1(
-            which_f1="o_f1",
-            pad_value=self.model.ingr_vocab_size - 1,
-            remove_eos=self.model.ingr_predictor.remove_eos,
-            dist_sync_on_step=True,
-        )
-        self.c_f1 = DistributedF1(
-            which_f1="c_f1",
-            pad_value=self.model.ingr_vocab_size - 1,
-            remove_eos=self.model.ingr_predictor.remove_eos,
-            dist_sync_on_step=True,
-        )
-        self.i_f1 = DistributedF1(
-            which_f1="i_f1",
+        # metrics to track at validation time
+        self.o_f1, self.c_f1, self.i_f1 = DistributedF1.create_all(
+            which_f1=["o_f1", "c_f1", "i_f1"],
             pad_value=self.model.ingr_vocab_size - 1,
             remove_eos=self.model.ingr_predictor.remove_eos,
             dist_sync_on_step=True,
