@@ -14,7 +14,11 @@ from inv_cooking.config import (
 from inv_cooking.models.im2ingr import Im2Ingr
 from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.models.ingr2recipe import Ingr2Recipe
-from inv_cooking.utils.metrics import DistributedF1, DistributedMetric, DistributedValLosses
+from inv_cooking.utils.metrics import (
+    DistributedF1,
+    DistributedMetric,
+    DistributedValLosses,
+)
 
 
 class LitInverseCooking(pl.LightningModule):
@@ -152,7 +156,6 @@ class LitInverseCooking(pl.LightningModule):
         return out
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor], prefix: str):
-        # get model outputs
         if self.task == TaskType.im2ingr:
             out = self(
                 **batch, split=prefix, compute_predictions=True, compute_losses=True
@@ -167,99 +170,25 @@ class LitInverseCooking(pl.LightningModule):
         if self.task in [TaskType.im2recipe, TaskType.im2ingr]:
             out[0]["ingr_pred"] = out[1][0]
             out[0]["ingr_gt"] = batch["ingredients"]
-
         return out[0]
-
-    def validation_epoch_end(self, out):
-        self._eval_epoch_end(split="val")
-
-    def test_epoch_end(self, out):
-        self._eval_epoch_end(split="test")
-
-    def _eval_epoch_end(self, split: str):
-        """
-        Compute and log metrics/losses
-        """
-        if self.task == TaskType.im2ingr or (
-            self.task == TaskType.im2recipe and split == "test"
-        ):
-            self.log(f"{split}_o_f1", self.o_f1.compute())
-            self.log(f"{split}_c_f1", self.c_f1.compute())
-            self.log(f"{split}_i_f1", self.i_f1.compute())
-
-        if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
-            self.log(f"{split}_perplexity", self.perplexity.compute())
-
-        val_losses = self.val_losses.compute()
-        for k, v in val_losses.items():
-            self.log(f"{split}_{k}", v)
 
     def training_step_end(self, losses: Dict[str, torch.Tensor]):
         """
         Average the loss across all GPUs and combine these losses together as an overall loss
         """
-
-        # avg losses across gpus
-        for k in losses.keys():
-            losses[k] = losses[k].mean()
-
         total_loss = 0
-        loss_weights = self.optimization.loss_weights
-
-        if "label_loss" in losses.keys():
-            self.log(
-                "label_loss",
-                losses["label_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
-            total_loss += losses["label_loss"] * loss_weights["label_loss"]
-
-        if "cardinality_loss" in losses.keys():
-            self.log(
-                "cardinality_loss",
-                losses["cardinality_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
-            total_loss += losses["cardinality_loss"] * loss_weights["cardinality_loss"]
-
-        if "eos_loss" in losses.keys():
-            self.log(
-                "eos_loss",
-                losses["eos_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
-            total_loss += losses["eos_loss"] * loss_weights["eos_loss"]
-
-        if "recipe_loss" in losses.keys():
-            self.log(
-                "recipe_loss",
-                losses["recipe_loss"],
-                on_step=True,
-                on_epoch=True,
-                prog_bar=True,
-                logger=True,
-            )
-            total_loss += losses["recipe_loss"] * loss_weights["recipe_loss"]
-
-        self.log(
-            "train_loss",
-            total_loss,
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            logger=True,
-        )
-
+        for loss_key in ["label_loss", "cardinality_loss", "eos_loss", "recipe_loss"]:
+            if loss_key in losses.keys():
+                loss = losses[loss_key].mean()  # Average across GPUs
+                self._log_loss(loss_key, loss)
+                total_loss += loss * self.optimization.loss_weights[loss_key]
+        self._log_loss("train_loss", total_loss)
         return total_loss
+
+    def _log_loss(self, key: str, value: Any):
+        self.log(
+            key, value, on_step=True, on_epoch=True, prog_bar=True, logger=True,
+        )
 
     def validation_step_end(self, step_output: Dict[str, Any]):
         self._evaluation_step_end(step_output)
@@ -286,42 +215,88 @@ class LitInverseCooking(pl.LightningModule):
         # update losses
         self.val_losses(step_output)
 
+    def validation_epoch_end(self, out):
+        self._eval_epoch_end(split="val")
+
+    def test_epoch_end(self, out):
+        self._eval_epoch_end(split="test")
+
+    def _eval_epoch_end(self, split: str):
+        """
+        Compute and log metrics/losses
+        """
+        if self.task == TaskType.im2ingr or (
+            self.task == TaskType.im2recipe and split == "test"
+        ):
+            self.log(f"{split}_o_f1", self.o_f1.compute())
+            self.log(f"{split}_c_f1", self.c_f1.compute())
+            self.log(f"{split}_i_f1", self.i_f1.compute())
+
+        if self.task in [TaskType.im2recipe, TaskType.ingr2recipe]:
+            self.log(f"{split}_perplexity", self.perplexity.compute())
+
+        val_losses = self.val_losses.compute()
+        for k, v in val_losses.items():
+            self.log(f"{split}_{k}", v)
+
     def configure_optimizers(self):
+        optimizer = torch.optim.Adam(
+            self.create_parameter_groups(),
+            lr=self.optimization.lr,
+            weight_decay=self.optimization.weight_decay,
+        )
+        scheduler = {
+            "scheduler": ExponentialLR(optimizer, self.optimization.lr_decay_rate),
+            "interval": "epoch",
+            "frequency": self.optimization.lr_decay_every,
+        }
+        return [optimizer], [scheduler]
+
+    def create_parameter_groups(self):
         opt_arguments = []
         pretrained_lr = self.optimization.lr * self.optimization.scale_lr_pretrained
 
         if hasattr(self.model, "image_encoder"):
-            params_imenc = filter(
-                lambda p: p.requires_grad, self.model.image_encoder.parameters()
-            )
-            num_params_imenc = sum([p.numel() for p in params_imenc])
+            params = [
+                p for p in self.model.image_encoder.parameters() if p.requires_grad
+            ]
+            nb_params = sum([p.numel() for p in params])
             print(
-                f"Number of trainable parameters in the image encoder is {num_params_imenc}."
+                f"Number of trainable parameters in the image encoder is {nb_params}."
             )
-
-            if num_params_imenc > 0:
+            if nb_params > 0:
                 opt_arguments += [
                     {
-                        "params": params_imenc,
+                        "params": params,
                         "lr": pretrained_lr
                         if self.pretrained_imenc
                         else self.optimization.lr,
                     }
                 ]
 
-        if hasattr(self.model, "ingr_predictor"):
-            params_ingrpred = filter(
-                lambda p: p.requires_grad, self.model.ingr_predictor.parameters()
-            )
-            num_params_ingrpred = sum([p.numel() for p in params_ingrpred])
+        if hasattr(self.model, "ingr_encoder"):
+            params = [
+                p for p in self.model.ingr_encoder.parameters() if p.requires_grad
+            ]
+            nb_params = sum([p.numel() for p in params])
             print(
-                f"Number of trainable parameters in the ingredient predictor is {num_params_ingrpred}."
+                f"Number of trainable parameters in the ingredient encoder is {nb_params}."
             )
+            if nb_params > 0:
+                opt_arguments += [{"params": params, "lr": self.optimization.lr,}]
 
-            if num_params_ingrpred > 0:
+        if hasattr(self.model, "ingr_predictor"):
+            params = [
+                p for p in self.model.ingr_predictor.parameters() if p.requires_grad
+            ]
+            nb_params = sum([p.numel() for p in params])
+            print(
+                f"Number of trainable parameters in the ingredient predictor is {nb_params}."
+            )
+            if nb_params > 0:
                 opt_arguments += [
                     {
-                        "params": params_ingrpred,
+                        "params": params,
                         "lr": pretrained_lr
                         if self.pretrained_ingrpred
                         else self.optimization.lr,
@@ -329,27 +304,12 @@ class LitInverseCooking(pl.LightningModule):
                 ]
 
         if hasattr(self.model, "recipe_gen"):
-            params_recgen = filter(
-                lambda p: p.requires_grad, self.model.recipe_gen.parameters()
-            )
-            num_params_recgen = sum([p.numel() for p in params_recgen])
+            params = [p for p in self.model.recipe_gen.parameters() if p.requires_grad]
+            nb_params = sum([p.numel() for p in params])
             print(
-                f"Number of trainable parameters in the recipe generator is {num_params_recgen}."
+                f"Number of trainable parameters in the recipe generator is {nb_params}."
             )
+            if nb_params > 0:
+                opt_arguments += [{"params": params, "lr": self.optimization.lr}]
 
-            if num_params_recgen > 0:
-                opt_arguments += [{"params": params_recgen, "lr": self.optimization.lr}]
-
-        optimizer = torch.optim.Adam(
-            opt_arguments,
-            lr=self.optimization.lr,
-            weight_decay=self.optimization.weight_decay,
-        )
-
-        scheduler = {
-            "scheduler": ExponentialLR(optimizer, self.optimization.lr_decay_rate),
-            "interval": "epoch",
-            "frequency": self.optimization.lr_decay_every,
-        }
-
-        return [optimizer], [scheduler]
+        return opt_arguments

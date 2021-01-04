@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 
 from inv_cooking.config import (
     ImageEncoderConfig,
@@ -48,6 +49,12 @@ class TestModule:
             low=0, high=self.INGR_VOCAB_SIZE, size=(batch_size, self.MAX_NUM_LABELS + 1)
         )
         recipe = None
+
+        # Try building an optimizer
+        self.assert_all_parameters_used(module)
+        optimizers, schedulers = module.configure_optimizers()
+        assert len(optimizers) == 1
+        assert len(schedulers) == 1
 
         # Try "train" forward pass
         losses, predictions = module(
@@ -109,6 +116,12 @@ class TestModule:
             low=0, high=self.RECIPE_VOCAB_SIZE, size=(batch_size, self.MAX_RECIPE_LEN)
         )
 
+        # Try building an optimizer
+        self.assert_all_parameters_used(module)
+        optimizers, schedulers = module.configure_optimizers()
+        assert len(optimizers) == 1
+        assert len(schedulers) == 1
+
         # Try "train" forward pass
         losses, predictions = module(
             split="train",
@@ -165,6 +178,12 @@ class TestModule:
         recipe = torch.randint(
             low=0, high=self.RECIPE_VOCAB_SIZE, size=(batch_size, self.MAX_RECIPE_LEN)
         )
+
+        # Try building an optimizer
+        self.assert_all_parameters_used(module)
+        optimizers, schedulers = module.configure_optimizers()
+        assert len(optimizers) == 1
+        assert len(schedulers) == 1
 
         # Try "train" forward pass
         losses, predictions = module(
@@ -230,6 +249,15 @@ class TestModule:
         assert losses["n_samples"] == 5
         assert losses["ingr_gt"].shape == torch.Size([5, self.MAX_NUM_LABELS + 1])
         assert losses["ingr_pred"].shape == torch.Size([5, self.MAX_NUM_LABELS + 1])
+
+    @staticmethod
+    def assert_all_parameters_used(module: LitInverseCooking):
+        total_nb_params = 0
+        for group in module.create_parameter_groups():
+            params = group["params"]
+            total_nb_params += sum([p.numel() for p in params])
+        expected_nb_params = sum([p.numel() for p in module.model.parameters() if p.requires_grad])
+        assert expected_nb_params == total_nb_params
 
     @staticmethod
     def default_optimization_config():
