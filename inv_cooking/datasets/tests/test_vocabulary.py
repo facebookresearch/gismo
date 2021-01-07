@@ -10,11 +10,31 @@ from inv_cooking.datasets.vocabulary import Vocabulary
 def test_vocabulary():
     vocab = Vocabulary()
     vocab.add_word("<end>")
-    vocab.add_word("<pad>")
     for word in "this is an an example".split():
         vocab.add_word(word)
+    vocab.add_word("<pad>")
 
     assert 6 == len(vocab), "duplicates should be removed"
+    assert len(vocab) == vocab.idx
+    assert_symmetric(vocab)
+
+    vocab.remove_eos()
+    assert 5 == len(vocab), "<end> token should have been removed"
+    assert len(vocab) == vocab.idx
+    assert_symmetric(vocab)
+
+
+def test_vocabulary_with_index_option():
+    vocab = Vocabulary()
+    vocab.add_word("<end>")
+    for group in [["this"], ["is"], ["an", "the"], ["an"], ["example"]]:
+        vocab.add_word_group(group)
+    vocab.add_word("<pad>")
+
+    assert len(vocab.word2idx) == 7
+    assert len(vocab.idx2word) == 6
+
+    assert 6 == len(vocab), "should be the number of different indices"
     assert len(vocab) == vocab.idx
     assert_symmetric(vocab)
 
@@ -38,4 +58,8 @@ def test_always_symmetric(words: List[str]):
 
 def assert_symmetric(vocab: Vocabulary):
     for i in range(len(vocab)):
-        assert i == vocab.word2idx[vocab.idx2word[i]], "reversible mapping expected"
+        words = vocab.idx2word[i]
+        if not isinstance(words, list):
+            words = [words]
+        for word in words:
+            assert i == vocab.word2idx[word], "reversible mapping expected"

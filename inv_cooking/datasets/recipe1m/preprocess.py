@@ -323,12 +323,10 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     # Ingredient vocab
     # Create a vocab wrapper for ingredients
     vocab_ingrs = Vocabulary()
-    idx = vocab_ingrs.add_word("<end>")
+    vocab_ingrs.add_word("<end>")
     for k, _ in ingrs.items():
-        for ingr in cluster_ingrs[k]:
-            idx = vocab_ingrs.add_word(ingr, idx)
-        idx += 1
-    _ = vocab_ingrs.add_word("<pad>", idx)
+        vocab_ingrs.add_word_group(cluster_ingrs[k])
+    vocab_ingrs.add_word("<pad>")
 
     print("Total ingr vocabulary size: {}".format(len(vocab_ingrs)))
     print("Total token vocabulary size: {}".format(len(vocab_toks)))
