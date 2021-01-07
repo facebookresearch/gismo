@@ -1,5 +1,4 @@
 import os
-from typing import Tuple
 
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
@@ -9,7 +8,9 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from inv_cooking.config import Config, IngredientPredictorType, TaskType
 from inv_cooking.datasets.recipe1m import LoadingOptions, Recipe1MDataModule
 
-from .module import LitInverseCooking
+from .image_to_ingredients import ImageToIngredients
+from .image_to_recipe import ImageToRecipe
+from .ingredient_to_recipe import IngredientToRecipe
 
 
 def run_training(
@@ -22,57 +23,37 @@ def run_training(
         os.makedirs(checkpoint_dir)
 
     # data module
-    dm = Recipe1MDataModule(
-        dataset_config=cfg.dataset,
-        seed=cfg.optimization.seed,
-        loading_options=_get_loading_options(cfg),
-        # checkpoint=None ## TODO: check how this would work
-    )
-    dm.prepare_data()
-    dm.setup("fit")
+    data_module = _load_data_set(cfg)
+    data_module.prepare_data()
+    data_module.setup("fit")
 
     # model
-    max_recipe_length = (
-        cfg.dataset.filtering.max_num_instructions
-        * cfg.dataset.filtering.max_instruction_length
-    )
-    model = LitInverseCooking(
-        task=cfg.task,
-        image_encoder_config=cfg.image_encoder,
-        ingr_pred_config=cfg.ingr_predictor,
-        recipe_gen_config=cfg.recipe_gen,
-        optim_config=cfg.optimization,
-        max_num_labels=cfg.dataset.filtering.max_num_labels,
-        max_recipe_len=max_recipe_length,
-        ingr_vocab_size=dm.ingr_vocab_size,
-        instr_vocab_size=dm.instr_vocab_size,
-        ingr_eos_value=dm.ingr_eos_value,
-    )
+    model = _create_model(cfg, data_module)
 
+    # logging
     logger = pl_loggers.TensorBoardLogger(
         os.path.join(cfg.checkpoint.dir, "logs"), name=cfg.task.name + "-" + cfg.name,
     )
 
-    # checkpointing and early stopping
-    monitor_metric, best_metric = _get_monitored_metric(cfg)
+    # check-pointing and early stopping
+    monitored_metric = model.get_monitored_metric()
     checkpoint_callback = ModelCheckpoint(
-        monitor=monitor_metric,
+        monitor=monitored_metric.name,
         dirpath=checkpoint_dir,
         filename="best",
         save_last=True,
-        mode=best_metric,
+        mode=monitored_metric.mode,
         save_top_k=1,
     )
     early_stop_callback = EarlyStopping(
-        monitor=monitor_metric,
+        monitor=monitored_metric.name,
         min_delta=0.00,
         patience=10,
         verbose=False,
-        mode=best_metric,
+        mode=monitored_metric.mode,
     )
 
     # trainer
-    is_local = cfg.slurm.partition == "local"
     trainer = pl.Trainer(
         gpus=gpus,
         num_nodes=nodes,
@@ -95,15 +76,24 @@ def run_training(
         # weights_save_path=checkpoint_dir,
         # limit_train_batches=10,
         fast_dev_run=cfg.debug_mode,
-        progress_bar_refresh_rate=1 if is_local else 0,
+        progress_bar_refresh_rate=1 if cfg.slurm.partition == "local" else 0,
         weights_summary=None,  # for it otherwise logs lots of useless information
     )
 
-    trainer.fit(model, datamodule=dm)
+    trainer.fit(model, datamodule=data_module)
 
     if cfg.eval_on_test:
-        dm.setup("test")
-        trainer.test(datamodule=dm)
+        data_module.setup("test")
+        trainer.test(datamodule=data_module)
+
+
+def _load_data_set(cfg):
+    return Recipe1MDataModule(
+        dataset_config=cfg.dataset,
+        seed=cfg.optimization.seed,
+        loading_options=_get_loading_options(cfg),
+        # checkpoint=None ## TODO: check how this would work
+    )
 
 
 def _get_loading_options(cfg: Config) -> LoadingOptions:
@@ -124,15 +114,44 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
             with_ingredient=True, with_ingredient_eos=include_eos, with_recipe=True,
         )
     else:
-        raise ValueError(f"Unknown task: {cfg.task}.")
+        raise ValueError(f"Unknown task: {cfg.task.name}.")
 
 
-def _get_monitored_metric(cfg) -> Tuple[str, str]:
+def _create_model(cfg: Config, data_module: Recipe1MDataModule):
+    max_num_labels = cfg.dataset.filtering.max_num_labels
+    max_recipe_len = (
+        cfg.dataset.filtering.max_num_instructions
+        * cfg.dataset.filtering.max_instruction_length
+    )
     if cfg.task == TaskType.im2ingr:
-        return "val_o_f1", "max"
+        return ImageToIngredients(
+            cfg.image_encoder,
+            cfg.ingr_predictor,
+            cfg.optimization,
+            max_num_labels=max_num_labels,
+            ingr_vocab_size=data_module.ingr_vocab_size,
+            ingr_eos_value=data_module.ingr_eos_value,
+        )
     elif cfg.task == TaskType.im2recipe:
-        return "val_perplexity", "min"
+        return ImageToRecipe(
+            cfg.image_encoder,
+            cfg.ingr_predictor,
+            cfg.recipe_gen,
+            cfg.optimization,
+            max_num_labels=max_num_labels,
+            max_recipe_len=max_recipe_len,
+            ingr_vocab_size=data_module.ingr_vocab_size,
+            instr_vocab_size=data_module.instr_vocab_size,
+            ingr_eos_value=data_module.ingr_eos_value,
+        )
     elif cfg.task == TaskType.ingr2recipe:
-        return "val_perplexity", "min"
+        return IngredientToRecipe(
+            cfg.recipe_gen,
+            cfg.optimization,
+            max_recipe_len=max_recipe_len,
+            ingr_vocab_size=data_module.ingr_vocab_size,
+            instr_vocab_size=data_module.instr_vocab_size,
+            ingr_eos_value=data_module.ingr_eos_value,
+        )
     else:
-        raise ValueError(f"Unknown task: {cfg.task}.")
+        raise ValueError(f"Unknown task: {cfg.task.name}.")
