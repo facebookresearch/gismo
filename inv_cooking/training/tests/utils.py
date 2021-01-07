@@ -15,7 +15,7 @@ class _BaseTest:
     High level tests of the lightning module, to check that the plumbing works
     """
 
-    MAX_NUM_LABELS = 20
+    MAX_NUM_INGREDIENTS = 20
     MAX_NUM_INSTRUCTIONS = 10
     MAX_INSTRUCTION_LENGTH = 15
     MAX_RECIPE_LEN = MAX_NUM_INSTRUCTIONS * MAX_INSTRUCTION_LENGTH

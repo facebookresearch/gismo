@@ -24,7 +24,7 @@ class ImageToRecipe(_BaseModule):
         ingr_pred_config: IngredientPredictorConfig,
         recipe_gen_config: RecipeGeneratorConfig,
         optim_config: OptimizationConfig,
-        max_num_labels: int,
+        max_num_ingredients: int,
         max_recipe_len: int,
         ingr_vocab_size: int,
         instr_vocab_size: int,
@@ -36,11 +36,11 @@ class ImageToRecipe(_BaseModule):
             image_encoder_config,
             ingr_pred_config,
             recipe_gen_config,
-            ingr_vocab_size,
-            instr_vocab_size,
-            max_num_labels,
-            max_recipe_len,
-            ingr_eos_value,
+            ingr_vocab_size=ingr_vocab_size,
+            instr_vocab_size=instr_vocab_size,
+            max_num_ingredients=max_num_ingredients,
+            max_recipe_len=max_recipe_len,
+            ingr_eos_value=ingr_eos_value,
         )
 
         self.optimization = optim_config

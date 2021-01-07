@@ -28,7 +28,7 @@ def requires_eos_token(config: IngredientPredictorConfig) -> bool:
 def create_ingredient_predictor(
     config: IngredientPredictorConfig,
     vocab_size: int,
-    max_num_labels: int,
+    max_num_ingredients: int,
     eos_value: int,
 ) -> IngredientsPredictor:
     """
@@ -37,15 +37,15 @@ def create_ingredient_predictor(
     if config.model == IngredientPredictorType.ff:
         config = cast(IngredientPredictorFFConfig, config)
         return FeedForwardIngredientsPredictor.from_config(
-            config, max_num_labels, vocab_size
+            config, max_num_ingredients, vocab_size
         )
     elif config.model == IngredientPredictorType.lstm:
         config = cast(IngredientPredictorLSTMConfig, config)
         return AutoRegressiveIngredientsPredictor.create_lstm_from_config(
-            config, max_num_labels, vocab_size, eos_value
+            config, max_num_ingredients, vocab_size, eos_value
         )
     elif config.model == IngredientPredictorType.tf:
         config = cast(IngredientPredictorTransformerConfig, config)
         return AutoRegressiveIngredientsPredictor.create_tf_from_config(
-            config, max_num_labels, vocab_size, eos_value
+            config, max_num_ingredients, vocab_size, eos_value
         )

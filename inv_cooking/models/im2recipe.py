@@ -27,7 +27,7 @@ class Im2Recipe(nn.Module):
         recipe_gen_config: RecipeGeneratorConfig,
         ingr_vocab_size: int,
         instr_vocab_size: int,
-        max_num_labels: int,
+        max_num_ingredients: int,
         max_recipe_len: int,
         ingr_eos_value: int,
     ):
@@ -45,7 +45,7 @@ class Im2Recipe(nn.Module):
         self.ingr_predictor = create_ingredient_predictor(
             ingr_pred_config,
             vocab_size=ingr_vocab_size,
-            max_num_labels=max_num_labels,
+            max_num_ingredients=max_num_ingredients,
             eos_value=ingr_eos_value,
         )
         self.ingr_encoder = IngredientsEncoder(
@@ -71,7 +71,7 @@ class Im2Recipe(nn.Module):
         Predict the ingredients and the recipe for the provided image
         :param image: input image from which to predict ingredient and recipe - shape (N, C, H, W)
         :param target_recipe: target recipe to predict - shape (N, max_recipe_len)
-        :param target_ingredients: target ingredients to predict - shape (N, max_num_labels)
+        :param target_ingredients: target ingredients to predict - shape (N, max_num_ingredients)
         :param use_ingr_pred: whether or not predict the ingredient or use the ground truth
         :param compute_losses: whether or not to compute the loss
         :param compute_predictions: whether or not to output the recipe prediction

@@ -9,24 +9,24 @@ from inv_cooking.models.tests.utils import FakeConfig
 
 def test_Im2Ingr():
     torch.random.manual_seed(0)
-    max_num_labels = 10
+    max_num_ingredients = 10
     vocab_size = 20
     batch_size = 5
     image = torch.randn(size=(batch_size, 3, 224, 224))
-    labels = torch.randint(low=0, high=vocab_size - 1, size=(5, max_num_labels))
+    labels = torch.randint(low=0, high=vocab_size - 1, size=(5, max_num_ingredients))
 
     ingredient_predictors = [
         (
             FakeIngredientPredictorConfig.ff_config(),
-            torch.Size([batch_size, max_num_labels]),
+            torch.Size([batch_size, max_num_ingredients]),
         ),
         (
             FakeIngredientPredictorConfig.tf_config(),
-            torch.Size([batch_size, max_num_labels + 1]),
+            torch.Size([batch_size, max_num_ingredients + 1]),
         ),
         (
             FakeIngredientPredictorConfig.lstm_config(),
-            torch.Size([batch_size, max_num_labels + 1]),
+            torch.Size([batch_size, max_num_ingredients + 1]),
         ),
     ]
 
@@ -35,7 +35,7 @@ def test_Im2Ingr():
             image_encoder_config=FakeConfig.image_encoder_config(),
             ingr_pred_config=ingr_predictor,
             ingr_vocab_size=vocab_size,
-            max_num_labels=max_num_labels,
+            max_num_ingredients=max_num_ingredients,
             ingr_eos_value=vocab_size - 1,
         )
 

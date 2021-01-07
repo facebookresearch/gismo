@@ -18,7 +18,7 @@ class ImageToIngredients(_BaseModule):
         image_encoder_config: ImageEncoderConfig,
         ingr_pred_config: IngredientPredictorConfig,
         optim_config: OptimizationConfig,
-        max_num_labels: int,
+        max_num_ingredients: int,
         ingr_vocab_size: int,
         ingr_eos_value: int,
     ):
@@ -26,9 +26,9 @@ class ImageToIngredients(_BaseModule):
         self.model = Im2Ingr(
             image_encoder_config,
             ingr_pred_config,
-            ingr_vocab_size,
-            max_num_labels,
-            ingr_eos_value,
+            ingr_vocab_size=ingr_vocab_size,
+            max_num_ingredients=max_num_ingredients,
+            ingr_eos_value=ingr_eos_value,
         )
 
         self.optimization = optim_config

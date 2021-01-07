@@ -27,16 +27,16 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
 
     @staticmethod
     def from_config(
-        config: IngredientPredictorFFConfig, max_num_labels: int, vocab_size: int
+        config: IngredientPredictorFFConfig, max_num_ingredients: int, vocab_size: int
     ) -> "FeedForwardIngredientsPredictor":
         cardinality_pred = config.cardinality_pred
         print(
             "Building feed-forward decoder {}. Embed size {} / Dropout {} / "
-            " Max. Num. Labels {} / Num. Layers {}".format(
+            " Max. Num. Ingredients {} / Num. Layers {}".format(
                 config.model.name,
                 config.embed_size,
                 config.dropout,
-                max_num_labels,
+                max_num_ingredients,
                 config.layers,
             ),
             flush=True,
@@ -52,7 +52,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         # cardinality loss
         if cardinality_pred == CardinalityPredictionType.categorical:
             print("Using categorical cardinality loss.", flush=True)
-            decoder.add_cardinality_prediction(max_num_labels)
+            decoder.add_cardinality_prediction(max_num_ingredients)
             cardinality_loss = nn.CrossEntropyLoss(reduction="mean")
         else:
             print("Using no cardinality loss.", flush=True)
@@ -68,8 +68,8 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
 
         model = FeedForwardIngredientsPredictor(
             decoder,
-            max_num_labels,
-            vocab_size,
+            max_num_ingredients=max_num_ingredients,
+            vocab_size=vocab_size,
             crit=label_loss,
             crit_cardinality=cardinality_loss,
             pad_value=vocab_size - 1,
@@ -84,7 +84,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
     def __init__(
         self,
         decoder: nn.Module,
-        max_num_labels: int,
+        max_num_ingredients: int,
         vocab_size: int,
         crit=None,
         crit_cardinality=None,
@@ -96,7 +96,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
     ):
         super().__init__(requires_eos=True)
         self.decoder = decoder
-        self.maxnumlabels = max_num_labels
+        self.max_num_ingredients = max_num_ingredients
         self.crit = crit
         self.threshold = threshold
         self.pad_value = pad_value
@@ -153,7 +153,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             # get label ids
             predictions = predictions_to_indices(
                 label_probs=label_probs,
-                max_num_labels=self.maxnumlabels,
+                max_num_labels=self.max_num_ingredients,
                 pad_value=self.pad_value,
                 threshold=self.threshold,
                 cardinality_prediction=cardinality,
