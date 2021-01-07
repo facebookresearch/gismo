@@ -14,6 +14,17 @@ ingr_predictor_ff:
   layers: 2
   dropout: 0.0
   criterion: bce
+  cardinality_pred: none
+
+ingr_predictor_ff_with_card_pred:
+  model: ff
+  embed_size: 2048
+  freeze: False  # setting freeze to True will also freeze the image encoder
+  load_pretrained_from: None
+  layers: 2
+  dropout: 0.0
+  criterion: bce
+  cardinality_pred: categorical
 
 ingr_predictor_lstm:
   model: lstm
