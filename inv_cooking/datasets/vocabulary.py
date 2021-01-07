@@ -4,6 +4,7 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in https://github.com/facebookresearch/inversecooking
+from typing import Iterable
 
 
 class Vocabulary(object):
@@ -14,22 +15,21 @@ class Vocabulary(object):
         self.idx2word = {}
         self.idx = 0
 
-    def add_word(self, word, idx=None):
-        if idx is None:
-            if not word in self.word2idx:
-                self.word2idx[word] = self.idx
-                self.idx2word[self.idx] = word
-                self.idx += 1
-            return self.idx
-        else:
-            if not word in self.word2idx:
-                self.word2idx[word] = idx
-                if idx in self.idx2word.keys():
-                    self.idx2word[idx].append(word)
-                else:
-                    self.idx2word[idx] = [word]
+    def add_word(self, word: str) -> int:
+        if not word in self.word2idx:
+            self.word2idx[word] = self.idx
+            self.idx2word[self.idx] = word
+            self.idx += 1
+        return self.idx
 
-                return idx
+    def add_word_group(self, words: Iterable[str]):
+        words = [word for word in words if word not in self.word2idx]
+        if words:
+            for word in words:
+                self.word2idx[word] = self.idx
+            self.idx2word[self.idx] = words
+            self.idx += 1
+        return self.idx
 
     def remove_eos(self):
         # get word id to remove
