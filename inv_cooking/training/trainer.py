@@ -5,9 +5,9 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
-from inv_cooking.config import Config, IngredientPredictorType, TaskType
+from inv_cooking.config import Config, TaskType
 from inv_cooking.datasets.recipe1m import LoadingOptions, Recipe1MDataModule
-
+from inv_cooking.models.ingredients_predictor.builder import requires_eos_token
 from .image_to_ingredients import ImageToIngredients
 from .image_to_recipe import ImageToRecipe
 from .ingredient_to_recipe import IngredientToRecipe
@@ -97,7 +97,7 @@ def _load_data_set(cfg):
 
 
 def _get_loading_options(cfg: Config) -> LoadingOptions:
-    include_eos = cfg.ingr_predictor.model != IngredientPredictorType.ff
+    include_eos = requires_eos_token(cfg.ingr_predictor)
     if cfg.task == TaskType.im2ingr:
         return LoadingOptions(
             with_image=True, with_ingredient=True, with_ingredient_eos=include_eos,

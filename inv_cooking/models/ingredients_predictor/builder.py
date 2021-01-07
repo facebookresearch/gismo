@@ -17,6 +17,14 @@ from .predictor_ar import AutoRegressiveIngredientsPredictor
 from .predictor_ff import FeedForwardIngredientsPredictor
 
 
+def requires_eos_token(config: IngredientPredictorConfig) -> bool:
+    """
+    Indicates whether or not the model requires the EOS token for
+    the ingredient predictor
+    """
+    return config.model != IngredientPredictorType.ff
+
+
 def create_ingredient_predictor(
     config: IngredientPredictorConfig,
     vocab_size: int,

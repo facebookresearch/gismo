@@ -94,7 +94,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         card_type: CardinalityPredictionType = CardinalityPredictionType.none,
         eps: float = 1e-8,
     ):
-        super().__init__(remove_eos=True)
+        super().__init__(requires_eos=True)
         self.decoder = decoder
         self.maxnumlabels = max_num_labels
         self.crit = crit
