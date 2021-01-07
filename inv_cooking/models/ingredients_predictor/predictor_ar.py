@@ -125,7 +125,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         perminv: bool = True,
         eps: float = 1e-8,
     ):
-        super().__init__(remove_eos=False)
+        super().__init__(requires_eos=False)
         self.decoder = decoder
         self.maxnumlabels = max_num_labels
         self.crit = crit

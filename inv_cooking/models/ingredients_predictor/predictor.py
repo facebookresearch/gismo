@@ -14,9 +14,9 @@ class IngredientsPredictor(nn.Module, abc.ABC):
     Interface of any ingredient predictor implementation
     """
 
-    def __init__(self, remove_eos: bool):
+    def __init__(self, requires_eos: bool):
         super().__init__()
-        self.remove_eos = remove_eos
+        self.requires_eos = requires_eos
 
     def forward(
         self,

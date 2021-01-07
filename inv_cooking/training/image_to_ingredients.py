@@ -40,7 +40,7 @@ class ImageToIngredients(_BaseModule):
         self.o_f1, self.c_f1, self.i_f1 = DistributedF1.create_all(
             which_f1=["o_f1", "c_f1", "i_f1"],
             pad_value=self.model.ingr_vocab_size - 1,
-            remove_eos=self.model.ingr_predictor.remove_eos,
+            remove_eos=self.model.ingr_predictor.requires_eos,
             dist_sync_on_step=True,
         )
         self.val_losses = DistributedValLosses(
