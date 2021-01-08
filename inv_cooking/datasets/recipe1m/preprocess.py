@@ -128,10 +128,9 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     layer1 = json.load(open(os.path.join(recipe1m_path, "layer1.json"), "r"))
     layer2 = json.load(open(os.path.join(recipe1m_path, "layer2.json"), "r"))
 
-    id2im = {}
-
+    id_to_images_index = {}
     for i, entry in enumerate(layer2):
-        id2im[entry["id"]] = i
+        id_to_images_index[entry["id"]] = i
 
     print("Loaded data.")
     print("Found %d recipes in the dataset." % (len(layer1)))
@@ -153,8 +152,8 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     #####
     if os.path.exists(ingrs_file) and os.path.exists(instrs_file) and not args.forcegen:
         print("loading pre-extracted word counters")
-        counter_ingrs = pickle.load(open(args.save_path + "allingrs_count.pkl", "rb"))
-        counter_toks = pickle.load(open(args.save_path + "allwords_count.pkl", "rb"))
+        counter_ingrs = pickle.load(open(ingrs_file, "rb"))
+        counter_toks = pickle.load(open(instrs_file, "rb"))
     else:
         counter_ingrs = Counter()
         counter_toks = Counter()
@@ -171,12 +170,10 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
             det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
 
             valid = dets[idx2ind[entry["id"]]]["valid"]
-            det_ingrs_filtered = []
 
             for j, det_ingr in enumerate(det_ingrs):
                 if len(det_ingr) > 0 and valid[j]:
                     det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
-                    det_ingrs_filtered.append(det_ingr_undrs)
                     ingrs_list.append(det_ingr_undrs)
 
             # get raw text for instructions of this entry
@@ -205,8 +202,8 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
                 counter_toks.update(title)
                 counter_ingrs.update(ingrs_list)
 
-        pickle.dump(counter_ingrs, open(args.save_path + "allingrs_count.pkl", "wb"))
-        # pickle.dump(counter_toks, open(args.save_path + 'allwords_count.pkl', 'wb'))
+        pickle.dump(counter_ingrs, open(ingrs_file, "wb"))
+        # pickle.dump(counter_toks, open(instrs_file, 'wb'))
 
     # manually add missing entries for better clustering
     base_words = [
@@ -332,18 +329,11 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     ######
     for i, entry in tqdm(enumerate(layer1)):
 
-        # get all instructions for this recipe
-        instrs = entry["instructions"]
-
-        instrs_list = []
-        ingrs_list = []
-        images_list = []
-
         # retrieve pre-detected ingredients for this entry
         det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
         valid = dets[idx2ind[entry["id"]]]["valid"]
         labels = []
-
+        ingrs_list = []
         for j, det_ingr in enumerate(det_ingrs):
             if len(det_ingr) > 0 and valid[j]:
                 det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
@@ -353,6 +343,8 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
                     labels.append(label_idx)
 
         # get raw text for instructions of this entry
+        instrs = entry["instructions"]
+        instrs_list = []
         acc_len = 0
         for instr in instrs:
             instr = instr["text"]
@@ -371,31 +363,31 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
         ):
             continue
 
-        if entry["id"] in id2im.keys():
-            ims = layer2[id2im[entry["id"]]]
-
-            # copy image paths for this recipe
-            for im in ims["images"]:
-                images_list.append(im["id"])
+        # copy image paths for this recipe
+        images_list = []
+        if entry["id"] in id_to_images_index.keys():
+            image_entry = layer2[id_to_images_index[entry["id"]]]
+            for image in image_entry["images"]:
+                images_list.append(image["id"])
 
         # tokenize sentences
-        toks = []
-
+        tokenized_instructions = []
         for instr in instrs_list:
             tokens = nltk.tokenize.word_tokenize(instr)
-            toks.append(tokens)
+            tokenized_instructions.append(tokens)
 
+        # tokenize title
         title = nltk.tokenize.word_tokenize(entry["title"].lower())
 
-        newentry = {
+        new_entry = {
             "id": entry["id"],
             "instructions": instrs_list,
-            "tokenized": toks,
+            "tokenized": tokenized_instructions,
             "ingredients": ingrs_list,
             "images": images_list,
             "title": title,
         }
-        dataset[entry["partition"]].append(newentry)
+        dataset[entry["partition"]].append(new_entry)
 
     print("Dataset size:")
     for split in dataset.keys():
