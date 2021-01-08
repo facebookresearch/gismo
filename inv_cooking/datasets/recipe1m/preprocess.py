@@ -118,19 +118,11 @@ def update_counter(sentence_list, counter_toks):
         counter_toks.update(tokens)
 
 
-def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
-    print("Loading data...")
-
-    dets = json.load(open(os.path.join(recipe1m_path, "det_ingrs.json"), "r"))
-    layer1 = json.load(open(os.path.join(recipe1m_path, "layer1.json"), "r"))
-    layer2 = json.load(open(os.path.join(recipe1m_path, "layer2.json"), "r"))
-
+def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
     id_to_images_index = {}
     for i, entry in enumerate(layer2):
         id_to_images_index[entry["id"]] = i
 
-    print("Loaded data.")
-    print("Found %d recipes in the dataset." % (len(layer1)))
     replace_dict_ingrs = {
         "and": ["&", "'n"],
         "": ["%", ",", ".", "#", "[", "]", "!", "?"],
@@ -383,12 +375,29 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     return vocab_ingrs, vocab_toks, dataset
 
 
+def load_unprocessed_dataset(recipe1m_path):
+    print("Loading data...")
+    dets = json.load(open(os.path.join(recipe1m_path, "det_ingrs.json"), "r"))
+    layer1 = json.load(open(os.path.join(recipe1m_path, "layer1.json"), "r"))
+    layer2 = json.load(open(os.path.join(recipe1m_path, "layer2.json"), "r"))
+    print("Loaded data.")
+    print(f"Found {len(layer1)} recipes in the dataset.")
+    return dets, layer1, layer2
+
+
 def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
     if not os.path.exists(config.save_path):
         os.mkdir(config.save_path)
 
-    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(recipe1m_path, config)
+    # Load the data files of Recipe1M
+    dets, layer1, layer2 = load_unprocessed_dataset(recipe1m_path)
 
+    # Build vocabularies and dataset
+    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(
+        dets, layer1, layer2, config
+    )
+
+    # Save the vocabularies and dataset
     ingredients_path = os.path.join(config.save_path, "final_recipe1m_vocab_ingrs.pkl")
     with open(ingredients_path, "wb") as f:
         pickle.dump(vocab_ingrs, f)
@@ -398,11 +407,7 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
         pickle.dump(vocab_toks, f)
 
     for split in dataset.keys():
-        recipe_split_path = os.path.join(
-            config.save_path, "final_recipe1m_" + split + ".pkl"
-        )
-        with open(
-            recipe_split_path,
-            "wb",
-        ) as f:
+        split_file_name = "final_recipe1m_" + split + ".pkl"
+        split_file_name = os.path.join(config.save_path, split_file_name)
+        with open(split_file_name, "wb") as f:
             pickle.dump(dataset[split], f)
