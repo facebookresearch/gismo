@@ -53,7 +53,7 @@ class Vocabulary(object):
         self.idx -= 1
 
     def __call__(self, word: str):
-        if not word in self.word2idx:
+        if word not in self.word2idx:
             return self.word2idx["<pad>"]
         return self.word2idx[word]
 

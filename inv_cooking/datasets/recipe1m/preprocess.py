@@ -27,7 +27,6 @@ def get_ingredient(det_ingr, replace_dict):
                 det_ingr_undrs = det_ingr_undrs.replace(c_, rep)
     det_ingr_undrs = det_ingr_undrs.strip()
     det_ingr_undrs = det_ingr_undrs.replace(" ", "_")
-
     return det_ingr_undrs
 
 
@@ -113,11 +112,10 @@ def cluster_ingredients(counter_ingrs):
     return mydict, mydict_ingrs
 
 
-def update_counter(list_, counter_toks, istrain=False):
-    for sentence in list_:
+def update_counter(sentence_list, counter_toks):
+    for sentence in sentence_list:
         tokens = nltk.tokenize.word_tokenize(sentence)
-        if istrain:
-            counter_toks.update(tokens)
+        counter_toks.update(tokens)
 
 
 def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
@@ -201,13 +199,10 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
                 continue
 
             # tokenize sentences and update counter
-            update_counter(
-                instrs_list, counter_toks, istrain=entry["partition"] == "train"
-            )
-            title = nltk.tokenize.word_tokenize(entry["title"].lower())
             if entry["partition"] == "train":
+                update_counter(instrs_list, counter_toks)
+                title = nltk.tokenize.word_tokenize(entry["title"].lower())
                 counter_toks.update(title)
-            if entry["partition"] == "train":
                 counter_ingrs.update(ingrs_list)
 
         pickle.dump(counter_ingrs, open(args.save_path + "allingrs_count.pkl", "wb"))
@@ -297,7 +292,6 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     ]
 
     for base_word in base_words:
-
         if base_word not in counter_ingrs.keys():
             counter_ingrs[base_word] = 1
 
@@ -316,7 +310,7 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     vocab_toks.add_word("<start>")
     vocab_toks.add_word("<end>")
     vocab_toks.add_word("<eoi>")
-    for i, word in enumerate(words):
+    for word in words:
         vocab_toks.add_word(word)
     vocab_toks.add_word("<pad>")
 
