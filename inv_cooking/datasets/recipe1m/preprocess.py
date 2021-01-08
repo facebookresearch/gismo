@@ -9,12 +9,17 @@ import json
 import os
 import pickle
 from collections import Counter
-from typing import Dict, List
 
 import nltk
 from omegaconf import DictConfig
-from tqdm import *
+from tqdm import tqdm
 
+from inv_cooking.datasets.recipe1m.parsing import (
+    IngredientParser,
+    InstructionParser,
+    cluster_ingredients,
+    remove_plurals,
+)
 from inv_cooking.datasets.vocabulary import Vocabulary
 
 BASE_WORDS = [
@@ -100,116 +105,6 @@ BASE_WORDS = [
 ]
 
 
-def get_ingredient(det_ingr, replace_dict: Dict[str, List[str]]):
-    """
-    Read an ingredient ingredient and clean the ingredient
-    - remove case
-    - get rid of some special characters
-    - replace some characters
-    """
-    det_ingr_undrs = det_ingr["text"].lower()
-    det_ingr_undrs = "".join(i for i in det_ingr_undrs if not i.isdigit())
-
-    for rep, char_list in replace_dict.items():
-        for c_ in char_list:
-            if c_ in det_ingr_undrs:
-                det_ingr_undrs = det_ingr_undrs.replace(c_, rep)
-
-    det_ingr_undrs = det_ingr_undrs.strip()
-    det_ingr_undrs = det_ingr_undrs.replace(" ", "_")
-    return det_ingr_undrs
-
-
-def get_instruction(instruction, replace_dict: Dict[str, List[str]]):
-    """
-    Read an ingredient ingredient and clean the ingredient
-    - remove case
-    - replace some characters
-    - get rid of sentences starting with a digit
-    """
-
-    instruction = instruction.lower()
-
-    for rep, char_list in replace_dict.items():
-        for c_ in char_list:
-            if c_ in instruction:
-                instruction = instruction.replace(c_, rep)
-        instruction = instruction.strip()
-
-    # remove sentences starting with "1.", "2.", ... from the targets
-    if len(instruction) > 0 and instruction[0].isdigit():
-        instruction = ""
-    return instruction
-
-
-def remove_plurals(counter_ingrs, ingr_clusters):
-    deleted_ingredients = []
-
-    for k, v in counter_ingrs.items():
-
-        if len(k) == 0:
-            deleted_ingredients.append(k)
-            continue
-
-        gotit = 0
-        if k[-2:] == "es":
-            if k[:-2] in counter_ingrs.keys():
-                counter_ingrs[k[:-2]] += v
-                ingr_clusters[k[:-2]].extend(ingr_clusters[k])
-                deleted_ingredients.append(k)
-                gotit = 1
-
-        if k[-1] == "s" and gotit == 0:
-            if k[:-1] in counter_ingrs.keys():
-                counter_ingrs[k[:-1]] += v
-                ingr_clusters[k[:-1]].extend(ingr_clusters[k])
-                deleted_ingredients.append(k)
-    for item in deleted_ingredients:
-        del counter_ingrs[item]
-        del ingr_clusters[item]
-    return counter_ingrs, ingr_clusters
-
-
-def cluster_ingredients(counter_ingrs):
-    mydict = dict()
-    mydict_ingrs = dict()
-
-    for k, v in counter_ingrs.items():
-
-        w1 = k.split("_")[-1]
-        w2 = k.split("_")[0]
-        lw = [w1, w2]
-        if len(k.split("_")) > 1:
-            w3 = k.split("_")[0] + "_" + k.split("_")[1]
-            w4 = k.split("_")[-2] + "_" + k.split("_")[-1]
-
-            lw = [w1, w2, w4, w3]
-
-        gotit = 0
-        for w in lw:
-            if w in counter_ingrs.keys():
-                # check if its parts are
-                parts = w.split("_")
-                if len(parts) > 0:
-                    if parts[0] in counter_ingrs.keys():
-                        w = parts[0]
-                    elif parts[1] in counter_ingrs.keys():
-                        w = parts[1]
-                if w in mydict.keys():
-                    mydict[w] += v
-                    mydict_ingrs[w].append(k)
-                else:
-                    mydict[w] = v
-                    mydict_ingrs[w] = [k]
-                gotit = 1
-                break
-        if gotit == 0:
-            mydict[k] = v
-            mydict_ingrs[k] = [k]
-
-    return mydict, mydict_ingrs
-
-
 def update_counter(sentence_list, counter_toks):
     for sentence in sentence_list:
         tokens = nltk.tokenize.word_tokenize(sentence)
@@ -221,11 +116,13 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
     for i, entry in enumerate(layer2):
         id_to_images_index[entry["id"]] = i
 
-    replace_dict_ingrs = {
-        "and": ["&", "'n"],
-        "": ["%", ",", ".", "#", "[", "]", "!", "?"],
-    }
-    replace_dict_instrs = {"and": ["&", "'n"], "": ["#", "[", "]"]}
+    ingredient_parser = IngredientParser(
+        replace_dict={"and": ["&", "'n"], "": ["%", ",", ".", "#", "[", "]", "!", "?"]}
+    )
+
+    instruction_parser = InstructionParser(
+        replace_dict={"and": ["&", "'n"], "": ["#", "[", "]"]}
+    )
 
     idx2ind = {}
     for i, entry in enumerate(dets):
@@ -241,24 +138,11 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
     for i, entry in tqdm(enumerate(layer1)):
 
         # retrieve pre-detected ingredients for this entry
-        det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
-        valid = dets[idx2ind[entry["id"]]]["valid"]
-        ingrs_list = []
-        for j, det_ingr in enumerate(det_ingrs):
-            if len(det_ingr) > 0 and valid[j]:
-                det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
-                ingrs_list.append(det_ingr_undrs)
+        det_entry = dets[idx2ind[entry["id"]]]
+        ingrs_list = list(ingredient_parser.parse_entry(det_entry))
 
         # get raw text for instructions of this entry
-        acc_len = 0
-        instrs_list = []
-        instrs = entry["instructions"]
-        for instr in instrs:
-            instr = instr["text"]
-            instr = get_instruction(instr, replace_dict_instrs)
-            if len(instr) > 0:
-                instrs_list.append(instr)
-                acc_len += len(instr)
+        acc_len, instrs_list = instruction_parser.parse_entry(entry)
 
         # discard recipes with too few or too many ingredients or instruction words
         if (
@@ -320,28 +204,17 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
     for i, entry in tqdm(enumerate(layer1)):
 
         # retrieve pre-detected ingredients for this entry
-        det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
-        valid = dets[idx2ind[entry["id"]]]["valid"]
         labels = []
         ingrs_list = []
-        for j, det_ingr in enumerate(det_ingrs):
-            if len(det_ingr) > 0 and valid[j]:
-                det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
-                ingrs_list.append(det_ingr_undrs)
-                label_idx = vocab_ingrs(det_ingr_undrs)
-                if label_idx is not vocab_ingrs("<pad>") and label_idx not in labels:
-                    labels.append(label_idx)
+        det_entry = dets[idx2ind[entry["id"]]]
+        for det_ingr_undrs in ingredient_parser.parse_entry(det_entry):
+            ingrs_list.append(det_ingr_undrs)
+            label_idx = vocab_ingrs(det_ingr_undrs)
+            if label_idx is not vocab_ingrs("<pad>") and label_idx not in labels:
+                labels.append(label_idx)
 
         # get raw text for instructions of this entry
-        instrs = entry["instructions"]
-        instrs_list = []
-        acc_len = 0
-        for instr in instrs:
-            instr = instr["text"]
-            instr = get_instruction(instr, replace_dict_instrs)
-            if len(instr) > 0:
-                acc_len += len(instr)
-                instrs_list.append(instr)
+        acc_len, instrs_list = instruction_parser.parse_entry(entry)
 
         # we discard recipes with too many or too few ingredients or instruction words
         if (
