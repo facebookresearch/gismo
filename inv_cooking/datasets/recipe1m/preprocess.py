@@ -121,9 +121,6 @@ def update_counter(sentence_list, counter_toks):
 def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     print("Loading data...")
 
-    if not os.path.exists(args.save_path):
-        os.mkdir(args.save_path)
-
     dets = json.load(open(os.path.join(recipe1m_path, "det_ingrs.json"), "r"))
     layer1 = json.load(open(os.path.join(recipe1m_path, "layer1.json"), "r"))
     layer2 = json.load(open(os.path.join(recipe1m_path, "layer2.json"), "r"))
@@ -144,66 +141,56 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     for i, entry in enumerate(dets):
         idx2ind[entry["id"]] = i
 
-    ingrs_file = args.save_path + "allingrs_count.pkl"
-    instrs_file = args.save_path + "allwords_count.pkl"
-
     #####
     # 1. Count words in dataset and clean
     #####
-    if os.path.exists(ingrs_file) and os.path.exists(instrs_file) and not args.forcegen:
-        print("loading pre-extracted word counters")
-        counter_ingrs = pickle.load(open(ingrs_file, "rb"))
-        counter_toks = pickle.load(open(instrs_file, "rb"))
-    else:
-        counter_ingrs = Counter()
-        counter_toks = Counter()
 
-        for i, entry in tqdm(enumerate(layer1)):
+    counter_ingrs = Counter()
+    counter_toks = Counter()
 
-            # get all instructions for this recipe
-            instrs = entry["instructions"]
+    for i, entry in tqdm(enumerate(layer1)):
 
-            instrs_list = []
-            ingrs_list = []
+        # get all instructions for this recipe
+        instrs = entry["instructions"]
 
-            # retrieve pre-detected ingredients for this entry
-            det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
+        instrs_list = []
+        ingrs_list = []
 
-            valid = dets[idx2ind[entry["id"]]]["valid"]
+        # retrieve pre-detected ingredients for this entry
+        det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
 
-            for j, det_ingr in enumerate(det_ingrs):
-                if len(det_ingr) > 0 and valid[j]:
-                    det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
-                    ingrs_list.append(det_ingr_undrs)
+        valid = dets[idx2ind[entry["id"]]]["valid"]
 
-            # get raw text for instructions of this entry
-            acc_len = 0
-            for instr in instrs:
-                instr = instr["text"]
-                instr = get_instruction(instr, replace_dict_instrs)
-                if len(instr) > 0:
-                    instrs_list.append(instr)
-                    acc_len += len(instr)
+        for j, det_ingr in enumerate(det_ingrs):
+            if len(det_ingr) > 0 and valid[j]:
+                det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
+                ingrs_list.append(det_ingr_undrs)
 
-            # discard recipes with too few or too many ingredients or instruction words
-            if (
-                len(ingrs_list) < args.minnumingrs
-                or len(instrs_list) < args.minnuminstrs
-                or len(instrs_list) >= args.maxnuminstrs
-                or len(ingrs_list) >= args.maxnumingrs
-                or acc_len < args.minnumwords
-            ):
-                continue
+        # get raw text for instructions of this entry
+        acc_len = 0
+        for instr in instrs:
+            instr = instr["text"]
+            instr = get_instruction(instr, replace_dict_instrs)
+            if len(instr) > 0:
+                instrs_list.append(instr)
+                acc_len += len(instr)
 
-            # tokenize sentences and update counter
-            if entry["partition"] == "train":
-                update_counter(instrs_list, counter_toks)
-                title = nltk.tokenize.word_tokenize(entry["title"].lower())
-                counter_toks.update(title)
-                counter_ingrs.update(ingrs_list)
+        # discard recipes with too few or too many ingredients or instruction words
+        if (
+            len(ingrs_list) < args.minnumingrs
+            or len(instrs_list) < args.minnuminstrs
+            or len(instrs_list) >= args.maxnuminstrs
+            or len(ingrs_list) >= args.maxnumingrs
+            or acc_len < args.minnumwords
+        ):
+            continue
 
-        pickle.dump(counter_ingrs, open(ingrs_file, "wb"))
-        # pickle.dump(counter_toks, open(instrs_file, 'wb'))
+        # tokenize sentences and update counter
+        if entry["partition"] == "train":
+            update_counter(instrs_list, counter_toks)
+            title = nltk.tokenize.word_tokenize(entry["title"].lower())
+            counter_toks.update(title)
+            counter_ingrs.update(ingrs_list)
 
     # manually add missing entries for better clustering
     base_words = [
@@ -397,6 +384,9 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
 
 
 def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
+    if not os.path.exists(config.save_path):
+        os.mkdir(config.save_path)
+
     vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(recipe1m_path, config)
 
     ingredients_path = os.path.join(config.save_path, "final_recipe1m_vocab_ingrs.pkl")
