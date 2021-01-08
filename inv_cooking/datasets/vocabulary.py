@@ -59,3 +59,8 @@ class Vocabulary(object):
 
     def __len__(self):
         return len(self.idx2word)
+
+    def __repr__(self):
+        return repr(
+            {"word2idx": self.word2idx, "idx2word": self.idx2word, "idx": self.idx}
+        )

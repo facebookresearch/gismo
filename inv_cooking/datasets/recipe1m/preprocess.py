@@ -9,6 +9,7 @@ import json
 import os
 import pickle
 from collections import Counter
+from typing import Dict, List
 
 import nltk
 from omegaconf import DictConfig
@@ -16,8 +17,96 @@ from tqdm import *
 
 from inv_cooking.datasets.vocabulary import Vocabulary
 
+BASE_WORDS = [
+    "peppers",
+    "tomato",
+    "spinach_leaves",
+    "turkey_breast",
+    "lettuce_leaf",
+    "chicken_thighs",
+    "milk_powder",
+    "bread_crumbs",
+    "onion_flakes",
+    "red_pepper",
+    "pepper_flakes",
+    "juice_concentrate",
+    "cracker_crumbs",
+    "hot_chili",
+    "seasoning_mix",
+    "dill_weed",
+    "pepper_sauce",
+    "sprouts",
+    "cooking_spray",
+    "cheese_blend",
+    "basil_leaves",
+    "pineapple_chunks",
+    "marshmallow",
+    "chile_powder",
+    "cheese_blend",
+    "corn_kernels",
+    "tomato_sauce",
+    "chickens",
+    "cracker_crust",
+    "lemonade_concentrate",
+    "red_chili",
+    "mushroom_caps",
+    "mushroom_cap",
+    "breaded_chicken",
+    "frozen_pineapple",
+    "pineapple_chunks",
+    "seasoning_mix",
+    "seaweed",
+    "onion_flakes",
+    "bouillon_granules",
+    "lettuce_leaf",
+    "stuffing_mix",
+    "parsley_flakes",
+    "chicken_breast",
+    "basil_leaves",
+    "baguettes",
+    "green_tea",
+    "peanut_butter",
+    "green_onion",
+    "fresh_cilantro",
+    "breaded_chicken",
+    "hot_pepper",
+    "dried_lavender",
+    "white_chocolate",
+    "dill_weed",
+    "cake_mix",
+    "cheese_spread",
+    "turkey_breast",
+    "chucken_thighs",
+    "basil_leaves",
+    "mandarin_orange",
+    "laurel",
+    "cabbage_head",
+    "pistachio",
+    "cheese_dip",
+    "thyme_leave",
+    "boneless_pork",
+    "red_pepper",
+    "onion_dip",
+    "skinless_chicken",
+    "dark_chocolate",
+    "canned_corn",
+    "muffin",
+    "cracker_crust",
+    "bread_crumbs",
+    "frozen_broccoli",
+    "philadelphia",
+    "cracker_crust",
+    "chicken_breast",
+]
 
-def get_ingredient(det_ingr, replace_dict):
+
+def get_ingredient(det_ingr, replace_dict: Dict[str, List[str]]):
+    """
+    Read an ingredient ingredient and clean the ingredient
+    - remove case
+    - get rid of some special characters
+    - replace some characters
+    """
     det_ingr_undrs = det_ingr["text"].lower()
     det_ingr_undrs = "".join(i for i in det_ingr_undrs if not i.isdigit())
 
@@ -25,12 +114,20 @@ def get_ingredient(det_ingr, replace_dict):
         for c_ in char_list:
             if c_ in det_ingr_undrs:
                 det_ingr_undrs = det_ingr_undrs.replace(c_, rep)
+
     det_ingr_undrs = det_ingr_undrs.strip()
     det_ingr_undrs = det_ingr_undrs.replace(" ", "_")
     return det_ingr_undrs
 
 
-def get_instruction(instruction, replace_dict, instruction_mode=True):
+def get_instruction(instruction, replace_dict: Dict[str, List[str]]):
+    """
+    Read an ingredient ingredient and clean the ingredient
+    - remove case
+    - replace some characters
+    - get rid of sentences starting with a digit
+    """
+
     instruction = instruction.lower()
 
     for rep, char_list in replace_dict.items():
@@ -38,19 +135,20 @@ def get_instruction(instruction, replace_dict, instruction_mode=True):
             if c_ in instruction:
                 instruction = instruction.replace(c_, rep)
         instruction = instruction.strip()
+
     # remove sentences starting with "1.", "2.", ... from the targets
-    if len(instruction) > 0 and instruction[0].isdigit() and instruction_mode:
+    if len(instruction) > 0 and instruction[0].isdigit():
         instruction = ""
     return instruction
 
 
 def remove_plurals(counter_ingrs, ingr_clusters):
-    del_ingrs = []
+    deleted_ingredients = []
 
     for k, v in counter_ingrs.items():
 
         if len(k) == 0:
-            del_ingrs.append(k)
+            deleted_ingredients.append(k)
             continue
 
         gotit = 0
@@ -58,15 +156,15 @@ def remove_plurals(counter_ingrs, ingr_clusters):
             if k[:-2] in counter_ingrs.keys():
                 counter_ingrs[k[:-2]] += v
                 ingr_clusters[k[:-2]].extend(ingr_clusters[k])
-                del_ingrs.append(k)
+                deleted_ingredients.append(k)
                 gotit = 1
 
         if k[-1] == "s" and gotit == 0:
             if k[:-1] in counter_ingrs.keys():
                 counter_ingrs[k[:-1]] += v
                 ingr_clusters[k[:-1]].extend(ingr_clusters[k])
-                del_ingrs.append(k)
-    for item in del_ingrs:
+                deleted_ingredients.append(k)
+    for item in deleted_ingredients:
         del counter_ingrs[item]
         del ingr_clusters[item]
     return counter_ingrs, ingr_clusters
@@ -142,17 +240,10 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
 
     for i, entry in tqdm(enumerate(layer1)):
 
-        # get all instructions for this recipe
-        instrs = entry["instructions"]
-
-        instrs_list = []
-        ingrs_list = []
-
         # retrieve pre-detected ingredients for this entry
         det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
-
         valid = dets[idx2ind[entry["id"]]]["valid"]
-
+        ingrs_list = []
         for j, det_ingr in enumerate(det_ingrs):
             if len(det_ingr) > 0 and valid[j]:
                 det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
@@ -160,6 +251,8 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
 
         # get raw text for instructions of this entry
         acc_len = 0
+        instrs_list = []
+        instrs = entry["instructions"]
         for instr in instrs:
             instr = instr["text"]
             instr = get_instruction(instr, replace_dict_instrs)
@@ -185,89 +278,7 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
             counter_ingrs.update(ingrs_list)
 
     # manually add missing entries for better clustering
-    base_words = [
-        "peppers",
-        "tomato",
-        "spinach_leaves",
-        "turkey_breast",
-        "lettuce_leaf",
-        "chicken_thighs",
-        "milk_powder",
-        "bread_crumbs",
-        "onion_flakes",
-        "red_pepper",
-        "pepper_flakes",
-        "juice_concentrate",
-        "cracker_crumbs",
-        "hot_chili",
-        "seasoning_mix",
-        "dill_weed",
-        "pepper_sauce",
-        "sprouts",
-        "cooking_spray",
-        "cheese_blend",
-        "basil_leaves",
-        "pineapple_chunks",
-        "marshmallow",
-        "chile_powder",
-        "cheese_blend",
-        "corn_kernels",
-        "tomato_sauce",
-        "chickens",
-        "cracker_crust",
-        "lemonade_concentrate",
-        "red_chili",
-        "mushroom_caps",
-        "mushroom_cap",
-        "breaded_chicken",
-        "frozen_pineapple",
-        "pineapple_chunks",
-        "seasoning_mix",
-        "seaweed",
-        "onion_flakes",
-        "bouillon_granules",
-        "lettuce_leaf",
-        "stuffing_mix",
-        "parsley_flakes",
-        "chicken_breast",
-        "basil_leaves",
-        "baguettes",
-        "green_tea",
-        "peanut_butter",
-        "green_onion",
-        "fresh_cilantro",
-        "breaded_chicken",
-        "hot_pepper",
-        "dried_lavender",
-        "white_chocolate",
-        "dill_weed",
-        "cake_mix",
-        "cheese_spread",
-        "turkey_breast",
-        "chucken_thighs",
-        "basil_leaves",
-        "mandarin_orange",
-        "laurel",
-        "cabbage_head",
-        "pistachio",
-        "cheese_dip",
-        "thyme_leave",
-        "boneless_pork",
-        "red_pepper",
-        "onion_dip",
-        "skinless_chicken",
-        "dark_chocolate",
-        "canned_corn",
-        "muffin",
-        "cracker_crust",
-        "bread_crumbs",
-        "frozen_broccoli",
-        "philadelphia",
-        "cracker_crust",
-        "chicken_breast",
-    ]
-
-    for base_word in base_words:
+    for base_word in BASE_WORDS:
         if base_word not in counter_ingrs.keys():
             counter_ingrs[base_word] = 1
 
