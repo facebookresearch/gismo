@@ -19,7 +19,7 @@ class TestIngredientToRecipe(_BaseTest):
 
         batch_size = 5
         ingredients = torch.randint(
-            low=0, high=self.INGR_VOCAB_SIZE, size=(batch_size, self.MAX_NUM_LABELS + 1)
+            low=0, high=self.INGR_VOCAB_SIZE, size=(batch_size, self.MAX_NUM_INGREDIENTS + 1)
         )
         recipe = torch.randint(
             low=0, high=self.RECIPE_VOCAB_SIZE, size=(batch_size, self.MAX_RECIPE_LEN)

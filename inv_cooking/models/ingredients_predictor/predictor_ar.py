@@ -28,18 +28,18 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
     def create_tf_from_config(
         cls,
         config: IngredientPredictorTransformerConfig,
-        max_num_labels: int,
+        max_num_ingredients: int,
         vocab_size: int,
         eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
-        max_num_labels += 1  # required for EOS token
+        max_num_ingredients += 1  # required for EOS token
         print(
             "Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / "
             "Num. Attention Heads {} / Num. Layers {}.".format(
                 config.model.name,
                 config.embed_size,
                 config.dropout,
-                max_num_labels,
+                max_num_ingredients,
                 config.n_att,
                 config.layers,
             ),
@@ -49,27 +49,27 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             config.embed_size,
             vocab_size,
             dropout=config.dropout,
-            seq_length=max_num_labels,
+            seq_length=max_num_ingredients,
             attention_nheads=config.n_att,
             pos_embeddings=False,
             num_layers=config.layers,
             learned=False,
             normalize_before=True,
         )
-        return cls.from_decoder(config, decoder, max_num_labels, vocab_size, eos_value)
+        return cls.from_decoder(config, decoder, max_num_ingredients, vocab_size, eos_value)
 
     @classmethod
     def create_lstm_from_config(
         cls,
         config: IngredientPredictorLSTMConfig,
-        max_num_labels: int,
+        max_num_ingredients: int,
         vocab_size: int,
         eos_value: int,
     ) -> "AutoRegressiveIngredientsPredictor":
-        max_num_labels += 1  # required for EOS token
+        max_num_ingredients += 1  # required for EOS token
         print(
             "Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. ".format(
-                config.model.name, config.embed_size, config.dropout, max_num_labels
+                config.model.name, config.embed_size, config.dropout, max_num_ingredients
             ),
             flush=True,
         )
@@ -78,15 +78,15 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             config.embed_size,
             vocab_size,
             dropout=config.dropout,
-            seq_length=max_num_labels,
+            seq_length=max_num_ingredients,
         )
-        return cls.from_decoder(config, decoder, max_num_labels, vocab_size, eos_value)
+        return cls.from_decoder(config, decoder, max_num_ingredients, vocab_size, eos_value)
 
     @staticmethod
     def from_decoder(
         config: IngredientPredictorLSTMConfig,
         decoder: nn.Module,
-        max_num_labels: int,
+        max_num_ingredients: int,
         vocab_size: int,
         eos_value: int,
     ):
@@ -100,8 +100,8 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
         model = AutoRegressiveIngredientsPredictor(
             decoder,
-            max_num_labels,
-            vocab_size,
+            max_num_ingredients=max_num_ingredients,
+            vocab_size=vocab_size,
             crit=label_loss,
             crit_eos=eos_loss,
             pad_value=pad_value,
@@ -116,7 +116,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
     def __init__(
         self,
         decoder: nn.Module,
-        max_num_labels: int,
+        max_num_ingredients: int,
         vocab_size: int,
         crit=None,
         crit_eos=None,
@@ -127,7 +127,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
     ):
         super().__init__(requires_eos=False)
         self.decoder = decoder
-        self.maxnumlabels = max_num_labels
+        self.max_num_ingredients = max_num_ingredients
         self.crit = crit
         self.perminv = perminv
         self.pad_value = pad_value

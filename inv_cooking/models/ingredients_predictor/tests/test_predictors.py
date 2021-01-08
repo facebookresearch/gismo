@@ -14,10 +14,10 @@ class TestIngredientPredictor:
     def setup_method(self):
         self.vocab_size = 20
         self.batch_size = 5
-        self.max_num_labels = 10
+        self.max_num_ingredients = 10
 
     def test_ff_model(self):
-        expected_output_shape = torch.Size([self.batch_size, self.max_num_labels])
+        expected_output_shape = torch.Size([self.batch_size, self.max_num_ingredients])
         config = FakeIngredientPredictorConfig.ff_config()
         losses, predictions = self._try_predictor(config)
 
@@ -28,7 +28,7 @@ class TestIngredientPredictor:
         assert predictions.max() < self.vocab_size
 
     def test_ar_models(self):
-        expected_output_shape = torch.Size([self.batch_size, self.max_num_labels + 1])
+        expected_output_shape = torch.Size([self.batch_size, self.max_num_ingredients + 1])
         all_configs = [
             FakeIngredientPredictorConfig.lstm_config(),
             FakeIngredientPredictorConfig.lstm_config(with_set_prediction=True),
@@ -65,14 +65,14 @@ class TestIngredientPredictor:
         self, config: IngredientPredictorConfig, include_eos: bool = False
     ):
         image_features = torch.randn(size=(self.batch_size, config.embed_size, 49))
-        max_num_labels = self.max_num_labels + 1 if include_eos else self.max_num_labels
+        max_num_labels = self.max_num_ingredients + 1 if include_eos else self.max_num_ingredients
         label_target = torch.randint(
             low=0, high=self.vocab_size - 1, size=(self.batch_size, max_num_labels)
         )
         model = create_ingredient_predictor(
             config,
             vocab_size=self.vocab_size,
-            max_num_labels=self.max_num_labels,
+            max_num_ingredients=self.max_num_ingredients,
             eos_value=0,
         )
         return model(

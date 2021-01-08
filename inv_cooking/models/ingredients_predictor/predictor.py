@@ -28,7 +28,7 @@ class IngredientsPredictor(nn.Module, abc.ABC):
         """
         Predict the ingredients of the image features extracted by an image encoder
         :param img_features: image features - shape (N, embedding_size, sequence_length)
-        :param label_target: ground truth, the ingredients to find - shape (N, max_num_labels)
+        :param label_target: ground truth, the ingredients to find - shape (N, max_num_ingredients)
         :param compute_losses: whether or not to compute loss between output and target
         :param compute_predictions: whether or not to output the predicted ingredients
         """

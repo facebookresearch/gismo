@@ -27,8 +27,8 @@ class FFDecoder(nn.Module):
         self.classifier = nn.Linear(in_dim, vocab_size - 1)
         self.fc_cardinality = None
 
-    def add_cardinality_prediction(self, max_num_labels: int):
-        self.fc_cardinality = nn.Linear(self.classifier.in_features, max_num_labels)
+    def add_cardinality_prediction(self, max_num_ingredients: int):
+        self.fc_cardinality = nn.Linear(self.classifier.in_features, max_num_ingredients)
 
     def forward(
         self, img_features: torch.Tensor

@@ -118,7 +118,7 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
 
 
 def _create_model(cfg: Config, data_module: Recipe1MDataModule):
-    max_num_labels = cfg.dataset.filtering.max_num_labels
+    max_num_ingredients = cfg.dataset.filtering.max_num_labels
     max_recipe_len = (
         cfg.dataset.filtering.max_num_instructions
         * cfg.dataset.filtering.max_instruction_length
@@ -128,7 +128,7 @@ def _create_model(cfg: Config, data_module: Recipe1MDataModule):
             cfg.image_encoder,
             cfg.ingr_predictor,
             cfg.optimization,
-            max_num_labels=max_num_labels,
+            max_num_ingredients=max_num_ingredients,
             ingr_vocab_size=data_module.ingr_vocab_size,
             ingr_eos_value=data_module.ingr_eos_value,
         )
@@ -138,7 +138,7 @@ def _create_model(cfg: Config, data_module: Recipe1MDataModule):
             cfg.ingr_predictor,
             cfg.recipe_gen,
             cfg.optimization,
-            max_num_labels=max_num_labels,
+            max_num_ingredients=max_num_ingredients,
             max_recipe_len=max_recipe_len,
             ingr_vocab_size=data_module.ingr_vocab_size,
             instr_vocab_size=data_module.instr_vocab_size,
