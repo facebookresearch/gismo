@@ -12,9 +12,12 @@ def copy_source_code_to_cwd():
     """
     original_path = hydra.utils.get_original_cwd()
     target_path = os.getcwd()
+    print(f"Running in folder {target_path}")
+
+    print(f"Copying to {target_path}...")
     folders_to_copy = ["inv_cooking", "data"]
     for folder in folders_to_copy:
         src_folder = os.path.join(original_path, folder)
         dst_folder = os.path.join(target_path, folder)
-        shutil.copytree(src_folder, dst_folder)
-    print(f"Running in folder {target_path}")
+        shutil.copytree(src_folder, dst_folder, symlinks=True)
+    print(f"Copying to {target_path} (DONE)")

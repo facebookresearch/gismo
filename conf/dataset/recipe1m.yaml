@@ -1,7 +1,7 @@
 # @package _group_
 
 name: "recipe1m"
-path: "/checkpoint/qduval/recipe1m/"
+path: "data/recipe1m"
 splits_path: "data/splits/recipe1m"
 
 image_resize: 448
@@ -18,7 +18,7 @@ filtering:
   max_instruction_length: 15
 
 pre_processing:
-  save_path: '/checkpoint/qduval/recipe1m/preprocessed'
+  save_path: 'data/recipe1m/preprocessed'
   threshold_ingrs: 10  # minimum ingr count threshold
   threshold_words: 10  # minimum word count threshold
   maxnuminstrs: 20  # max number of instructions (sentences)

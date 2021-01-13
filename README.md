@@ -51,13 +51,17 @@ images/val
 images/test
 ```
 
+- Link the dataset to your current folder (the other option is to modify "path" in the configuration of the dataset)
+
+```
+ln -s /path/to/recipe1m/ data/recipe1m
+```
+
 - Pre-process the dataset with:
 
 ```
 python preprocess.py dataset=recipe1m
 ```
-
-This will add an additional folder "preprocessed" inside the folder of the dataset.
 
 <br>
 
