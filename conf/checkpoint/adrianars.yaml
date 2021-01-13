@@ -2,3 +2,4 @@
 
 dir: '/checkpoint/adrianars/inversecooking2.0/debug/'
 log_folder: '/checkpoint/adrianars/log_runs'
+tensorboard_folder: '/checkpoint/adrianars/inversecooking2.0/debug/logs'

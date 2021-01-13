@@ -21,6 +21,7 @@ class TaskType(Enum):
 class CheckpointConfig:
     log_folder: str = MISSING
     dir: str = MISSING
+    tensorboard_folder: str = MISSING
 
 
 @dataclass
