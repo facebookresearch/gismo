@@ -53,9 +53,14 @@ class Vocabulary(object):
         self.idx -= 1
 
     def __call__(self, word: str):
-        if not word in self.word2idx:
+        if word not in self.word2idx:
             return self.word2idx["<pad>"]
         return self.word2idx[word]
 
     def __len__(self):
         return len(self.idx2word)
+
+    def __repr__(self):
+        return repr(
+            {"word2idx": self.word2idx, "idx2word": self.idx2word, "idx": self.idx}
+        )

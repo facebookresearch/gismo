@@ -26,4 +26,3 @@ pre_processing:
   minnuminstrs: 2  # min number of instructions (sentences)
   minnumingrs: 2  # min number of ingredients
   minnumwords: 20  # minimum number of characters in recipe
-  forcegen: true  # do not cache results: recompute everything

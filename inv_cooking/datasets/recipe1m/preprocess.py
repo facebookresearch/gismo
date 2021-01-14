@@ -12,292 +12,157 @@ from collections import Counter
 
 import nltk
 from omegaconf import DictConfig
-from tqdm import *
+from tqdm import tqdm
 
+from inv_cooking.datasets.recipe1m.parsing import (
+    IngredientParser,
+    InstructionParser,
+    cluster_ingredients,
+    remove_plurals,
+)
 from inv_cooking.datasets.vocabulary import Vocabulary
 
-
-def get_ingredient(det_ingr, replace_dict):
-    det_ingr_undrs = det_ingr["text"].lower()
-    det_ingr_undrs = "".join(i for i in det_ingr_undrs if not i.isdigit())
-
-    for rep, char_list in replace_dict.items():
-        for c_ in char_list:
-            if c_ in det_ingr_undrs:
-                det_ingr_undrs = det_ingr_undrs.replace(c_, rep)
-    det_ingr_undrs = det_ingr_undrs.strip()
-    det_ingr_undrs = det_ingr_undrs.replace(" ", "_")
-
-    return det_ingr_undrs
-
-
-def get_instruction(instruction, replace_dict, instruction_mode=True):
-    instruction = instruction.lower()
-
-    for rep, char_list in replace_dict.items():
-        for c_ in char_list:
-            if c_ in instruction:
-                instruction = instruction.replace(c_, rep)
-        instruction = instruction.strip()
-    # remove sentences starting with "1.", "2.", ... from the targets
-    if len(instruction) > 0 and instruction[0].isdigit() and instruction_mode:
-        instruction = ""
-    return instruction
-
-
-def remove_plurals(counter_ingrs, ingr_clusters):
-    del_ingrs = []
-
-    for k, v in counter_ingrs.items():
-
-        if len(k) == 0:
-            del_ingrs.append(k)
-            continue
-
-        gotit = 0
-        if k[-2:] == "es":
-            if k[:-2] in counter_ingrs.keys():
-                counter_ingrs[k[:-2]] += v
-                ingr_clusters[k[:-2]].extend(ingr_clusters[k])
-                del_ingrs.append(k)
-                gotit = 1
-
-        if k[-1] == "s" and gotit == 0:
-            if k[:-1] in counter_ingrs.keys():
-                counter_ingrs[k[:-1]] += v
-                ingr_clusters[k[:-1]].extend(ingr_clusters[k])
-                del_ingrs.append(k)
-    for item in del_ingrs:
-        del counter_ingrs[item]
-        del ingr_clusters[item]
-    return counter_ingrs, ingr_clusters
-
-
-def cluster_ingredients(counter_ingrs):
-    mydict = dict()
-    mydict_ingrs = dict()
-
-    for k, v in counter_ingrs.items():
-
-        w1 = k.split("_")[-1]
-        w2 = k.split("_")[0]
-        lw = [w1, w2]
-        if len(k.split("_")) > 1:
-            w3 = k.split("_")[0] + "_" + k.split("_")[1]
-            w4 = k.split("_")[-2] + "_" + k.split("_")[-1]
-
-            lw = [w1, w2, w4, w3]
-
-        gotit = 0
-        for w in lw:
-            if w in counter_ingrs.keys():
-                # check if its parts are
-                parts = w.split("_")
-                if len(parts) > 0:
-                    if parts[0] in counter_ingrs.keys():
-                        w = parts[0]
-                    elif parts[1] in counter_ingrs.keys():
-                        w = parts[1]
-                if w in mydict.keys():
-                    mydict[w] += v
-                    mydict_ingrs[w].append(k)
-                else:
-                    mydict[w] = v
-                    mydict_ingrs[w] = [k]
-                gotit = 1
-                break
-        if gotit == 0:
-            mydict[k] = v
-            mydict_ingrs[k] = [k]
-
-    return mydict, mydict_ingrs
+BASE_WORDS = [
+    "peppers",
+    "tomato",
+    "spinach_leaves",
+    "turkey_breast",
+    "lettuce_leaf",
+    "chicken_thighs",
+    "milk_powder",
+    "bread_crumbs",
+    "onion_flakes",
+    "red_pepper",
+    "pepper_flakes",
+    "juice_concentrate",
+    "cracker_crumbs",
+    "hot_chili",
+    "seasoning_mix",
+    "dill_weed",
+    "pepper_sauce",
+    "sprouts",
+    "cooking_spray",
+    "cheese_blend",
+    "basil_leaves",
+    "pineapple_chunks",
+    "marshmallow",
+    "chile_powder",
+    "cheese_blend",
+    "corn_kernels",
+    "tomato_sauce",
+    "chickens",
+    "cracker_crust",
+    "lemonade_concentrate",
+    "red_chili",
+    "mushroom_caps",
+    "mushroom_cap",
+    "breaded_chicken",
+    "frozen_pineapple",
+    "pineapple_chunks",
+    "seasoning_mix",
+    "seaweed",
+    "onion_flakes",
+    "bouillon_granules",
+    "lettuce_leaf",
+    "stuffing_mix",
+    "parsley_flakes",
+    "chicken_breast",
+    "basil_leaves",
+    "baguettes",
+    "green_tea",
+    "peanut_butter",
+    "green_onion",
+    "fresh_cilantro",
+    "breaded_chicken",
+    "hot_pepper",
+    "dried_lavender",
+    "white_chocolate",
+    "dill_weed",
+    "cake_mix",
+    "cheese_spread",
+    "turkey_breast",
+    "chucken_thighs",
+    "basil_leaves",
+    "mandarin_orange",
+    "laurel",
+    "cabbage_head",
+    "pistachio",
+    "cheese_dip",
+    "thyme_leave",
+    "boneless_pork",
+    "red_pepper",
+    "onion_dip",
+    "skinless_chicken",
+    "dark_chocolate",
+    "canned_corn",
+    "muffin",
+    "cracker_crust",
+    "bread_crumbs",
+    "frozen_broccoli",
+    "philadelphia",
+    "cracker_crust",
+    "chicken_breast",
+]
 
 
-def update_counter(list_, counter_toks, istrain=False):
-    for sentence in list_:
+def update_counter(sentence_list, counter_toks):
+    for sentence in sentence_list:
         tokens = nltk.tokenize.word_tokenize(sentence)
-        if istrain:
-            counter_toks.update(tokens)
+        counter_toks.update(tokens)
 
 
-def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
-    print("Loading data...")
-
-    if not os.path.exists(args.save_path):
-        os.mkdir(args.save_path)
-
-    dets = json.load(open(os.path.join(recipe1m_path, "det_ingrs.json"), "r"))
-    layer1 = json.load(open(os.path.join(recipe1m_path, "layer1.json"), "r"))
-    layer2 = json.load(open(os.path.join(recipe1m_path, "layer2.json"), "r"))
-
-    id2im = {}
-
+def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
+    id_to_images_index = {}
     for i, entry in enumerate(layer2):
-        id2im[entry["id"]] = i
+        id_to_images_index[entry["id"]] = i
 
-    print("Loaded data.")
-    print("Found %d recipes in the dataset." % (len(layer1)))
-    replace_dict_ingrs = {
-        "and": ["&", "'n"],
-        "": ["%", ",", ".", "#", "[", "]", "!", "?"],
-    }
-    replace_dict_instrs = {"and": ["&", "'n"], "": ["#", "[", "]"]}
+    ingredient_parser = IngredientParser(
+        replace_dict={"and": ["&", "'n"], "": ["%", ",", ".", "#", "[", "]", "!", "?"]}
+    )
+
+    instruction_parser = InstructionParser(
+        replace_dict={"and": ["&", "'n"], "": ["#", "[", "]"]}
+    )
 
     idx2ind = {}
     for i, entry in enumerate(dets):
         idx2ind[entry["id"]] = i
 
-    ingrs_file = args.save_path + "allingrs_count.pkl"
-    instrs_file = args.save_path + "allwords_count.pkl"
-
     #####
     # 1. Count words in dataset and clean
     #####
-    if os.path.exists(ingrs_file) and os.path.exists(instrs_file) and not args.forcegen:
-        print("loading pre-extracted word counters")
-        counter_ingrs = pickle.load(open(args.save_path + "allingrs_count.pkl", "rb"))
-        counter_toks = pickle.load(open(args.save_path + "allwords_count.pkl", "rb"))
-    else:
-        counter_ingrs = Counter()
-        counter_toks = Counter()
 
-        for i, entry in tqdm(enumerate(layer1)):
+    counter_ingrs = Counter()
+    counter_toks = Counter()
 
-            # get all instructions for this recipe
-            instrs = entry["instructions"]
+    for i, entry in tqdm(enumerate(layer1)):
 
-            instrs_list = []
-            ingrs_list = []
+        # retrieve pre-detected ingredients for this entry
+        det_entry = dets[idx2ind[entry["id"]]]
+        ingrs_list = list(ingredient_parser.parse_entry(det_entry))
 
-            # retrieve pre-detected ingredients for this entry
-            det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
+        # get raw text for instructions of this entry
+        acc_len, instrs_list = instruction_parser.parse_entry(entry)
 
-            valid = dets[idx2ind[entry["id"]]]["valid"]
-            det_ingrs_filtered = []
+        # discard recipes with too few or too many ingredients or instruction words
+        if (
+            len(ingrs_list) < args.minnumingrs
+            or len(instrs_list) < args.minnuminstrs
+            or len(instrs_list) >= args.maxnuminstrs
+            or len(ingrs_list) >= args.maxnumingrs
+            or acc_len < args.minnumwords
+        ):
+            continue
 
-            for j, det_ingr in enumerate(det_ingrs):
-                if len(det_ingr) > 0 and valid[j]:
-                    det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
-                    det_ingrs_filtered.append(det_ingr_undrs)
-                    ingrs_list.append(det_ingr_undrs)
-
-            # get raw text for instructions of this entry
-            acc_len = 0
-            for instr in instrs:
-                instr = instr["text"]
-                instr = get_instruction(instr, replace_dict_instrs)
-                if len(instr) > 0:
-                    instrs_list.append(instr)
-                    acc_len += len(instr)
-
-            # discard recipes with too few or too many ingredients or instruction words
-            if (
-                len(ingrs_list) < args.minnumingrs
-                or len(instrs_list) < args.minnuminstrs
-                or len(instrs_list) >= args.maxnuminstrs
-                or len(ingrs_list) >= args.maxnumingrs
-                or acc_len < args.minnumwords
-            ):
-                continue
-
-            # tokenize sentences and update counter
-            update_counter(
-                instrs_list, counter_toks, istrain=entry["partition"] == "train"
-            )
+        # tokenize sentences and update counter
+        if entry["partition"] == "train":
+            update_counter(instrs_list, counter_toks)
             title = nltk.tokenize.word_tokenize(entry["title"].lower())
-            if entry["partition"] == "train":
-                counter_toks.update(title)
-            if entry["partition"] == "train":
-                counter_ingrs.update(ingrs_list)
-
-        pickle.dump(counter_ingrs, open(args.save_path + "allingrs_count.pkl", "wb"))
-        # pickle.dump(counter_toks, open(args.save_path + 'allwords_count.pkl', 'wb'))
+            counter_toks.update(title)
+            counter_ingrs.update(ingrs_list)
 
     # manually add missing entries for better clustering
-    base_words = [
-        "peppers",
-        "tomato",
-        "spinach_leaves",
-        "turkey_breast",
-        "lettuce_leaf",
-        "chicken_thighs",
-        "milk_powder",
-        "bread_crumbs",
-        "onion_flakes",
-        "red_pepper",
-        "pepper_flakes",
-        "juice_concentrate",
-        "cracker_crumbs",
-        "hot_chili",
-        "seasoning_mix",
-        "dill_weed",
-        "pepper_sauce",
-        "sprouts",
-        "cooking_spray",
-        "cheese_blend",
-        "basil_leaves",
-        "pineapple_chunks",
-        "marshmallow",
-        "chile_powder",
-        "cheese_blend",
-        "corn_kernels",
-        "tomato_sauce",
-        "chickens",
-        "cracker_crust",
-        "lemonade_concentrate",
-        "red_chili",
-        "mushroom_caps",
-        "mushroom_cap",
-        "breaded_chicken",
-        "frozen_pineapple",
-        "pineapple_chunks",
-        "seasoning_mix",
-        "seaweed",
-        "onion_flakes",
-        "bouillon_granules",
-        "lettuce_leaf",
-        "stuffing_mix",
-        "parsley_flakes",
-        "chicken_breast",
-        "basil_leaves",
-        "baguettes",
-        "green_tea",
-        "peanut_butter",
-        "green_onion",
-        "fresh_cilantro",
-        "breaded_chicken",
-        "hot_pepper",
-        "dried_lavender",
-        "white_chocolate",
-        "dill_weed",
-        "cake_mix",
-        "cheese_spread",
-        "turkey_breast",
-        "chucken_thighs",
-        "basil_leaves",
-        "mandarin_orange",
-        "laurel",
-        "cabbage_head",
-        "pistachio",
-        "cheese_dip",
-        "thyme_leave",
-        "boneless_pork",
-        "red_pepper",
-        "onion_dip",
-        "skinless_chicken",
-        "dark_chocolate",
-        "canned_corn",
-        "muffin",
-        "cracker_crust",
-        "bread_crumbs",
-        "frozen_broccoli",
-        "philadelphia",
-        "cracker_crust",
-        "chicken_breast",
-    ]
-
-    for base_word in base_words:
-
+    for base_word in BASE_WORDS:
         if base_word not in counter_ingrs.keys():
             counter_ingrs[base_word] = 1
 
@@ -316,7 +181,7 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     vocab_toks.add_word("<start>")
     vocab_toks.add_word("<end>")
     vocab_toks.add_word("<eoi>")
-    for i, word in enumerate(words):
+    for word in words:
         vocab_toks.add_word(word)
     vocab_toks.add_word("<pad>")
 
@@ -338,34 +203,18 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     ######
     for i, entry in tqdm(enumerate(layer1)):
 
-        # get all instructions for this recipe
-        instrs = entry["instructions"]
-
-        instrs_list = []
-        ingrs_list = []
-        images_list = []
-
         # retrieve pre-detected ingredients for this entry
-        det_ingrs = dets[idx2ind[entry["id"]]]["ingredients"]
-        valid = dets[idx2ind[entry["id"]]]["valid"]
         labels = []
-
-        for j, det_ingr in enumerate(det_ingrs):
-            if len(det_ingr) > 0 and valid[j]:
-                det_ingr_undrs = get_ingredient(det_ingr, replace_dict_ingrs)
-                ingrs_list.append(det_ingr_undrs)
-                label_idx = vocab_ingrs(det_ingr_undrs)
-                if label_idx is not vocab_ingrs("<pad>") and label_idx not in labels:
-                    labels.append(label_idx)
+        ingrs_list = []
+        det_entry = dets[idx2ind[entry["id"]]]
+        for det_ingr_undrs in ingredient_parser.parse_entry(det_entry):
+            ingrs_list.append(det_ingr_undrs)
+            label_idx = vocab_ingrs(det_ingr_undrs)
+            if label_idx is not vocab_ingrs("<pad>") and label_idx not in labels:
+                labels.append(label_idx)
 
         # get raw text for instructions of this entry
-        acc_len = 0
-        for instr in instrs:
-            instr = instr["text"]
-            instr = get_instruction(instr, replace_dict_instrs)
-            if len(instr) > 0:
-                acc_len += len(instr)
-                instrs_list.append(instr)
+        acc_len, instrs_list = instruction_parser.parse_entry(entry)
 
         # we discard recipes with too many or too few ingredients or instruction words
         if (
@@ -377,31 +226,31 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
         ):
             continue
 
-        if entry["id"] in id2im.keys():
-            ims = layer2[id2im[entry["id"]]]
-
-            # copy image paths for this recipe
-            for im in ims["images"]:
-                images_list.append(im["id"])
+        # copy image paths for this recipe
+        images_list = []
+        if entry["id"] in id_to_images_index.keys():
+            image_entry = layer2[id_to_images_index[entry["id"]]]
+            for image in image_entry["images"]:
+                images_list.append(image["id"])
 
         # tokenize sentences
-        toks = []
-
+        tokenized_instructions = []
         for instr in instrs_list:
             tokens = nltk.tokenize.word_tokenize(instr)
-            toks.append(tokens)
+            tokenized_instructions.append(tokens)
 
+        # tokenize title
         title = nltk.tokenize.word_tokenize(entry["title"].lower())
 
-        newentry = {
+        new_entry = {
             "id": entry["id"],
             "instructions": instrs_list,
-            "tokenized": toks,
+            "tokenized": tokenized_instructions,
             "ingredients": ingrs_list,
             "images": images_list,
             "title": title,
         }
-        dataset[entry["partition"]].append(newentry)
+        dataset[entry["partition"]].append(new_entry)
 
     print("Dataset size:")
     for split in dataset.keys():
@@ -410,9 +259,29 @@ def build_vocab_recipe1m(recipe1m_path: str, args: DictConfig):
     return vocab_ingrs, vocab_toks, dataset
 
 
-def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
-    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(recipe1m_path, config)
+def load_unprocessed_dataset(recipe1m_path):
+    print("Loading data...")
+    dets = json.load(open(os.path.join(recipe1m_path, "det_ingrs.json"), "r"))
+    layer1 = json.load(open(os.path.join(recipe1m_path, "layer1.json"), "r"))
+    layer2 = json.load(open(os.path.join(recipe1m_path, "layer2.json"), "r"))
+    print("Loaded data.")
+    print(f"Found {len(layer1)} recipes in the dataset.")
+    return dets, layer1, layer2
 
+
+def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
+    if not os.path.exists(config.save_path):
+        os.mkdir(config.save_path)
+
+    # Load the data files of Recipe1M
+    dets, layer1, layer2 = load_unprocessed_dataset(recipe1m_path)
+
+    # Build vocabularies and dataset
+    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(
+        dets, layer1, layer2, config
+    )
+
+    # Save the vocabularies and dataset
     ingredients_path = os.path.join(config.save_path, "final_recipe1m_vocab_ingrs.pkl")
     with open(ingredients_path, "wb") as f:
         pickle.dump(vocab_ingrs, f)
@@ -422,11 +291,7 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
         pickle.dump(vocab_toks, f)
 
     for split in dataset.keys():
-        recipe_split_path = os.path.join(
-            config.save_path, "final_recipe1m_" + split + ".pkl"
-        )
-        with open(
-            recipe_split_path,
-            "wb",
-        ) as f:
+        split_file_name = "final_recipe1m_" + split + ".pkl"
+        split_file_name = os.path.join(config.save_path, split_file_name)
+        with open(split_file_name, "wb") as f:
             pickle.dump(dataset[split], f)

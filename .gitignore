@@ -8,3 +8,4 @@ outputs/
 launch.json
 settings.json
 .idea/
+.DS_Store
