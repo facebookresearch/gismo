@@ -32,7 +32,7 @@ def run_training(
 
     # logging
     logger = pl_loggers.TensorBoardLogger(
-        os.path.join(cfg.checkpoint.dir, "logs"), name=cfg.task.name + "-" + cfg.name,
+        cfg.checkpoint.tensorboard_folder, name=cfg.task.name + "-" + cfg.name,
     )
 
     # check-pointing and early stopping

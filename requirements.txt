@@ -1,9 +1,9 @@
-pandas
-tqdm
-spicy
-lmdb
-nltk
-hydra-core
+pandas==1.1.4
+tqdm==4.54.0
+spicy==0.16.0
+lmdb==1.0.0
+nltk==3.5
+hydra-core==1.0.4
 pytorch-lightning
-tensorboard
+tensorboard==2.4.0
 submitit==1.1.5
