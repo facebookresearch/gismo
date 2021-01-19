@@ -3,6 +3,18 @@
 resnet50_encoder:
   model: resnet50
   pretrained: True
+  dropout: 0.1
+  freeze: 'none'
+
+resnet101_encoder:
+  model: resnet101
+  pretrained: True
+  dropout: 0.0
+  freeze: 'none'
+
+resnext101_32x8d_encoder:
+  model: resnext101_32x8d
+  pretrained: True
   dropout: 0.0
   freeze: 'none'
 
@@ -17,7 +29,7 @@ ingr_predictor_ff:
   embed_size: 2048
   freeze: False  # setting freeze to True will also freeze the image encoder
   load_pretrained_from: None
-  layers: 2
+  layers: 3
   dropout: 0.0
   criterion: bce
   cardinality_pred: none
@@ -27,8 +39,8 @@ ingr_predictor_ff_with_card_pred:
   embed_size: 2048
   freeze: False  # setting freeze to True will also freeze the image encoder
   load_pretrained_from: None
-  layers: 2
-  dropout: 0.0
+  layers: 3
+  dropout: 0.1
   criterion: bce
   cardinality_pred: categorical
 
