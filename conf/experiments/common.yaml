@@ -4,19 +4,19 @@ resnet50_encoder:
   model: resnet50
   pretrained: True
   dropout: 0.1
-  freeze: 'none'
+  freeze: False
 
 resnet101_encoder:
   model: resnet101
   pretrained: True
   dropout: 0.0
-  freeze: 'none'
+  freeze: False
 
 resnext101_32x8d_encoder:
   model: resnext101_32x8d
   pretrained: True
   dropout: 0.0
-  freeze: 'none'
+  freeze: False
 
 vit_small_encoder:
   model: vit_32_small
@@ -62,9 +62,19 @@ ingr_predictor_tf:
   n_att: 8
   dropout: 0.3
 
-recipe_gen_tf:
-  dropout: 0.5
+ingr_predictor_ff_with_card_pred_pretrained:
+  model: ff
   embed_size: 2048
+  freeze: True  # setting freeze to True will also freeze the image encoder
+  load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
+  layers: 3
+  dropout: 0.1
+  criterion: bce
+  cardinality_pred: categorical
+
+recipe_gen_tf:
+  dropout: 0.3
+  embed_size: 512
   n_att_heads: 8
-  layers: 2
+  layers: 16
   normalize_before: True

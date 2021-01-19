@@ -76,9 +76,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             crit_type=config.criterion,
             card_type=cardinality_pred,
         )
-
-        if config.freeze:
-            freeze_fn(model)
+        
         return model
 
     def __init__(

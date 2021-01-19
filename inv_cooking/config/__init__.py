@@ -5,7 +5,7 @@ from .dataset import (
     DatasetLoadingConfig,
     DatasetName,
 )
-from .image_encoder import ImageEncoderConfig, ImageEncoderFreezeType
+from .image_encoder import ImageEncoderConfig
 from .ingredient_predictor import (
     CardinalityPredictionType,
     IngredientPredictorConfig,

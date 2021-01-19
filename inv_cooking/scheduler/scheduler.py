@@ -20,7 +20,9 @@ def schedule_jobs(configurations: List[Config], mode: str) -> None:
 def _schedule_job_locally(cfg: Config, mode: str):
     nb_gpu = torch.cuda.device_count()
     if mode == "train":
-        run_training(cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp", load_checkpoint=False)
+        run_training(
+            cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp", load_checkpoint=False
+        )
     else:
         run_eval(cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp")
 
@@ -43,7 +45,9 @@ def _schedule_job_on_slurm(cfg: Config, mode: str):
 
     if mode == "train":
         trainer = ResumableTrainer(config=cfg, nb_gpu=nb_gpus, nb_node=cfg.slurm.nodes)
-        job = executor.submit(trainer,)
+        job = executor.submit(
+            trainer,
+        )
         print(f"Submitted {job.job_id}")
     else:
         raise NotImplementedError
@@ -73,6 +77,11 @@ class ResumableTrainer:
 
     def checkpoint(self):
         trainer = ResumableTrainer(
-            config=self.config, nb_gpu=self.nb_gpu, nb_node=self.nb_node, load_checkpoint=True
+            config=self.config,
+            nb_gpu=self.nb_gpu,
+            nb_node=self.nb_node,
+            load_checkpoint=True,
         )
-        return submitit.helpers.DelayedSubmission(trainer,)
+        return submitit.helpers.DelayedSubmission(
+            trainer,
+        )

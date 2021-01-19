@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torchvision.models.resnet as resnet
 
-from inv_cooking.config import ImageEncoderConfig, ImageEncoderFreezeType
+from inv_cooking.config import ImageEncoderConfig
 from inv_cooking.models.modules.utils import freeze_fn
 
 
@@ -46,19 +46,18 @@ class ResnetImageEncoder(nn.Module):
                 nn.ReLU(),
             )
 
-    def _freeze_layers(self, freeze: ImageEncoderFreezeType):
-        if freeze == ImageEncoderFreezeType.pretrained:
+    def _freeze_layers(self, freeze: bool):
+        if freeze:
             freeze_fn(self.pretrained_net)
-        elif freeze == ImageEncoderFreezeType.all:
-            freeze_fn(self.pretrained_net)
-            if self.last_module is not None:
-                freeze_fn(self.last_module)
 
-    def forward(self, images: torch.Tensor):
+    def forward(self, images: torch.Tensor, return_reshaped_features=True):
         if images is None:
             return None
 
         features = self.pretrained_net(images)
         if self.last_module is not None:
             features = self.last_module(features)
-        return features.reshape(features.size(0), features.size(1), -1)
+        if return_reshaped_features:
+            return features.reshape(features.size(0), features.size(1), -1)
+        else:
+            return features

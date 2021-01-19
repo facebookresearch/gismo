@@ -55,7 +55,7 @@ class ImageToRecipe(_BaseModule):
         self.o_f1, self.c_f1, self.i_f1 = DistributedF1.create_all(
             which_f1=["o_f1", "c_f1", "i_f1"],
             pad_value=self.model.ingr_vocab_size - 1,
-            remove_eos=self.model.ingr_predictor.requires_eos,
+            remove_eos=self.model.im2ingr.ingr_predictor.requires_eos,
             dist_sync_on_step=True,
         )
         self.val_losses = DistributedValLosses(
@@ -156,7 +156,7 @@ class ImageToRecipe(_BaseModule):
     def create_optimization_groups(self):
         return [
             OptimizationGroup(
-                model=self.model.image_encoder,
+                model=self.model.im2ingr.image_encoder,
                 pretrained=self.pretrained_imenc,
                 name="image encoder",
             ),
@@ -166,7 +166,7 @@ class ImageToRecipe(_BaseModule):
                 name="ingredient encoder",
             ),
             OptimizationGroup(
-                model=self.model.ingr_predictor,
+                model=self.model.im2ingr.ingr_predictor,
                 pretrained=self.pretrained_ingrpred,
                 name="ingredient predictor",
             ),
