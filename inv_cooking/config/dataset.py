@@ -29,6 +29,7 @@ class DatasetConfig:
     name: DatasetName = DatasetName.recipe1m
     path: str = MISSING
     splits_path: str = MISSING
+    eval_split: str = MISSING
     image_resize: int = MISSING
     image_crop_size: int = MISSING
     loading: DatasetLoadingConfig = DatasetLoadingConfig()

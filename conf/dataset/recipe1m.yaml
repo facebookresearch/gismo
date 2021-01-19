@@ -3,12 +3,13 @@
 name: "recipe1m"
 path: "data/recipe1m"
 splits_path: "data/splits/recipe1m"
+eval_split: "test"
 
 image_resize: 448
 image_crop_size: 448
 
 loading:
-  batch_size: 16
+  batch_size: 32
   num_workers: 8
 
 filtering:
