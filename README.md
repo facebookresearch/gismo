@@ -76,6 +76,9 @@ Training can be run as in the following example command:
 This command will look for the definition of the experiment "im2recipe" in the configuration
 file "conf/experiments/im2recipe.yaml" and run this experiment.
 
+Evaluation can be run as in the following example command:
+    python eval.py task=im2recipe name=im2recipe
+
 ### Running on SLURM
 
 Running on SLURM requires only to add the SLURM configuration to the command line:
