@@ -53,7 +53,7 @@ def run_training(
     early_stop_callback = EarlyStopping(
         monitor=monitored_metric.name,
         min_delta=0.00,
-        patience=10,
+        patience=cfg.optimization.patience,
         verbose=False,
         mode=monitored_metric.mode,
     )
@@ -97,7 +97,6 @@ def _load_data_set(cfg):
         dataset_config=cfg.dataset,
         seed=cfg.optimization.seed,
         loading_options=_get_loading_options(cfg),
-        # checkpoint=None ## TODO: check how this would work
     )
 
 
