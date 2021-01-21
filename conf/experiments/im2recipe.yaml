@@ -20,6 +20,11 @@ im2recipe:
       eos_loss: 0.0
       recipe_loss: 1.0
 
+im2recipe_vit:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder: vit_small_encoder
+
 search_example_im2recipe:
   comment: 'example of hyper-parameter search for im2recipe'
   parent: im2recipe

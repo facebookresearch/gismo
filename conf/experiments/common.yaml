@@ -6,6 +6,12 @@ resnet50_encoder:
   dropout: 0.0
   freeze: 'none'
 
+vit_small_encoder:
+  model: vit_32_small
+  pretrained: False
+  dropout: 0.1
+  freeze: 'none'
+
 ingr_predictor_ff:
   model: ff
   embed_size: 2048

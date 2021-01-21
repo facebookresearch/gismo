@@ -31,16 +31,20 @@ class ResnetImageEncoder(nn.Module):
 
         # Adapt the output dimension in case of mismatch
         in_dim = pretrained_net.fc.in_features
-        if in_dim == embed_size:
-            self.last_module = None
+        self.last_module = self._build_adaptation_head(in_dim, embed_size, dropout=config.dropout)
+        self._freeze_layers(config.freeze)
+
+    @staticmethod
+    def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
+        if input_size == embed_size:
+            return None
         else:
-            self.last_module = nn.Sequential(
-                nn.Conv2d(in_dim, embed_size, kernel_size=1, padding=0, bias=False),
-                nn.Dropout(config.dropout),
+            return nn.Sequential(
+                nn.Conv2d(input_size, embed_size, kernel_size=1, padding=0, bias=False),
+                nn.Dropout(dropout),
                 nn.BatchNorm2d(embed_size, momentum=0.01),
                 nn.ReLU(),
             )
-        self._freeze_layers(config.freeze)
 
     def _freeze_layers(self, freeze: ImageEncoderFreezeType):
         if freeze == ImageEncoderFreezeType.pretrained:

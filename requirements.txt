@@ -6,4 +6,5 @@ nltk==3.5
 hydra-core==1.0.4
 pytorch-lightning
 tensorboard==2.4.0
+timm==0.3.2
 submitit==1.1.5

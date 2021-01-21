@@ -4,11 +4,13 @@
 
 from inv_cooking.config import ImageEncoderConfig
 from .resnet import ResnetImageEncoder
+from .vit import VitImageEncoder
 
 
 def create_image_encoder(embed_size: int, config: ImageEncoderConfig):
     if "resnet" in config.model or "resnext" in config.model:
         return ResnetImageEncoder(embed_size, config)
+    elif "vit" in config.model:
+        return VitImageEncoder(embed_size, config, image_size=448)  # TODO - through configuration
     else:
         raise ValueError("Invalid image model {}".format(config.model))
-
