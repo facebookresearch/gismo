@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+
 import torch
 import torch.nn as nn
 import torchvision.models.resnet as resnet
@@ -9,7 +10,7 @@ from inv_cooking.config import ImageEncoderConfig, ImageEncoderFreezeType
 from inv_cooking.models.modules.utils import freeze_fn
 
 
-class ImageEncoder(nn.Module):
+class ResnetImageEncoder(nn.Module):
     """
     Extract feature vectors from input images.
     """
@@ -21,15 +22,15 @@ class ImageEncoder(nn.Module):
     ):
         super().__init__()
 
-        if "resnet" in config.model or "resnext" in config.model:
-            pretrained_net = resnet.__dict__[config.model](pretrained=config.pretrained)
-            # delete avg pooling and last fc layer
-            modules = list(pretrained_net.children())[:-2]
-            self.pretrained_net = nn.Sequential(*modules)
-            in_dim = pretrained_net.fc.in_features
-        else:
-            raise ValueError("Invalid image model {}".format(config.model))
+        # Load the pre-trained resnet encoder
+        pretrained_net = resnet.__dict__[config.model](pretrained=config.pretrained)
 
+        # Delete avg pooling and last fc layer
+        modules = list(pretrained_net.children())[:-2]
+        self.pretrained_net = nn.Sequential(*modules)
+
+        # Adapt the output dimension in case of mismatch
+        in_dim = pretrained_net.fc.in_features
         if in_dim == embed_size:
             self.last_module = None
         else:

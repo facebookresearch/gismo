@@ -10,7 +10,7 @@ from inv_cooking.config import (
     IngredientPredictorConfig,
     RecipeGeneratorConfig,
 )
-from inv_cooking.models.image_encoder import ImageEncoder
+from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
 from inv_cooking.models.ingredients_predictor import (
     create_ingredient_predictor,
@@ -39,7 +39,7 @@ class Im2Recipe(nn.Module):
         if ingr_pred_config.freeze:
             image_encoder_config.freeze = ImageEncoderFreezeType.all
 
-        self.image_encoder = ImageEncoder(
+        self.image_encoder = create_image_encoder(
             ingr_pred_config.embed_size, image_encoder_config
         )
         self.ingr_predictor = create_ingredient_predictor(
