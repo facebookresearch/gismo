@@ -1,16 +1,22 @@
-from typing import List
-
 import submitit
 import torch
 
 from inv_cooking.config import Config
+from inv_cooking.scheduler.parsing import RawConfig
 from inv_cooking.training import run_training, run_eval
 from inv_cooking.utils.hydra import copy_source_code_to_cwd
 
 
-def schedule_jobs(configurations: List[Config], training_mode: bool) -> None:
-    copy_source_code_to_cwd()  # Because Hydra create a new running folder
-    for config in configurations:
+def schedule_jobs(cfg: RawConfig, training_mode: bool) -> None:
+    # Because Hydra create a new running folder, we copy code and data to this
+    # location (to have an isolated working copy). This should be done even in
+    # case the process is spawn by Pytorch Lightning in the context of DDP
+    # since each process will run in a separate hydra folder
+    copy_source_code_to_cwd()
+
+    # Run each of the jobs described by the configuration (there might be more)
+    # than one in case of hyper-parameter search
+    for config in RawConfig.to_config(cfg):
         if config.slurm.partition == "local":
             _schedule_job_locally(config, training_mode)
         else:

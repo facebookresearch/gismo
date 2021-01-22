@@ -6,11 +6,13 @@ from inv_cooking.datasets.recipe1m import run_dataset_pre_processing
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg: RawConfig) -> None:
-    configs = RawConfig.to_config(cfg)
-    if configs:
-        # TODO - the expansion of experiment might not be necessary for pre-processing
-        config = configs[0]
-        run_dataset_pre_processing(config.dataset.path, config.dataset.pre_processing)
+    """
+    Preprocess the selected dataset.
+
+    Example usage:
+    `python preprocess.py dataset=recipe1m`
+    """
+    run_dataset_pre_processing(cfg.dataset.path, cfg.dataset.pre_processing)
 
 
 if __name__ == "__main__":
