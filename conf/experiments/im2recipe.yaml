@@ -1,9 +1,12 @@
 # @package _group_
 
-im2recipe_invcooking1.0:
+im2recipe_invcooking1.0_linearimgtransf_final_trainingrpred:
   comment: 'default configuration for im2recipe (inverse cooking 1.0 model)'
   image_encoder: resnet50_encoder
   ingr_predictor: ingr_predictor_ff_with_card_pred_pretrained
+  pretrained_im2ingr:
+    freeze: True 
+    load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
   recipe_gen: recipe_gen_tf
   optimization:
     seed: 1235
@@ -13,7 +16,7 @@ im2recipe_invcooking1.0:
     lr_decay_every: 1
     weight_decay: 0.0
     max_epochs: 400
-    patience: 50
+    patience: 20
     loss_weights:
       label_loss: 0.0
       cardinality_loss: 0.0

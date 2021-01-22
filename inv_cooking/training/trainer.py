@@ -146,6 +146,7 @@ def _create_model(cfg: Config, data_module: Recipe1MDataModule):
             cfg.ingr_predictor,
             cfg.recipe_gen,
             cfg.optimization,
+            cfg.pretrained_im2ingr,
             max_num_ingredients=max_num_ingredients,
             max_recipe_len=max_recipe_len,
             ingr_vocab_size=data_module.ingr_vocab_size,

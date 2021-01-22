@@ -27,8 +27,6 @@ vit_small_encoder:
 ingr_predictor_ff:
   model: ff
   embed_size: 2048
-  freeze: False  # setting freeze to True will also freeze the image encoder
-  load_pretrained_from: None
   layers: 3
   dropout: 0.0
   criterion: bce
@@ -37,8 +35,6 @@ ingr_predictor_ff:
 ingr_predictor_ff_with_card_pred:
   model: ff
   embed_size: 2048
-  freeze: False  # setting freeze to True will also freeze the image encoder
-  load_pretrained_from: None
   layers: 3
   dropout: 0.1
   criterion: bce
@@ -47,8 +43,6 @@ ingr_predictor_ff_with_card_pred:
 ingr_predictor_lstm:
   model: lstm
   embed_size: 2048
-  freeze: False  # setting freeze to True will also freeze the image encoder
-  load_pretrained_from: None
   with_set_prediction: true
   dropout: 0.1
 
@@ -56,8 +50,6 @@ ingr_predictor_tf:
   model: tf
   layers: 0
   embed_size: 2048
-  freeze: False  # setting freeze to True will also freeze the image encoder
-  load_pretrained_from: None
   with_set_prediction: false
   n_att: 8
   dropout: 0.3
@@ -65,8 +57,6 @@ ingr_predictor_tf:
 ingr_predictor_ff_with_card_pred_pretrained:
   model: ff
   embed_size: 2048
-  freeze: True  # setting freeze to True will also freeze the image encoder
-  load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
   layers: 3
   dropout: 0.1
   criterion: bce

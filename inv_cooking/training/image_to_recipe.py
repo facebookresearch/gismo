@@ -7,6 +7,7 @@ from inv_cooking.config import (
     IngredientPredictorConfig,
     OptimizationConfig,
     RecipeGeneratorConfig,
+    PretrainedConfig,
 )
 from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.training.utils import MonitoredMetric, OptimizationGroup, _BaseModule
@@ -24,6 +25,7 @@ class ImageToRecipe(_BaseModule):
         ingr_pred_config: IngredientPredictorConfig,
         recipe_gen_config: RecipeGeneratorConfig,
         optim_config: OptimizationConfig,
+        pretrained_im2ingr_config: PretrainedConfig,
         max_num_ingredients: int,
         max_recipe_len: int,
         ingr_vocab_size: int,
@@ -36,6 +38,7 @@ class ImageToRecipe(_BaseModule):
             image_encoder_config,
             ingr_pred_config,
             recipe_gen_config,
+            pretrained_im2ingr_config,
             ingr_vocab_size=ingr_vocab_size,
             instr_vocab_size=instr_vocab_size,
             max_num_ingredients=max_num_ingredients,
@@ -48,19 +51,19 @@ class ImageToRecipe(_BaseModule):
         # check if pretrained models
         self.pretrained_imenc = image_encoder_config.pretrained
         self.pretrained_ingrpred = (
-            ingr_pred_config.load_pretrained_from != "None"
-        )  ## TODO: load model when pretrained
+            pretrained_im2ingr_config.load_pretrained_from != "None"
+        )
 
         # metrics to track at validation time
         self.o_f1, self.c_f1, self.i_f1 = DistributedF1.create_all(
             which_f1=["o_f1", "c_f1", "i_f1"],
             pad_value=self.model.ingr_vocab_size - 1,
-            remove_eos=self.model.im2ingr.ingr_predictor.requires_eos,
+            remove_eos=self.model.ingr_predictor.requires_eos,
             dist_sync_on_step=True,
         )
         self.val_losses = DistributedValLosses(
             weights=self.optimization.loss_weights,
-            monitor_ingr_losses=ingr_pred_config.freeze,
+            monitor_ingr_losses=pretrained_im2ingr_config.freeze,
             dist_sync_on_step=True,
         )
         self.perplexity = DistributedAverage()
@@ -88,7 +91,7 @@ class ImageToRecipe(_BaseModule):
         return out[0], out[1:]
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self(compute_losses=True, **batch)
+        out = self(compute_losses=True, use_ingr_pred=False, **batch)
         return out[0]
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
@@ -156,7 +159,7 @@ class ImageToRecipe(_BaseModule):
     def create_optimization_groups(self):
         return [
             OptimizationGroup(
-                model=self.model.im2ingr.image_encoder,
+                model=self.model.image_encoder,
                 pretrained=self.pretrained_imenc,
                 name="image encoder",
             ),
@@ -166,7 +169,7 @@ class ImageToRecipe(_BaseModule):
                 name="ingredient encoder",
             ),
             OptimizationGroup(
-                model=self.model.im2ingr.ingr_predictor,
+                model=self.model.ingr_predictor,
                 pretrained=self.pretrained_ingrpred,
                 name="ingredient predictor",
             ),

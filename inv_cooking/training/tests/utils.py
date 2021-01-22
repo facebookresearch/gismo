@@ -2,11 +2,11 @@ import torch
 
 from inv_cooking.config import (
     ImageEncoderConfig,
-    ImageEncoderFreezeType,
     IngredientPredictorTransformerConfig,
     IngredientPredictorType,
     OptimizationConfig,
     RecipeGeneratorConfig,
+    PretrainedConfig,
 )
 
 
@@ -60,8 +60,6 @@ class _BaseTest:
             model=IngredientPredictorType.tf,
             layers=0,
             embed_size=2048,
-            freeze=False,
-            load_pretrained_from="",
             with_set_prediction=False,
             n_att=8,
             dropout=0.3,
@@ -73,7 +71,7 @@ class _BaseTest:
             model="resnet50",
             pretrained=False,
             dropout=0.1,
-            freeze=ImageEncoderFreezeType.none,
+            freeze=False,
         )
 
     @staticmethod
@@ -84,4 +82,11 @@ class _BaseTest:
             n_att_heads=8,
             layers=2,
             normalize_before=True,
+        )
+
+    @staticmethod
+    def default_pretrained_config():
+        return PretrainedConfig(
+            freeze=False,
+            load_pretrained_from="None",
         )

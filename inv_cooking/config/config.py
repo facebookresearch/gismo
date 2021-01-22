@@ -25,6 +25,12 @@ class CheckpointConfig:
 
 
 @dataclass
+class PretrainedConfig:
+    freeze: bool = MISSING 
+    load_pretrained_from: str = MISSING
+    
+
+@dataclass
 class Config:
     """
     Configuration fed to the main scheduler of experiment.
@@ -43,3 +49,4 @@ class Config:
     image_encoder: ImageEncoderConfig = ImageEncoderConfig()
     ingr_predictor: IngredientPredictorConfig = MISSING
     slurm: SlurmConfig = SlurmConfig()
+    pretrained_im2ingr: PretrainedConfig = PretrainedConfig()

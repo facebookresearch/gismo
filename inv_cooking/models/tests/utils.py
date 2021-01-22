@@ -1,7 +1,7 @@
 from inv_cooking.config import (
     ImageEncoderConfig,
-    ImageEncoderFreezeType,
     RecipeGeneratorConfig,
+    PretrainedConfig,
 )
 
 
@@ -12,11 +12,17 @@ class FakeConfig:
             model="resnet50",
             pretrained=False,
             dropout=0.1,
-            freeze=ImageEncoderFreezeType.none,
+            freeze=False,
         )
 
     @staticmethod
     def recipe_gen_config() -> RecipeGeneratorConfig:
         return RecipeGeneratorConfig(
             dropout=0.1, embed_size=2048, n_att_heads=1, layers=1, normalize_before=True
+        )
+
+    @staticmethod
+    def pretrained_config() -> PretrainedConfig:
+        return PretrainedConfig(
+            freeze=False, load_pretrained_from="None",
         )

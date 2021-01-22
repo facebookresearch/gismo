@@ -3,7 +3,7 @@ from typing import List
 import pytest
 import torch
 
-from inv_cooking.config import ImageEncoderConfig, ImageEncoderFreezeType
+from inv_cooking.config import ImageEncoderConfig
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.image_encoder.vit import VitImageEncoder
 
@@ -18,7 +18,7 @@ def test_resnet_image_encoder(embed_size: int, expected: List[int]):
             dropout=0.5,
             model="resnet50",
             pretrained=True,
-            freeze=ImageEncoderFreezeType.none,
+            freeze=False,
         ),
     )
     x = torch.randn(size=(1, 3, 224, 224))

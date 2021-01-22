@@ -1,4 +1,4 @@
-from .config import CheckpointConfig, Config, TaskType
+from .config import CheckpointConfig, Config, TaskType, PretrainedConfig
 from .dataset import (
     DatasetConfig,
     DatasetFilterConfig,

@@ -14,8 +14,6 @@ class IngredientPredictorType(Enum):
 class IngredientPredictorConfig:
     model: IngredientPredictorType = MISSING
     embed_size: int = MISSING
-    freeze: bool = MISSING
-    load_pretrained_from: str = MISSING
 
 
 class IngredientPredictorCriterion(Enum):

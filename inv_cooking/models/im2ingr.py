@@ -10,7 +10,6 @@ from inv_cooking.config import (
 )
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
-from inv_cooking.models.modules.utils import freeze_fn
 
 
 class Im2Ingr(nn.Module):
@@ -35,19 +34,6 @@ class Im2Ingr(nn.Module):
             max_num_ingredients=max_num_ingredients,
             eos_value=ingr_eos_value,
         )
-
-        # load pretrained model from checkpoint
-        if ingr_pred_config.load_pretrained_from != "None":
-            pretrained_model = torch.load(ingr_pred_config.load_pretrained_from)
-            pretrained_image_encoder_dict = {k[len('model.image_encoder.'):]: v for k, v in pretrained_model['state_dict'].items() if 'image_encoder' in k}
-            self.image_encoder.load_state_dict(pretrained_image_encoder_dict)
-            pretrained_ingr_predictor_dict = {k[len('model.ingr_predictor.'):]: v for k, v in pretrained_model['state_dict'].items() if 'ingr_predictor' in k}
-            self.ingr_predictor.load_state_dict(pretrained_ingr_predictor_dict)
-
-        # freeze pretrained model
-        if ingr_pred_config.freeze:
-            freeze_fn(self.image_encoder)
-            freeze_fn(self.ingr_predictor)
 
     def forward(
         self,

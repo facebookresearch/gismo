@@ -60,6 +60,7 @@ class RawConfig:
             config.ingr_predictor = cls._get_ingr_predictor(experiment.ingr_predictor)
             config.checkpoint = raw_config.checkpoint
             config.optimization = experiment.optimization
+            config.pretrained_im2ingr = experiment.pretrained_im2ingr
             configs.append(config)
         return configs
 

@@ -17,6 +17,7 @@ def test_Im2Recipe():
         image_encoder_config=FakeConfig.image_encoder_config(),
         ingr_pred_config=FakeIngredientPredictorConfig.ff_config(),
         recipe_gen_config=FakeConfig.recipe_gen_config(),
+        pretrained_im2ingr_config=FakeConfig.pretrained_config(),
         ingr_vocab_size=ingr_vocab_size,
         instr_vocab_size=instr_vocab_size,
         max_num_ingredients=max_num_ingredients,

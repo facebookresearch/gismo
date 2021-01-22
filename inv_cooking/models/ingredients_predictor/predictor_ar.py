@@ -13,7 +13,6 @@ from inv_cooking.config import (
 )
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
-from inv_cooking.models.modules.utils import freeze_fn
 
 from .predictor import IngredientsPredictor
 from .utils import label2_k_hots, mask_from_eos
@@ -109,8 +108,6 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             perminv=config.with_set_prediction,
         )
 
-        if config.freeze:
-            freeze_fn(model)
         return model
 
     def __init__(

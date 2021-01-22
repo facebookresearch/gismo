@@ -8,6 +8,7 @@ from inv_cooking.config import (
     ImageEncoderConfig,
     IngredientPredictorConfig,
     RecipeGeneratorConfig,
+    PretrainedConfig,
 )
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
@@ -16,6 +17,8 @@ from inv_cooking.models.ingredients_predictor import (
     mask_from_eos,
 )
 from inv_cooking.models.recipe_generator import RecipeGenerator
+from inv_cooking.models.modules.utils import freeze_fn
+
 
 class Im2Recipe(nn.Module):
     def __init__(
@@ -23,6 +26,7 @@ class Im2Recipe(nn.Module):
         image_encoder_config: ImageEncoderConfig,
         ingr_pred_config: IngredientPredictorConfig,
         recipe_gen_config: RecipeGeneratorConfig,
+        pretrained_im2ingr_config: PretrainedConfig,
         ingr_vocab_size: int,
         instr_vocab_size: int,
         max_num_ingredients: int,
@@ -39,10 +43,22 @@ class Im2Recipe(nn.Module):
         )
         self.ingr_predictor = create_ingredient_predictor(
             ingr_pred_config,
+            vocab_size=ingr_vocab_size,
             max_num_ingredients=max_num_ingredients,
-            ingr_vocab_size=ingr_vocab_size,
-            ingr_eos_value=ingr_eos_value,
+            eos_value=ingr_eos_value,
         )
+        # load pretrained model from checkpoint
+        if pretrained_im2ingr_config.load_pretrained_from != "None":
+            pretrained_model = torch.load(pretrained_im2ingr_config.load_pretrained_from)
+            pretrained_image_encoder_dict = {k[len('model.image_encoder.'):]: v for k, v in pretrained_model['state_dict'].items() if 'image_encoder' in k}
+            self.image_encoder.load_state_dict(pretrained_image_encoder_dict)
+            pretrained_ingr_predictor_dict = {k[len('model.ingr_predictor.'):]: v for k, v in pretrained_model['state_dict'].items() if 'ingr_predictor' in k}
+            self.ingr_predictor.load_state_dict(pretrained_ingr_predictor_dict)
+
+        # freeze pretrained model
+        if pretrained_im2ingr_config.freeze:
+            freeze_fn(self.image_encoder)
+            freeze_fn(self.ingr_predictor)
 
         if ingr_pred_config.embed_size != recipe_gen_config.embed_size:
             self.img_features_transform = nn.Sequential(

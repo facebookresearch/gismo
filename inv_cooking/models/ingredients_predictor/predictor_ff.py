@@ -13,7 +13,6 @@ from inv_cooking.config import (
     IngredientPredictorFFConfig,
 )
 from inv_cooking.models.modules.ff_decoder import FFDecoder
-from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.utils.criterion import SoftIoUCriterion, TargetDistributionCriterion
 
 from .predictor import IngredientsPredictor

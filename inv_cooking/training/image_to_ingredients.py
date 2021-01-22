@@ -45,7 +45,7 @@ class ImageToIngredients(_BaseModule):
         )
         self.val_losses = DistributedValLosses(
             weights=self.optimization.loss_weights,
-            monitor_ingr_losses=ingr_pred_config.freeze,
+            monitor_ingr_losses=True,
             dist_sync_on_step=True,
         )
 
