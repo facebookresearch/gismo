@@ -95,6 +95,31 @@ Check training progress with Tensorboard from the folder in which the checkpoint
 
 <br>
 
+## Reproducing experiments
+
+To reproduce the experiments in inversecooking1.0, train the image-to-ingredient model as follows on 2 gpus:
+
+    python train.py task=im2ingr name=im2ingr_resnet50_ff_bce_cat
+
+Once trained, update the im2recipe.yaml file with the following entry (or edit the existing one):
+
+ im2recipe_invcooking1.0:
+   comment: 'inverse cooking 1.0 model'
+   parent: im2recipe
+   pretrained_im2ingr:
+     freeze: True
+     load_pretrained_from: /path/to/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
+
+Then, train the image-to-recipe model as follows on 1 node and 8 gpus:
+
+    python train.py task=im2recipe name=im2recipe_invcooking1.0
+
+Finally, you can evaluate your model as follows:
+
+    python eval.py task=im2recipe name=im2recipe_invcooking1.0
+
+Note that models will be evaluated on the val_all data split of Recipe1M by default. If you would like to change the evaluation set, please change the flag eval_split under the recipe1m config. Possible eval_split choices are: train, val (subset of 5k samples from val_all), val_all, and test.
+
 ## Evaluation
 
 TBD
