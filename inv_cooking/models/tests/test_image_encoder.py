@@ -33,7 +33,7 @@ def test_resnet_image_encoder_size_448():
             dropout=0.5,
             model="resnet50",
             pretrained=True,
-            freeze=ImageEncoderFreezeType.none,
+            freeze=False,
         ),
     )
     x = torch.randn(size=(1, 3, 448, 448))
@@ -51,7 +51,7 @@ def test_vit_image_encoder(embed_size: int, expected: List[int]):
             dropout=0.5,
             model="vit_32_small",
             pretrained=False,
-            freeze=ImageEncoderFreezeType.none,
+            freeze=False,
         ),
     )
     x = torch.randn(size=(1, 3, 224, 224))
@@ -69,7 +69,7 @@ def test_vit_image_encoder_size_448(model_name: str):
             dropout=0.5,
             model=model_name,
             pretrained=False,
-            freeze=ImageEncoderFreezeType.none,
+            freeze=False,
         ),
     )
     x = torch.randn(size=(1, 3, 448, 448))
