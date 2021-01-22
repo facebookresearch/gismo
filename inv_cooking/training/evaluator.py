@@ -21,7 +21,7 @@ def run_eval(
 
     checkpoint_file = os.path.join(cfg.checkpoint.dir, cfg.task.name + "-" + cfg.name, 'best.ckpt')
     if not os.path.exists(checkpoint_file):
-        raise Error(f'Checkpoint {checkpoint_dir} does not exist.')
+        raise ValueError(f'Checkpoint {checkpoint_file} does not exist.')
 
     # data module
     data_module = _load_data_set(cfg)

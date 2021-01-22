@@ -45,7 +45,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             print(f"Training set composed of {len(self.dataset_train)} samples.")
             print(f"Validation set composed of {len(self.dataset_val)} samples.")
         elif stage == "test":
-            self.dataset_test = self._get_dataset(self.dataset_config.eval_split)
+            self.dataset_test = self._get_dataset(stage, self.dataset_config.eval_split)
             print(f"Eval split: {self.dataset_config.eval_split} composed of {len(self.dataset_test)} samples.")
             self.ingr_vocab_size = self.dataset_test.get_ingr_vocab_size()
             self.instr_vocab_size = self.dataset_test.get_instr_vocab_size()
@@ -86,10 +86,14 @@ class Recipe1MDataModule(pl.LightningDataModule):
         )
         return data_loader
 
-    def _get_dataset(self, stage: str):
+    def _get_dataset(self, stage: str, which_split: Optional[str] = None):
 
         # reads the file with ids to use for the corresponding split
-        splits_filename = os.path.join(self.dataset_config.splits_path, stage + ".txt")
+        if stage == 'test' and which_split is not None:
+            splits_filename = os.path.join(self.dataset_config.splits_path, which_split + ".txt")
+        else:
+            splits_filename = os.path.join(self.dataset_config.splits_path, stage + ".txt")
+
         with open(splits_filename, "r") as f:
             selected_indices = np.array([int(line.rstrip("\n")) for line in f])
 
