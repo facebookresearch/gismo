@@ -54,14 +54,6 @@ ingr_predictor_tf:
   n_att: 8
   dropout: 0.3
 
-ingr_predictor_ff_with_card_pred_pretrained:
-  model: ff
-  embed_size: 2048
-  layers: 3
-  dropout: 0.1
-  criterion: bce
-  cardinality_pred: categorical
-
 recipe_gen_tf:
   dropout: 0.3
   embed_size: 512

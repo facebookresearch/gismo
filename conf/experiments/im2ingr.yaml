@@ -28,38 +28,18 @@ im2ingr_tf:
   ingr_predictor: ingr_predictor_tf
 
 im2ingr_resnext101_ff_bce:
+  parent: im2ingr
   comment: 'best image-to-set results for resnext101 image backbone'
   image_encoder: resnext101_32x8d_encoder
-  ingr_predictor: ingr_predictor_ff
-  recipe_gen: recipe_gen_tf
   optimization:
-    seed: 1235
     lr: 0.0001
     scale_lr_pretrained: 0.1
-    lr_decay_rate: 0.99
-    lr_decay_every: 1
-    weight_decay: 0.0
-    max_epochs: 400
-    patience: 10
-    loss_weights:
-      label_loss: 1.0
-      cardinality_loss: 0.0
-      eos_loss: 0.0
 
 im2ingr_resnet50_ff_bce_cat:
+  parent: im2ingr
   comment: 'best image-to-set results for resnet50 image backbone'
-  image_encoder: resnet50_encoder
   ingr_predictor: ingr_predictor_ff_with_card_pred
-  recipe_gen: recipe_gen_tf
   optimization:
-    seed: 1235
-    lr: 0.001
-    scale_lr_pretrained: 0.01
-    lr_decay_rate: 0.99
-    lr_decay_every: 1
-    weight_decay: 0.0
-    max_epochs: 400
-    patience: 10
     loss_weights:
       label_loss: 1.0
       cardinality_loss: 0.001

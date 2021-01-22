@@ -1,9 +1,9 @@
 # @package _group_
 
-im2recipe_invcooking1.0_linearimgtransf_final_trainingrpred:
+im2recipe_invcooking1.0:
   comment: 'default configuration for im2recipe (inverse cooking 1.0 model)'
   image_encoder: resnet50_encoder
-  ingr_predictor: ingr_predictor_ff_with_card_pred_pretrained
+  ingr_predictor: ingr_predictor_ff_with_card_pred
   pretrained_im2ingr:
     freeze: True 
     load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
