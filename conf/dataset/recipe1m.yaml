@@ -3,7 +3,7 @@
 name: "recipe1m"
 path: "data/recipe1m"
 splits_path: "data/splits/recipe1m"
-eval_split: "test"
+eval_split: "val_all"
 
 image_resize: 448
 image_crop_size: 448
