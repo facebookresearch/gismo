@@ -1,4 +1,6 @@
 import os
+import glob
+import torch
 
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
@@ -19,9 +21,10 @@ def run_eval(
 ) -> None:
     seed_everything(cfg.optimization.seed)
 
-    checkpoint_file = os.path.join(cfg.checkpoint.dir, cfg.task.name + "-" + cfg.name, 'best.ckpt')
-    if not os.path.exists(checkpoint_file):
-        raise ValueError(f'Checkpoint {checkpoint_file} does not exist.')
+    checkpoint_dir = os.path.join(cfg.checkpoint.dir, cfg.task.name + "-" + cfg.name)
+    all_checkpoints = glob.glob(os.path.join(checkpoint_dir, 'best*.ckpt'))
+    if len(all_checkpoints) == 0:
+        raise ValueError(f'Checkpoint {checkpoint_dir} does not exist.')
 
     # data module
     data_module = _load_data_set(cfg)
@@ -32,6 +35,20 @@ def run_eval(
     # note: it should be possible to directly load the weights when creating the model by using load_from_checkpoint function
     # this function seems to rely on saving hyper-parameters though
     model = _create_model(cfg, data_module)
+    monitored_metric = model.get_monitored_metric()
+
+    # check best checkpoint path
+    best_scores = torch.zeros(len(all_checkpoints))        
+    for i, filename in enumerate(all_checkpoints):
+        check = torch.load(filename)
+        best_scores[i] = list(check['callbacks'].values())[0]['best_model_score']
+        del check
+    if monitored_metric.mode == 'min':
+        pos = best_scores.argmin()
+    else:
+        pos = best_scores.argmax()
+
+    print(f'Using checkpoint {all_checkpoints[pos]}')
 
     # trainer
     trainer = pl.Trainer(
@@ -40,7 +57,7 @@ def run_eval(
             accelerator=distributed_mode,
             benchmark=True,  # increases speed for fixed image sizes
             precision=32,
-            resume_from_checkpoint=checkpoint_file,
+            resume_from_checkpoint=all_checkpoints[pos],
         )
 
     # test model
