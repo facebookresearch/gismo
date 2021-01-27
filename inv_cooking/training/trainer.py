@@ -9,6 +9,7 @@ from inv_cooking.config import Config, TaskType
 from inv_cooking.datasets.recipe1m import LoadingOptions, Recipe1MDataModule
 from inv_cooking.models.ingredients_predictor.builder import requires_eos_token
 from inv_cooking.utils.checkpointing import get_checkpoint_directory
+from inv_cooking.utils.logging import get_log_version
 
 from .image_to_ingredients import ImageToIngredients
 from .image_to_recipe import ImageToRecipe
@@ -22,6 +23,8 @@ def run_training(
 
     checkpoint_dir = get_checkpoint_directory(cfg)
     os.makedirs(checkpoint_dir, exist_ok=True)
+    os.makedirs(cfg.checkpoint.log_folder, exist_ok=True)
+    os.makedirs(cfg.checkpoint.tensorboard_folder, exist_ok=True)
 
     # data module
     data_module = _load_data_set(cfg)
@@ -33,7 +36,10 @@ def run_training(
 
     # logging
     logger = pl_loggers.TensorBoardLogger(
-        cfg.checkpoint.tensorboard_folder, name=cfg.task.name + "-" + cfg.name,
+        save_dir=cfg.checkpoint.tensorboard_folder,
+        name=cfg.task.name + "-" + cfg.name,
+        version=get_log_version(),
+        default_hp_metric=False,
     )
 
     # check-pointing and early stopping
