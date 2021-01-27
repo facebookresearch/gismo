@@ -8,6 +8,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from inv_cooking.config import Config, TaskType
 from inv_cooking.datasets.recipe1m import LoadingOptions, Recipe1MDataModule
 from inv_cooking.models.ingredients_predictor.builder import requires_eos_token
+from inv_cooking.utils.checkpointing import get_checkpoint_directory
 
 from .image_to_ingredients import ImageToIngredients
 from .image_to_recipe import ImageToRecipe
@@ -15,17 +16,12 @@ from .ingredient_to_recipe import IngredientToRecipe
 
 
 def run_training(
-    cfg: Config,
-    gpus: int,
-    nodes: int,
-    distributed_mode: str,
-    load_checkpoint: bool,
+    cfg: Config, gpus: int, nodes: int, distributed_mode: str, load_checkpoint: bool,
 ) -> None:
     seed_everything(cfg.optimization.seed)
 
-    checkpoint_dir = os.path.join(cfg.checkpoint.dir, cfg.task.name + "-" + cfg.name)
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
+    checkpoint_dir = get_checkpoint_directory(cfg)
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     # data module
     data_module = _load_data_set(cfg)
@@ -104,9 +100,7 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
     include_eos = requires_eos_token(cfg.ingr_predictor)
     if cfg.task == TaskType.im2ingr:
         return LoadingOptions(
-            with_image=True,
-            with_ingredient=True,
-            with_ingredient_eos=include_eos,
+            with_image=True, with_ingredient=True, with_ingredient_eos=include_eos,
         )
     elif cfg.task == TaskType.im2recipe:
         return LoadingOptions(
@@ -117,9 +111,7 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
         )
     elif cfg.task == TaskType.ingr2recipe:
         return LoadingOptions(
-            with_ingredient=True,
-            with_ingredient_eos=include_eos,
-            with_recipe=True,
+            with_ingredient=True, with_ingredient_eos=include_eos, with_recipe=True,
         )
     else:
         raise ValueError(f"Unknown task: {cfg.task.name}.")
