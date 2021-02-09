@@ -90,3 +90,12 @@ recipe_gen_tf_seq_ingr_first:
   activation: "relu"
   encoder_attn: seq_ingr_first
   tf_enc_layers: 0
+
+recipe_gen_tf_concat_tf:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: concat_tf
+  tf_enc_layers: 2

@@ -81,9 +81,16 @@ class Im2Recipe(nn.Module):
             scale_grad=False,
         )
 
-        ## TODO: concat_tf
         if self.encoder_attn == EncoderAttentionType.concat_tf:
-            pass
+            self.transformer_encoder = EncoderTransformer(
+                recipe_gen_config.embed_size,
+                dropout=recipe_gen_config.dropout,
+                attention_nheads=recipe_gen_config.n_att_heads,
+                pos_embeddings=False,
+                num_layers=recipe_gen_config.tf_enc_layers,
+                learned=False,
+                activation=recipe_gen_config.activation,
+            )
             
         # recipe generator
         if self.encoder_attn in [EncoderAttentionType.concat, EncoderAttentionType.concat_tf]:
@@ -158,7 +165,11 @@ class Im2Recipe(nn.Module):
             features = [ingr_features, img_features]
             masks = [ingr_mask, img_mask]
         elif self.encoder_attn == EncoderAttentionType.concat_tf:
-            pass
+            features = [
+                self.transformer_encoder(
+                    features=torch.cat((img_features, ingr_features), 2),
+                    masks=torch.cat((img_mask, ingr_mask), 1))]
+            masks = [None]
 
         # generate recipe and compute losses if necessary
         loss, recipe_predictions = self.recipe_gen(

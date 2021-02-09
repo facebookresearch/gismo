@@ -84,7 +84,6 @@ class TransformerDecoderLayer(nn.Module):
         # cross attention
         residual = x
 
-        # if there is more than one encoder conditioning
         assert (len(encoder_out) == len(encoder_padding_mask)) and (len(encoder_out) == len(self.cross_attn))
         for i, (e, m) in enumerate(zip(encoder_out, encoder_padding_mask)):
             x, _ = self.cross_attn[i](
