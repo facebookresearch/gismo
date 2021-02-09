@@ -48,15 +48,45 @@ ingr_predictor_lstm:
 
 ingr_predictor_tf:
   model: tf
-  layers: 0
+  layers: 1
   embed_size: 2048
   with_set_prediction: false
   n_att: 8
   dropout: 0.3
+  activation: "relu"
 
 recipe_gen_tf:
   dropout: 0.3
   embed_size: 512
   n_att_heads: 8
-  layers: 16
-  normalize_before: True
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: concat
+  tf_enc_layers: 0
+
+recipe_gen_tf_gelu:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "gelu"
+  encoder_attn: concat
+  tf_enc_layers: 0
+
+recipe_gen_tf_seq_img_first:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: seq_img_first
+  tf_enc_layers: 0
+
+recipe_gen_tf_seq_ingr_first:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: seq_ingr_first
+  tf_enc_layers: 0

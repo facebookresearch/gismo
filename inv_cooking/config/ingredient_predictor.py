@@ -50,3 +50,4 @@ class IngredientPredictorTransformerConfig(IngredientPredictorARConfig):
     layers: int = MISSING
     n_att: int = MISSING
     dropout: float = MISSING
+    activation: str = MISSING

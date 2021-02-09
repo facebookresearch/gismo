@@ -81,7 +81,6 @@ class _BaseTest:
             embed_size=2048,
             n_att_heads=8,
             layers=2,
-            normalize_before=True,
         )
 
     @staticmethod

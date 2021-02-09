@@ -16,5 +16,8 @@ from .ingredient_predictor import (
     IngredientPredictorType,
 )
 from .optimization import OptimizationConfig
-from .recipe_generator import RecipeGeneratorConfig
+from .recipe_generator import (
+    RecipeGeneratorConfig,
+    EncoderAttentionType,
+)
 from .slurm import SlurmConfig

@@ -22,13 +22,11 @@ from inv_cooking.models.modules.positional_embedding import (
 class TransformerDecoderLayer(nn.Module):
     """Decoder layer block."""
 
-    def __init__(self, embed_dim, n_att, dropout=0.5, normalize_before=True):
+    def __init__(self, embed_dim, n_att, dropout=0.5, activation="relu", n_cross_attn=1):
         super().__init__()
 
         self.embed_dim = embed_dim
         self.dropout = dropout
-        self.relu_dropout = dropout
-        self.normalize_before = normalize_before
 
         # self attention
         self.self_attn = MultiheadAttention(
@@ -37,20 +35,28 @@ class TransformerDecoderLayer(nn.Module):
             dropout=dropout,
         )
 
-        # encoder attention
-        self.encoder_attn = MultiheadAttention(
-            self.embed_dim,
-            n_att,
-            dropout=dropout,
+        # cross attention between encoder and decoder
+        self.cross_attn = nn.ModuleList(
+            [MultiheadAttention(self.embed_dim,
+                                n_att,
+                                dropout=dropout,
+                            )
+            for i in range(n_cross_attn)]
         )
 
         self.fc1 = Linear(self.embed_dim, self.embed_dim)
         self.fc2 = Linear(self.embed_dim, self.embed_dim)
 
-        # layer normalizations: we have one for the encoder attn, one for the self attn and one for the final module
+        # layer normalizations: we have one for the cross attn, one for the self attn and one for the final module
         self.layer_norms = nn.ModuleList(
             [nn.LayerNorm(self.embed_dim) for i in range(3)]
         )
+
+        # activations
+        if activation == "relu":
+            self.activation = F.relu
+        elif activation == "gelu":
+            self.activation = F.gelu
 
     def forward(
         self,
@@ -58,12 +64,11 @@ class TransformerDecoderLayer(nn.Module):
         encoder_out,
         encoder_padding_mask,
         incremental_state,
-        other_encoder_out=None,
+        activation="relu",
     ):
 
         # self attention
         residual = x
-        x = self.maybe_layer_norm(0, x, before=True)
         x, _ = self.self_attn(
             query=x,
             key=x,
@@ -74,64 +79,36 @@ class TransformerDecoderLayer(nn.Module):
         )
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm(0, x, after=True)
+        x = self.layer_norms[0](x)
 
-        # encoder attention
+        # cross attention
         residual = x
-        x = self.maybe_layer_norm(1, x, before=True)
 
-        if other_encoder_out is None:
-            # attention on encoder's output (only composed of ingredients features)
-            x, attn = self.encoder_attn(
+        # if there is more than one encoder conditioning
+        assert (len(encoder_out) == len(encoder_padding_mask)) and (len(encoder_out) == len(self.cross_attn))
+        for i, (e, m) in enumerate(zip(encoder_out, encoder_padding_mask)):
+            x, _ = self.cross_attn[i](
                 query=x,
-                key=encoder_out,
-                value=encoder_out,
-                key_padding_mask=encoder_padding_mask,
-                incremental_state=incremental_state,
-                static_kv=True,
-            )
-        else:
-            # attention on encoder's outputs (composed of ingredient and image features)
-            kv = torch.cat((other_encoder_out, encoder_out), 0)
-            mask = torch.cat(
-                (
-                    torch.zeros(
-                        other_encoder_out.shape[1], other_encoder_out.shape[0]
-                    ).type_as(encoder_padding_mask),
-                    encoder_padding_mask,
-                ),
-                1,
-            )
-            x, _ = self.encoder_attn(
-                query=x,
-                key=kv,
-                value=kv,
-                key_padding_mask=mask,
+                key=e,
+                value=e,
+                key_padding_mask=m,
                 incremental_state=incremental_state,
                 static_kv=True,
             )
 
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm(1, x, after=True)
+        x = self.layer_norms[1](x)
 
         # final operations
         residual = x
-        x = self.maybe_layer_norm(2, x, before=True)
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, p=self.relu_dropout, training=self.training)
+        x = self.activation(self.fc1(x))
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.maybe_layer_norm(2, x, after=True)
+        x = self.layer_norms[2](x)
         return x
-
-    def maybe_layer_norm(self, which_layer_norm, x, before=False, after=False):
-        assert before ^ after
-        if after ^ self.normalize_before:
-            return self.layer_norms[which_layer_norm](x)
-        else:
-            return x
 
 
 class DecoderTransformer(nn.Module):
@@ -147,7 +124,8 @@ class DecoderTransformer(nn.Module):
         pos_embeddings=True,
         num_layers=8,
         learned=True,
-        normalize_before=True,
+        num_cross_attn=1,
+        activation="relu",
     ):
         super(DecoderTransformer, self).__init__()
         self.dropout = dropout
@@ -158,7 +136,7 @@ class DecoderTransformer(nn.Module):
 
         if pos_embeddings:
             self.embed_positions = PositionalEmbedding(
-                1024, embed_size, 0, left_pad=False, learned=learned
+                self.seq_length+1, embed_size, 0, left_pad=False, learned=learned
             )
         else:
             self.embed_positions = None
@@ -172,7 +150,8 @@ class DecoderTransformer(nn.Module):
                     embed_size,
                     attention_nheads,
                     dropout=dropout,
-                    normalize_before=normalize_before,
+                    activation=activation,
+                    n_cross_attn=num_cross_attn,
                 )
                 for i in range(num_layers)
             ]
@@ -181,19 +160,11 @@ class DecoderTransformer(nn.Module):
         self.linear = Linear(embed_size, vocab_size - 1)
 
     def forward(
-        self, features, mask, captions, other_features=None, incremental_state=None
+        self, features, masks, captions, incremental_state=None
     ):
 
-        if features is not None:
-            features = features.permute(0, 2, 1)
-            features = features.transpose(0, 1)
-
-        if mask is not None:
-            mask = (1 - mask.squeeze(1)).bool()
-
-        if other_features is not None:
-            other_features = other_features.permute(0, 2, 1)
-            other_features = other_features.transpose(0, 1)
+        # B x C x T -> T x B x C
+        features = [f.permute(2, 0, 1) for f in features]
 
         # embed positions
         if self.embed_positions is not None:
@@ -217,7 +188,7 @@ class DecoderTransformer(nn.Module):
 
         # decoder layers
         for layer in self.layers:
-            x = layer(x, features, mask, incremental_state, other_features)
+            x = layer(x, features, masks, incremental_state)
         # T x B x C -> B x T x C
         x = x.transpose(0, 1)
 
@@ -232,8 +203,7 @@ class DecoderTransformer(nn.Module):
     def sample(
         self,
         features,
-        mask,
-        other_features=None,
+        masks,
         greedy=True,
         temperature=1.0,
         first_token_value=0,
@@ -243,8 +213,9 @@ class DecoderTransformer(nn.Module):
         incremental_state = {}
 
         # create dummy previous word
-        fs = features.size(0)
-        first_word = torch.ones(fs).type_as(features) * first_token_value
+        assert all(f.size(0) == features[0].size(0) for f in features)
+        fs = features[0].size(0)
+        first_word = torch.ones(fs).type_as(features[0]) * first_token_value       
 
         first_word = first_word.long()
         sampled_ids = [first_word]
@@ -253,9 +224,8 @@ class DecoderTransformer(nn.Module):
             # forward
             outputs = self.forward(
                 features=features,
-                mask=mask,
+                masks=masks,
                 captions=torch.stack(sampled_ids, 1),
-                other_features=other_features,
                 incremental_state=incremental_state,
             )
             outputs = outputs.squeeze(1)

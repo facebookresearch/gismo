@@ -8,7 +8,7 @@ from inv_cooking.utils.criterion import MaskedCrossEntropyCriterion
 
 class RecipeGenerator(nn.Module):
     def __init__(
-        self, args: RecipeGeneratorConfig, instr_vocab_size: int, maxrecipelen: int
+        self, args: RecipeGeneratorConfig, instr_vocab_size: int, maxrecipelen: int, num_cross_attn: int
     ):
         super().__init__()
 
@@ -20,8 +20,9 @@ class RecipeGenerator(nn.Module):
             seq_length=maxrecipelen,
             attention_nheads=args.n_att_heads,
             pos_embeddings=True,
-            num_layers=args.layers,
-            normalize_before=args.normalize_before,
+            num_layers=args.tf_dec_layers,
+            activation=args.activation,
+            num_cross_attn=num_cross_attn,
         )
 
         # recipe loss
@@ -31,10 +32,9 @@ class RecipeGenerator(nn.Module):
 
     def forward(
         self,
-        ingr_features: torch.Tensor,
-        ingr_mask: torch.Tensor,
+        features: torch.Tensor,
+        masks: torch.Tensor,
         recipe_gt: torch.Tensor,
-        img_features: torch.Tensor = None,
         compute_losses=False,
         compute_predictions=False,
         greedy=True,
@@ -45,10 +45,9 @@ class RecipeGenerator(nn.Module):
 
         if compute_losses:
             output_logits, _ = self.model(
-                features=ingr_features,
-                mask=ingr_mask,
+                features=features,
+                masks=masks,
                 captions=recipe_gt,
-                other_features=img_features,
             )
 
             # compute loss
@@ -56,9 +55,8 @@ class RecipeGenerator(nn.Module):
 
         if compute_predictions:
             predictions, _ = self.model.sample(
-                features=ingr_features,
-                mask=ingr_mask,
-                other_features=img_features,
+                features=features,
+                masks=masks,
                 greedy=greedy,
                 temperature=temperature,
                 first_token_value=0,

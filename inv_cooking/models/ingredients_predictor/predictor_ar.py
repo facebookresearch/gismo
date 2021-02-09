@@ -34,13 +34,14 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         max_num_ingredients += 1  # required for EOS token
         print(
             "Building Transformer decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {} / "
-            "Num. Attention Heads {} / Num. Layers {}.".format(
+            "Num. Attention Heads {} / Num. Layers {} / Activation {}.".format(
                 config.model.name,
                 config.embed_size,
                 config.dropout,
                 max_num_ingredients,
                 config.n_att,
                 config.layers,
+                config.activation,
             ),
             flush=True,
         )
@@ -53,7 +54,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             pos_embeddings=False,
             num_layers=config.layers,
             learned=False,
-            normalize_before=True,
+            activation=config.activation,
         )
         return cls.from_decoder(config, decoder, max_num_ingredients, vocab_size, eos_value)
 
@@ -148,8 +149,8 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         # output label_logits is only used to compute losses in case of self.perminv (no teacher forcing)
         # predictions output is used for all auto-regressive models
         predictions, label_logits = self.decoder.sample(
-            img_features,
-            None,
+            [img_features],
+            [None],
             first_token_value=0,
             replacement=False,
         )
@@ -220,7 +221,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             else:
                 # other autoregressive models
                 # we need to recompute logits using teacher forcing (forward pass)
-                label_logits, _ = self.decoder(img_features, None, shift_target)
+                label_logits, _ = self.decoder([img_features], [None], shift_target)
                 label_logits_v = label_logits.view(
                     label_logits.size(0) * label_logits.size(1), -1
                 )

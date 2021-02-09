@@ -9,6 +9,7 @@ from inv_cooking.config import (
     IngredientPredictorConfig,
     RecipeGeneratorConfig,
     PretrainedConfig,
+    EncoderAttentionType,
 )
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.ingredients_encoder import IngredientsEncoder
@@ -17,6 +18,7 @@ from inv_cooking.models.ingredients_predictor import (
     mask_from_eos,
 )
 from inv_cooking.models.recipe_generator import RecipeGenerator
+from inv_cooking.models.modules.transformer_encoder import EncoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
 
 
@@ -37,6 +39,7 @@ class Im2Recipe(nn.Module):
         self.ingr_vocab_size = ingr_vocab_size
         self.ingr_eos_value = ingr_eos_value
         self.instr_vocab_size = instr_vocab_size
+        self.encoder_attn = recipe_gen_config.encoder_attn
 
         self.image_encoder = create_image_encoder(
             ingr_pred_config.embed_size, image_encoder_config
@@ -47,6 +50,7 @@ class Im2Recipe(nn.Module):
             max_num_ingredients=max_num_ingredients,
             eos_value=ingr_eos_value,
         )
+
         # load pretrained model from checkpoint
         if pretrained_im2ingr_config.load_pretrained_from != "None":
             pretrained_model = torch.load(pretrained_im2ingr_config.load_pretrained_from)
@@ -76,8 +80,19 @@ class Im2Recipe(nn.Module):
             dropout=recipe_gen_config.dropout,
             scale_grad=False,
         )
+
+        ## TODO: concat_tf
+        if self.encoder_attn == EncoderAttentionType.concat_tf:
+            pass
+            
+        # recipe generator
+        if self.encoder_attn in [EncoderAttentionType.concat, EncoderAttentionType.concat_tf]:
+            num_cross_attn = 1
+        elif self.encoder_attn in [EncoderAttentionType.seq_img_first, EncoderAttentionType.seq_ingr_first]:
+            num_cross_attn = 2
+
         self.recipe_gen = RecipeGenerator(
-            recipe_gen_config, instr_vocab_size, max_recipe_len
+            recipe_gen_config, instr_vocab_size, max_recipe_len, num_cross_attn,
         )
 
     def forward(
@@ -115,23 +130,40 @@ class Im2Recipe(nn.Module):
             ingr_mask = mask_from_eos(
                 ingr_predictions, eos_value=self.ingr_eos_value, mult_before=False
             )
-            ingr_mask = ingr_mask.float().unsqueeze(1)
+            ingr_mask = (1- ingr_mask).bool()
         else:
             # encode ingredients (using ground truth ingredients)
             ingr_features = self.ingr_encoder(target_ingredients)
             ingr_mask = mask_from_eos(
                 target_ingredients, eos_value=self.ingr_eos_value, mult_before=False
             )
-            ingr_mask = ingr_mask.float().unsqueeze(1)
+            ingr_mask = (1- ingr_mask).bool()
 
+        # transform image features and create mask
         if self.img_features_transform is not None:
             img_features = self.img_features_transform(img_features)
+        img_features = img_features.reshape(img_features.size(0), img_features.size(1), -1)
+        img_mask = torch.zeros(
+            img_features.shape[0], img_features.shape[2]
+            ).type_as(ingr_mask)
+
+        # prepare encoder conditioning for cross attention in recipe tf
+        if self.encoder_attn == EncoderAttentionType.concat:
+            features = [torch.cat((img_features, ingr_features), 2)]
+            masks = [torch.cat((img_mask, ingr_mask), 1)]
+        elif self.encoder_attn == EncoderAttentionType.seq_img_first:
+            features = [img_features, ingr_features]
+            masks = [img_mask, ingr_mask]
+        elif self.encoder_attn == EncoderAttentionType.seq_ingr_first:
+            features = [ingr_features, img_features]
+            masks = [ingr_mask, img_mask]
+        elif self.encoder_attn == EncoderAttentionType.concat_tf:
+            pass
 
         # generate recipe and compute losses if necessary
         loss, recipe_predictions = self.recipe_gen(
-            img_features=img_features.reshape(img_features.size(0), img_features.size(1), -1),
-            ingr_features=ingr_features,
-            ingr_mask=ingr_mask,
+            features=features,
+            masks=masks,
             recipe_gt=target_recipe,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
