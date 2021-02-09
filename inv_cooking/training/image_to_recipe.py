@@ -8,6 +8,7 @@ from inv_cooking.config import (
     OptimizationConfig,
     RecipeGeneratorConfig,
     PretrainedConfig,
+    IngredientTeacherForcingConfig,
 )
 from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.training.utils import MonitoredMetric, OptimizationGroup, _BaseModule
@@ -26,6 +27,7 @@ class ImageToRecipe(_BaseModule):
         recipe_gen_config: RecipeGeneratorConfig,
         optim_config: OptimizationConfig,
         pretrained_im2ingr_config: PretrainedConfig,
+        ingr_teachforce_config: IngredientTeacherForcingConfig,
         max_num_ingredients: int,
         max_recipe_len: int,
         ingr_vocab_size: int,
@@ -47,6 +49,7 @@ class ImageToRecipe(_BaseModule):
         )
 
         self.optimization = optim_config
+        self.ingr_teachforce = ingr_teachforce_config
 
         # check if pretrained models
         self.pretrained_imenc = image_encoder_config.pretrained
@@ -91,14 +94,14 @@ class ImageToRecipe(_BaseModule):
         return out[0], out[1:]
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self(compute_losses=True, use_ingr_pred=False, **batch)
+        out = self(compute_losses=True, use_ingr_pred=self.ingr_teachforce.train, **batch)
         return out[0]
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        return self._evaluation_step(batch, use_ingr_pred=False)
+        return self._evaluation_step(batch, use_ingr_pred=self.ingr_teachforce.val)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        return self._evaluation_step(batch, use_ingr_pred=True)
+        return self._evaluation_step(batch, use_ingr_pred=self.ingr_teachforce.test)
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor], use_ingr_pred: bool):
         out = self(

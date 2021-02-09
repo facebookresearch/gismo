@@ -7,6 +7,7 @@ from inv_cooking.config import (
     OptimizationConfig,
     RecipeGeneratorConfig,
     PretrainedConfig,
+    IngredientTeacherForcingConfig,
 )
 
 
@@ -88,4 +89,12 @@ class _BaseTest:
         return PretrainedConfig(
             freeze=False,
             load_pretrained_from="None",
+        )
+
+    @staticmethod
+    def default_ingr_teachforce_config():
+        return IngredientTeacherForcingConfig(
+            train=True,
+            val=True,
+            test=False,
         )

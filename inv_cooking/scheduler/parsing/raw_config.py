@@ -61,6 +61,7 @@ class RawConfig:
             config.checkpoint = raw_config.checkpoint
             config.optimization = experiment.optimization
             config.pretrained_im2ingr = experiment.pretrained_im2ingr
+            config.ingr_teachforce = experiment.ingr_teachforce
             configs.append(config)
         return configs
 

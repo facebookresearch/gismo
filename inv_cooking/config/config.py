@@ -28,6 +28,13 @@ class CheckpointConfig:
 class PretrainedConfig:
     freeze: bool = MISSING 
     load_pretrained_from: str = MISSING
+
+
+@dataclass
+class IngredientTeacherForcingConfig:
+    train: bool = MISSING
+    val: bool = MISSING
+    test: bool = MISSING
     
 
 @dataclass
@@ -50,3 +57,4 @@ class Config:
     ingr_predictor: IngredientPredictorConfig = MISSING
     slurm: SlurmConfig = SlurmConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()
+    ingr_teachforce: IngredientTeacherForcingConfig = IngredientTeacherForcingConfig()

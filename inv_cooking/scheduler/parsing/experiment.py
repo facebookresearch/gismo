@@ -16,7 +16,7 @@ from omegaconf import DictConfig, OmegaConf
 from inv_cooking.config.image_encoder import ImageEncoderConfig
 from inv_cooking.config.optimization import OptimizationConfig
 from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
-from inv_cooking.config import PretrainedConfig
+from inv_cooking.config import PretrainedConfig, IngredientTeacherForcingConfig
 from inv_cooking.config.utils import untyped_config
 
 
@@ -47,6 +47,7 @@ class Experiment:
     ingr_predictor: DictConfig = untyped_config()
     optimization: OptimizationConfig = OptimizationConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()
+    ingr_teachforce: IngredientTeacherForcingConfig = IngredientTeacherForcingConfig()
 
 
 def parse_experiments(db: Experiments, task: str, name: str) -> List[Experiment]:

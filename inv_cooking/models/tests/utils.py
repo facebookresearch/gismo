@@ -2,6 +2,7 @@ from inv_cooking.config import (
     ImageEncoderConfig,
     RecipeGeneratorConfig,
     PretrainedConfig,
+    IngredientTeacherForcingConfig,
 )
 
 
@@ -25,4 +26,10 @@ class FakeConfig:
     def pretrained_config() -> PretrainedConfig:
         return PretrainedConfig(
             freeze=False, load_pretrained_from="None",
+        )
+
+    @staticmethod
+    def ingr_teachforce_config() -> IngredientTeacherForcingConfig:
+        return IngredientTeacherForcingConfig(
+            train=True, val=True, test=False,
         )
