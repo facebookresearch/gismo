@@ -44,3 +44,30 @@ im2ingr_resnet50_ff_bce_cat:
       label_loss: 1.0
       cardinality_loss: 0.001
       eos_loss: 0.0
+
+im2ingr_vit_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'try the VIT encoder for the images'
+  image_encoder: vit_small_encoder
+
+im2ingr_clip_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'try the CLIP pre-trained encoder for the images'
+  image_encoder:
+    model: clip_RN50
+    pretrained: True
+    dropout: 0.1
+    freeze: False
+  optimization:
+    scale_lr_pretrained: 0.1
+
+im2ingr_clip_vit_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'try the CLIP pre-trained encoder for the images'
+  image_encoder:
+    model: clip_ViT-B/32
+    pretrained: True
+    dropout: 0.1
+    freeze: False
+  optimization:
+    scale_lr_pretrained: 0.1

@@ -22,7 +22,7 @@ vit_small_encoder:
   model: vit_32_small
   pretrained: False
   dropout: 0.1
-  freeze: 'none'
+  freeze: False
 
 ingr_predictor_ff:
   model: ff

@@ -3,6 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from inv_cooking.config import ImageEncoderConfig
+from .clip import ClipBasedEncoder
 from .resnet import ResnetImageEncoder
 from .vit import VitImageEncoder
 
@@ -12,5 +13,7 @@ def create_image_encoder(embed_size: int, config: ImageEncoderConfig):
         return ResnetImageEncoder(embed_size, config)
     elif "vit" in config.model:
         return VitImageEncoder(embed_size, config, image_size=448)  # TODO - through configuration
+    elif config.model.startswith(ClipBasedEncoder.PREFIX):
+        return ClipBasedEncoder(embed_size, config)
     else:
         raise ValueError("Invalid image model {}".format(config.model))
