@@ -14,6 +14,7 @@ class TestImageToRecipe(_BaseTest):
             recipe_gen_config=self.default_recipe_generator_config(),
             optim_config=self.default_optimization_config(),
             pretrained_im2ingr_config = self.default_pretrained_config(),
+            ingr_teachforce_config= self.default_ingr_teachforce_config(),
             max_num_ingredients=self.MAX_NUM_INGREDIENTS,
             max_recipe_len=self.MAX_NUM_INSTRUCTIONS * self.MAX_INSTRUCTION_LENGTH,
             ingr_vocab_size=self.INGR_VOCAB_SIZE,

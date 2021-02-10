@@ -3,6 +3,7 @@ from inv_cooking.config import (
     RecipeGeneratorConfig,
     PretrainedConfig,
     IngredientTeacherForcingConfig,
+    EncoderAttentionType,
 )
 
 
@@ -19,7 +20,10 @@ class FakeConfig:
     @staticmethod
     def recipe_gen_config() -> RecipeGeneratorConfig:
         return RecipeGeneratorConfig(
-            dropout=0.1, embed_size=2048, n_att_heads=1, layers=1
+            dropout=0.1, embed_size=2048, n_att_heads=1,
+            tf_enc_layers=0, tf_dec_layers=1,
+            encoder_attn=EncoderAttentionType.concat,
+            activation="relu",
         )
 
     @staticmethod

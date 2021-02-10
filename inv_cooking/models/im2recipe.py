@@ -156,8 +156,8 @@ class Im2Recipe(nn.Module):
 
         # prepare encoder conditioning for cross attention in recipe tf
         if self.encoder_attn == EncoderAttentionType.concat:
-            features = [torch.cat((img_features, ingr_features), 2)]
-            masks = [torch.cat((img_mask, ingr_mask), 1)]
+            features = torch.cat((img_features, ingr_features), 2)
+            masks = torch.cat((img_mask, ingr_mask), 1)
         elif self.encoder_attn == EncoderAttentionType.seq_img_first:
             features = [img_features, ingr_features]
             masks = [img_mask, ingr_mask]
@@ -165,11 +165,11 @@ class Im2Recipe(nn.Module):
             features = [ingr_features, img_features]
             masks = [ingr_mask, img_mask]
         elif self.encoder_attn == EncoderAttentionType.concat_tf:
-            features = [
-                self.transformer_encoder(
-                    features=torch.cat((img_features, ingr_features), 2),
-                    masks=torch.cat((img_mask, ingr_mask), 1))]
-            masks = [None]
+            features = self.transformer_encoder(
+                features=torch.cat((img_features, ingr_features), 2),
+                masks=torch.cat((img_mask, ingr_mask), 1)
+            )
+            masks = None
 
         # generate recipe and compute losses if necessary
         loss, recipe_predictions = self.recipe_gen(

@@ -162,6 +162,11 @@ class DecoderTransformer(nn.Module):
         self, features, masks, captions, incremental_state=None
     ):
 
+        if not isinstance(features, list):
+            features = [features]
+        if not isinstance(masks, list):
+            masks = [masks]
+
         # B x C x T -> T x B x C
         features = [f.permute(2, 0, 1) for f in features]
 
@@ -210,6 +215,11 @@ class DecoderTransformer(nn.Module):
     ):
 
         incremental_state = {}
+
+        if not isinstance(features, list):
+            features = [features]
+        if not isinstance(masks, list):
+            masks = [masks]
 
         # create dummy previous word
         assert all(f.size(0) == features[0].size(0) for f in features)

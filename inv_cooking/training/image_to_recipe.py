@@ -94,14 +94,14 @@ class ImageToRecipe(_BaseModule):
         return out[0], out[1:]
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self(compute_losses=True, use_ingr_pred=self.ingr_teachforce.train, **batch)
+        out = self(compute_losses=True, use_ingr_pred=not self.ingr_teachforce.train, **batch)
         return out[0]
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        return self._evaluation_step(batch, use_ingr_pred=self.ingr_teachforce.val)
+        return self._evaluation_step(batch, use_ingr_pred=not self.ingr_teachforce.val)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        return self._evaluation_step(batch, use_ingr_pred=self.ingr_teachforce.test)
+        return self._evaluation_step(batch, use_ingr_pred=not self.ingr_teachforce.test)
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor], use_ingr_pred: bool):
         out = self(

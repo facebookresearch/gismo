@@ -8,6 +8,7 @@ from inv_cooking.config import (
     RecipeGeneratorConfig,
     PretrainedConfig,
     IngredientTeacherForcingConfig,
+    EncoderAttentionType,
 )
 
 
@@ -81,7 +82,10 @@ class _BaseTest:
             dropout=0.5,
             embed_size=2048,
             n_att_heads=8,
-            layers=2,
+            tf_enc_layers=0,
+            tf_dec_layers=2,
+            encoder_attn=EncoderAttentionType.concat,
+            activation="relu",
         )
 
     @staticmethod

@@ -31,7 +31,7 @@ class Ingr2Recipe(nn.Module):
             scale_grad=False,
         )
         self.recipe_gen = RecipeGenerator(
-            recipe_gen_config, instr_vocab_size, max_recipe_len
+            recipe_gen_config, instr_vocab_size, max_recipe_len, num_cross_attn=1,
         )
 
     def forward(
@@ -54,13 +54,12 @@ class Ingr2Recipe(nn.Module):
         ingr_mask = mask_from_eos(
             ingredients, eos_value=self.ingr_eos_value, mult_before=False
         )
-        ingr_mask = ingr_mask.float().unsqueeze(1)
+        ingr_mask = (1- ingr_mask).bool()
 
         # generate recipe and compute losses if necessary
         loss, predictions = self.recipe_gen(
-            img_features=None,
-            ingr_features=ingr_features,
-            ingr_mask=ingr_mask,
+            features=ingr_features,
+            masks=ingr_mask,
             recipe_gt=target_recipe,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
