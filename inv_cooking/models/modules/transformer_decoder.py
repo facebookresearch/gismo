@@ -69,6 +69,7 @@ class TransformerDecoderLayer(nn.Module):
 
         # self attention
         residual = x
+        x = self.layer_norms[0](x)
         x, _ = self.self_attn(
             query=x,
             key=x,
@@ -79,11 +80,10 @@ class TransformerDecoderLayer(nn.Module):
         )
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.layer_norms[0](x)
 
         # cross attention
         residual = x
-
+        x = self.layer_norms[1](x)
         assert (len(encoder_out) == len(encoder_padding_mask)) and (len(encoder_out) == len(self.cross_attn))
         for i, (e, m) in enumerate(zip(encoder_out, encoder_padding_mask)):
             x, _ = self.cross_attn[i](
@@ -97,16 +97,15 @@ class TransformerDecoderLayer(nn.Module):
 
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.layer_norms[1](x)
 
         # final operations
         residual = x
+        x = self.layer_norms[2](x)
         x = self.activation(self.fc1(x))
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.fc2(x)
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = residual + x
-        x = self.layer_norms[2](x)
         return x
 
 
