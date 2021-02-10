@@ -47,12 +47,12 @@ im2ingr_resnet50_ff_bce_cat:
 
 im2ingr_vit_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'try the VIT encoder for the images'
+  comment: 'try the VIT encoder for the images (not pretrained)'
   image_encoder: vit_small_encoder
 
 im2ingr_clip_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'try the CLIP pre-trained encoder for the images'
+  comment: 'try the CLIP pre-trained encoder for the images (with fine-tuning)'
   image_encoder:
     model: clip_RN50
     pretrained: True
@@ -63,7 +63,7 @@ im2ingr_clip_ff_bce_cat:
 
 im2ingr_clip_vit_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'try the CLIP pre-trained encoder for the images'
+  comment: 'try the CLIP pre-trained encoder for the images (with fine-tuning)'
   image_encoder:
     model: clip_ViT-B/32
     pretrained: True
