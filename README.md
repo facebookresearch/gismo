@@ -118,7 +118,7 @@ Finally, you can evaluate your model as follows:
 
     python eval.py task=im2recipe name=im2recipe_invcooking1.0
 
-Note that models will be evaluated on the val_all data split of Recipe1M by default. If you would like to change the evaluation set, please change the flag eval_split under the recipe1m config. Possible eval_split choices are: train, val (subset of 5k samples from val_all), val_all, and test.
+Note that models will be evaluated on the val_all data split of Recipe1M without using teacher forcing by default. If you would like to change the evaluation set, please change the flag eval_split under the recipe1m config. Possible eval_split choices are: train, val (subset of 5k samples from val_all), val_all, and test. If you would like to use teacher forcing in the evaluation, please set the flag ingr_teachforce.test to True (see the im2recipe.yaml file).
 
 ## Evaluation
 
