@@ -59,7 +59,7 @@ im2ingr_clip_ff_bce_cat:
     dropout: 0.1
     freeze: False
   optimization:
-    scale_lr_pretrained: 0.1
+    scale_lr_pretrained: SEARCH[0.1,1.0,0.01]
 
 im2ingr_clip_vit_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
