@@ -47,8 +47,25 @@ im2ingr_resnet50_ff_bce_cat:
 
 im2ingr_vit_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'try the VIT encoder for the images (not pretrained)'
-  image_encoder: vit_small_encoder
+  comment: 'Try a VIT pretrained classification encoder'
+  image_encoder:
+     model: vit
+     pretrained: True
+     dropout: 0.1
+     patch_size: SEARCH[16,32]
+     n_cls_tokens: 1
+     freeze: False
+
+im2ingr_vit_multi_class_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'Try a VIT encoder with multi class token (not pretrained)'
+  image_encoder:
+     model: vit
+     pretrained: False
+     dropout: 0.1
+     patch_size: SEARCH[16,32]
+     n_cls_tokens: SEARCH[4, 8, 16]
+     freeze: False
 
 im2ingr_clip_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
