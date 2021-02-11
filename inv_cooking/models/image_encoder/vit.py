@@ -19,7 +19,10 @@ def create_vit_image_encoder(embed_size: int, config: ImageEncoderConfig, image_
     """
     if config.n_cls_tokens == 1:
         return OneClassVit(embed_size=embed_size, config=config, image_size=image_size)
-    elif config.n_cls_tokens == 0:
+
+    if config.pretrained:
+        raise ValueError("VIT pretrained models are only available for a number of class token equal to 1")
+    if config.n_cls_tokens == 0:
         return NoClassVit(embed_size=embed_size, config=config, image_size=image_size)
     else:
         return MultiClassVit(embed_size=embed_size, config=config, image_size=image_size)
