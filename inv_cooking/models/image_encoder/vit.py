@@ -23,7 +23,64 @@ _VALID_MODELS = {
 }
 
 
-class VitImageEncoder(timm.VisionTransformer):
+def create_vit_image_encoder(embed_size: int, config: ImageEncoderConfig, image_size: int = 448):
+    """
+    Create an image encoder based on VIT. Several flavors are available:
+    - no classification token: use the full sequence as output
+    - pre-trained (1 classification token) => return sequence of size 1
+    - multi-classification tokens: return a sequence as long as number of tokens
+    """
+    if config.n_cls_tokens == 1:
+        return OneClassVit(embed_size=embed_size, config=config, image_size=image_size)
+    elif config.n_cls_tokens == 0:
+        return NoClassVit(embed_size=embed_size, config=config, image_size=image_size)
+    else:
+        return None
+
+
+class OneClassVit(nn.Module):
+    """
+    Simple Wrapper around a potentially pretrained image VIT classifier on imagenet:
+    - handles the resizing of the inputs
+    - handles the adaptation of the output size
+    """
+
+    def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
+        super().__init__()
+        if image_size != 384:
+            self.interpolate = nn.Upsample(size=(384, 384))
+        else:
+            self.interpolate = nn.Identity()
+        if config.patch_size == 32:
+            self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
+        else:
+            self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
+        self.core_vit.head = nn.Identity()
+        self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        """
+        :param x: tensor of shape (batch_size, 3, height, width)
+        :return shape (batch_size, embedding_size, 1)
+        """
+        image = self.interpolate(image)
+        out = self.core_vit(image)
+        out = self.adapt_head(out)
+        return out.unsqueeze(-1)
+
+    @staticmethod
+    def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
+        if input_size == embed_size:
+            return nn.Identity()
+        return nn.Sequential(
+            nn.Linear(input_size, embed_size, bias=False),
+            nn.Dropout(dropout),
+            nn.BatchNorm1d(embed_size),
+            nn.ReLU(),
+        )
+
+
+class NoClassVit(timm.VisionTransformer):
     """
     Encodes the image using the encoder part of a ViT (vision transformer).
     The flavor of ViT used is the small one (embedding size of 768).
@@ -34,7 +91,7 @@ class VitImageEncoder(timm.VisionTransformer):
     - with interpolation at the end to reduce the sequence length to 49 (same as ResNet)
     """
 
-    def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int = 224):
+    def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
         assert config.model in _VALID_MODELS, f"Unsupported model {config.model}, use one of {list(_VALID_MODELS.keys())}"
         parameters = _VALID_MODELS[config.model]
         super().__init__(
@@ -79,6 +136,6 @@ class VitImageEncoder(timm.VisionTransformer):
         return nn.Sequential(
             nn.Conv1d(input_size, embed_size, kernel_size=1, padding=0, bias=False),
             nn.Dropout(dropout),
-            nn.BatchNorm1d(embed_size, momentum=0.01),
+            nn.BatchNorm1d(embed_size),
             nn.ReLU(),
         )
