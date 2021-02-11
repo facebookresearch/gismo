@@ -19,9 +19,11 @@ resnext101_32x8d_encoder:
   freeze: False
 
 vit_small_encoder:
-  model: vit_32_small
+  model: vit
   pretrained: False
   dropout: 0.1
+  patch_size: 32
+  n_cls_tokens: 0
   freeze: False
 
 ingr_predictor_ff:

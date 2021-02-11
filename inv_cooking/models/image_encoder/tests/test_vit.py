@@ -1,16 +1,41 @@
-from typing import List
-
 import pytest
 import torch
 
 from inv_cooking.config import ImageEncoderConfig
-from inv_cooking.models.image_encoder.vit import OneClassVit, NoClassVit
+from inv_cooking.models.image_encoder.vit import create_vit_image_encoder
 
 
-def test_one_class_vit():
-    vit = OneClassVit(
+@pytest.mark.parametrize("patch_size", [16, 32])
+def test_multi_class_vit(patch_size: int):
+    vit = create_vit_image_encoder(
         embed_size=1024,
-        config=ImageEncoderConfig(pretrained=False, dropout=0.1),
+        config=ImageEncoderConfig(
+            dropout=0.5,
+            model="vit",
+            pretrained=False,
+            freeze=False,
+            n_cls_tokens=4,
+            patch_size=patch_size,
+        ),
+        image_size=448
+    )
+    x = torch.randn(size=(2, 3, 448, 448))
+    out = vit(x)
+    assert out.shape == torch.Size([2, 1024, 4])
+
+
+@pytest.mark.parametrize("patch_size", [16, 32])
+def test_one_class_vit(patch_size: int):
+    vit = create_vit_image_encoder(
+        embed_size=1024,
+        config=ImageEncoderConfig(
+            dropout=0.5,
+            model="vit",
+            pretrained=False,
+            freeze=False,
+            n_cls_tokens=1,
+            patch_size=patch_size,
+        ),
         image_size=448
     )
 
@@ -19,17 +44,17 @@ def test_one_class_vit():
     assert out.shape == torch.Size([2, 1024, 1])
 
 
-@pytest.mark.parametrize(
-    "model_name", ["vit_32_small", "vit_16_small"]
-)
-def test_vit_image_encoder_size_448(model_name: str):
-    encoder = NoClassVit(
+@pytest.mark.parametrize("patch_size", [16, 32])
+def test_no_class_vit(patch_size: int):
+    encoder = create_vit_image_encoder(
         embed_size=1024,
         config=ImageEncoderConfig(
             dropout=0.5,
-            model=model_name,
+            model="vit",
             pretrained=False,
             freeze=False,
+            n_cls_tokens=0,
+            patch_size=patch_size,
         ),
         image_size=448
     )
