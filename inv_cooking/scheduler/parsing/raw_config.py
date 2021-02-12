@@ -15,6 +15,7 @@ from inv_cooking.config.ingredient_predictor import (
 from inv_cooking.config.slurm import SlurmConfig
 
 from .experiment import Experiment, Experiments, parse_experiments
+from ...utils.hydra import merge_with_non_missing
 
 
 @dataclass
@@ -55,6 +56,7 @@ class RawConfig:
             config.eval_on_test = raw_config.eval_on_test
             config.slurm = raw_config.slurm
             config.dataset = raw_config.dataset
+            config.dataset.loading = merge_with_non_missing(config.dataset.loading, experiment.loading)
             config.recipe_gen = experiment.recipe_gen
             config.image_encoder = experiment.image_encoder
             config.ingr_predictor = cls._get_ingr_predictor(experiment.ingr_predictor)

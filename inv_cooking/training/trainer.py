@@ -27,12 +27,12 @@ def run_training(
     os.makedirs(cfg.checkpoint.tensorboard_folder, exist_ok=True)
 
     # data module
-    data_module = _load_data_set(cfg)
+    data_module = load_data_set(cfg)
     data_module.prepare_data()
     data_module.setup("fit")
 
     # model
-    model = _create_model(cfg, data_module)
+    model = create_model(cfg, data_module)
 
     # logging
     logger = pl_loggers.TensorBoardLogger(
@@ -96,7 +96,7 @@ def run_training(
         trainer.test(datamodule=data_module)
 
 
-def _load_data_set(cfg):
+def load_data_set(cfg):
     return Recipe1MDataModule(
         dataset_config=cfg.dataset,
         seed=cfg.optimization.seed,
@@ -125,7 +125,7 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
         raise ValueError(f"Unknown task: {cfg.task.name}.")
 
 
-def _create_model(cfg: Config, data_module: Recipe1MDataModule):
+def create_model(cfg: Config, data_module: Recipe1MDataModule):
     max_num_ingredients = cfg.dataset.filtering.max_num_labels
     max_recipe_len = (
         cfg.dataset.filtering.max_num_instructions

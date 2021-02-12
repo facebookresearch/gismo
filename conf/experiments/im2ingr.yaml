@@ -31,6 +31,8 @@ im2ingr_resnext101_ff_bce:
   parent: im2ingr
   comment: 'best image-to-set results for resnext101 image backbone'
   image_encoder: resnext101_32x8d_encoder
+  loading:
+    batch_size: 8
   optimization:
     lr: 0.0001
     scale_lr_pretrained: 0.1
@@ -58,8 +60,10 @@ im2ingr_vit_32_ff_bce_cat:
 
 im2ingr_vit_16_ff_bce_cat:
   parent: im2ingr_vit_32_ff_bce_cat
+  loading:
+    batch_size: 8
   image_encoder:
-     patch_size: 16
+    patch_size: 16
 
 im2ingr_vit_multi_class_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat

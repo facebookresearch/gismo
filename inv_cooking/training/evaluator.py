@@ -8,7 +8,7 @@ from inv_cooking.utils.checkpointing import (
     select_best_checkpoint,
 )
 
-from .trainer import _create_model, _load_data_set
+from .trainer import create_model, load_data_set
 
 
 def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
@@ -20,14 +20,14 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
         raise ValueError(f"Checkpoint {checkpoint_dir} does not exist.")
 
     # data module
-    data_module = _load_data_set(cfg)
+    data_module = load_data_set(cfg)
     data_module.prepare_data()
     data_module.setup("test")
 
     # model
     # note: it should be possible to directly load the weights when creating the model by using load_from_checkpoint function
     # this function seems to rely on saving hyper-parameters though
-    model = _create_model(cfg, data_module)
+    model = create_model(cfg, data_module)
     monitored_metric = model.get_monitored_metric()
 
     # check best checkpoint path
