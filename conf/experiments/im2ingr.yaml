@@ -45,16 +45,21 @@ im2ingr_resnet50_ff_bce_cat:
       cardinality_loss: 0.001
       eos_loss: 0.0
 
-im2ingr_vit_ff_bce_cat:
+im2ingr_vit_32_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
   comment: 'Try a VIT pretrained classification encoder'
   image_encoder:
      model: vit
      pretrained: True
      dropout: 0.1
-     patch_size: SEARCH[16,32]
+     patch_size: 32
      n_cls_tokens: 1
      freeze: False
+
+im2ingr_vit_16_ff_bce_cat:
+  parent: im2ingr_vit_32_ff_bce_cat
+  image_encoder:
+     patch_size: 16
 
 im2ingr_vit_multi_class_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
@@ -63,8 +68,8 @@ im2ingr_vit_multi_class_ff_bce_cat:
      model: vit
      pretrained: False
      dropout: 0.1
-     patch_size: SEARCH[16,32]
-     n_cls_tokens: SEARCH[4, 8, 16]
+     patch_size: 32
+     n_cls_tokens: SEARCH[4, 8, 16, 32, 64]
      freeze: False
 
 im2ingr_clip_ff_bce_cat:

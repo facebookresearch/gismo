@@ -85,6 +85,8 @@ def run_training(
         fast_dev_run=cfg.debug_mode,
         progress_bar_refresh_rate=1 if cfg.slurm.partition == "local" else 0,
         weights_summary=None,  # for it otherwise logs lots of useless information
+        # track_grad_norm=2,  # Track the L2 norm of the gradients (debugging)
+        # terminate_on_nan=True,  # Show when gradients have NAN (debugging)
     )
 
     trainer.fit(model, datamodule=data_module)
