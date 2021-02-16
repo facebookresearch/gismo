@@ -28,6 +28,22 @@ class _BaseModule(pl.LightningModule):
     def get_monitored_metric(self) -> MonitoredMetric:
         ...
 
+    def on_save_checkpoint(self, checkpoint: Dict[str, Any]):
+        """
+        Override Lightning module to move the state_dict saved in the checkpoint to CPU
+
+        This avoids the out-of-memory issue during distributed training, when several workers
+        load the same checkpoint, all on the same GPU (8 times on 8 GPUs machines).
+        """
+        self.checkpoint_to_cpu(checkpoint)
+
+    @staticmethod
+    def checkpoint_to_cpu(checkpoint: Dict[str, Any]):
+        state_dict = checkpoint.get('state_dict')
+        if state_dict is not None:
+            for k, v in state_dict.items():
+                state_dict[k] = v.cpu()
+
     def log_training_losses(
         self, losses: Dict[str, torch.Tensor], optim_config: OptimizationConfig
     ) -> torch.Tensor:
