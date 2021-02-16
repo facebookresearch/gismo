@@ -48,7 +48,7 @@ class OneClassVit(nn.Module):
         self.core_vit.head = nn.Identity()
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
+    def forward(self, image: torch.Tensor, return_reshaped_features=True) -> torch.Tensor:
         """
         :param x: tensor of shape (batch_size, 3, height, width)
         :return shape (batch_size, embedding_size, 1)
@@ -56,7 +56,10 @@ class OneClassVit(nn.Module):
         image = self.interpolate(image)
         out = self.core_vit(image)
         out = self.adapt_head(out)
-        return out.unsqueeze(-1)
+        if return_reshaped_features:
+            return out.unsqueeze(-1)
+        else:
+            return out.unsqueeze(-1).unsqueeze(-1)  # To mimic a ResNet50
 
     @staticmethod
     def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
@@ -95,7 +98,7 @@ class MultiClassVit(timm.VisionTransformer):
         num_patches = self.patch_embed.num_patches + n_tokens
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, self.embed_dim))
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, return_reshaped_features=True):
         """
         :param x: tensor of shape (batch_size, 3, height, width)
         :return shape (batch_size, embedding_size, seq_len)
@@ -112,7 +115,11 @@ class MultiClassVit(timm.VisionTransformer):
         x = self.norm(x)
         x = x.permute(0, 2, 1)
         x = x[:, :, -self.n_cls_tokens:]
-        return self.adapt_head(x)
+        x = self.adapt_head(x)
+        if return_reshaped_features:
+            return x
+        else:
+            return x.unsqueeze(-1)
 
     @staticmethod
     def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
@@ -151,7 +158,7 @@ class NoClassVit(timm.VisionTransformer):
             self.interpolate = nn.Upsample(scale_factor=0.25)  # to get the same size of feature map
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, return_reshaped_features=True):
         """
         :param x: tensor of shape (batch_size, 3, height, width)
         :return shape (batch_size, embedding_size, seq_len)
@@ -166,7 +173,11 @@ class NoClassVit(timm.VisionTransformer):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             x = self.interpolate(x)
-        return self.adapt_head(x)
+        x = self.adapt_head(x)
+        if return_reshaped_features:
+            return x
+        else:
+            return x.unsqueeze(-1)
 
     def _remove_classification_token(self):
         # No classification token, so the positional embedding must be changed
