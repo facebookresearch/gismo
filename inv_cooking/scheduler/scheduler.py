@@ -30,7 +30,7 @@ def schedule_jobs(cfg: RawConfig, training_mode: bool) -> None:
 
 
 def _schedule_job_locally(cfg: Config, training_mode: bool):
-    nb_gpu = torch.cuda.device_count()
+    nb_gpu = cfg.slurm.gpus_per_node
     if training_mode:
         run_training(
             cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp", load_checkpoint=False
