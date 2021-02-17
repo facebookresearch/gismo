@@ -55,7 +55,10 @@ class _BaseModule(pl.LightningModule):
             loss = losses[loss_key].mean()  # Average across GPUs
             self.log_on_progress_bar(loss_key, loss)
             total_loss += loss * optim_config.loss_weights[loss_key]
+
+        memory_gb = torch.cuda.max_memory_reserved() / (1024 ** 3)
         self.log_on_progress_bar("train_loss", total_loss)
+        self.log_on_progress_bar("max_memory_used", memory_gb)
         return total_loss
 
     def log_on_progress_bar(self, key: str, value: Any):
