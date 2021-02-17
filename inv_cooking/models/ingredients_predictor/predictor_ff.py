@@ -129,7 +129,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
                 offset = 1
                 losses["cardinality_loss"] = self.crit_cardinality(
                     cardinality_logits,
-                    (cardinality_target.squeeze() - offset).long(),
+                    (cardinality_target.squeeze(-1) - offset).long(),
                 )
 
         if compute_predictions:
