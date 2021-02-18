@@ -19,12 +19,9 @@ def create_vit_image_encoder(embed_size: int, config: ImageEncoderConfig, image_
     """
     if config.n_cls_tokens == 1:
         return OneClassVit(embed_size=embed_size, config=config, image_size=image_size)
-
-    if config.pretrained:
-        raise ValueError("VIT pretrained models are only available for a number of class token equal to 1")
-    if config.n_cls_tokens == 0:
+    elif config.n_cls_tokens == 0:
         return NoClassVit(embed_size=embed_size, config=config, image_size=image_size)
-    else:
+    elif config.n_cls_tokens > 1:
         return MultiClassVit(embed_size=embed_size, config=config, image_size=image_size)
 
 
@@ -131,14 +128,28 @@ class MultiClassVit(timm.VisionTransformer):
             patch_size=config.patch_size,
             embed_dim=768,
         )
-        self.n_cls_tokens = config.n_cls_tokens
+        self.n_cls_tokens = config.n_cls_tokens + 1  # to account for eos token
+
+        if image_size != 384:
+            self.interpolate = nn.Upsample(size=(384, 384))
+        else:
+            self.interpolate = nn.Identity()
+        if config.patch_size == 32:
+            self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
+        else:
+            self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
+
+        self.core_vit.head = nn.Identity()
+
+        # switch classification tokens
         self._swith_classification_tokens(config.n_cls_tokens)
+        
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
     def _swith_classification_tokens(self, n_tokens: int):
-        self.cls_token = nn.Parameter(torch.zeros(1, n_tokens, self.embed_dim))
-        num_patches = self.patch_embed.num_patches + n_tokens
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, self.embed_dim))
+        self.core_vit.cls_token = nn.Parameter(self.core_vit.cls_token.repeat(1,self.n_cls_tokens,1))
+        self.core_vit.pos_embed = nn.Parameter(torch.cat((self.core_vit.pos_embed[:,0,:].repeat(1, self.n_cls_tokens,1), self.core_vit.pos_embed[:,1:,:]), dim=1))
+
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
         """
@@ -146,17 +157,18 @@ class MultiClassVit(timm.VisionTransformer):
         :return shape (batch_size, embedding_size, seq_len)
         """
         B = x.shape[0]
-        x = self.patch_embed(x)
-        cls_tokens = self.cls_token.expand(B, -1, -1)
+        x = self.interpolate(x)
+        x = self.core_vit.patch_embed(x)
+        cls_tokens = self.core_vit.cls_token.expand(B, -1, -1)
         x = torch.cat((cls_tokens, x), dim=1)
 
-        x = x + self.pos_embed
-        x = self.pos_drop(x)
-        for blk in self.blocks:
+        x = x + self.core_vit.pos_embed
+        x = self.core_vit.pos_drop(x)
+        for blk in self.core_vit.blocks:
             x = blk(x)
-        x = self.norm(x)
+        x = self.core_vit.norm(x)
         x = x.permute(0, 2, 1)
-        x = x[:, :, -self.n_cls_tokens:]
+        x = x[:, :, :self.n_cls_tokens]
         x = self.adapt_head(x)
         if return_reshaped_features:
             return x
@@ -193,11 +205,19 @@ class NoClassVit(timm.VisionTransformer):
             patch_size=config.patch_size,
             embed_dim=768,
         )
-        self._remove_classification_token()
-        if config.patch_size == 32:
+        if image_size != 384:
+            self.interpolate = nn.Upsample(size=(384, 384))
+        else:
             self.interpolate = nn.Identity()
-        elif config.patch_size == 16:
-            self.interpolate = nn.Upsample(scale_factor=0.25)  # to get the same size of feature map
+        if config.patch_size == 32:
+            self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
+        else:
+            self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
+
+        self._remove_classification_token()
+
+        self.core_vit.head = nn.Identity()
+        
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
@@ -205,16 +225,16 @@ class NoClassVit(timm.VisionTransformer):
         :param x: tensor of shape (batch_size, 3, height, width)
         :return shape (batch_size, embedding_size, seq_len)
         """
-        x = self.patch_embed(x)
-        x = x + self.pos_embed
-        x = self.pos_drop(x)
-        for blk in self.blocks:
+        x = self.interpolate(x)
+        x = self.core_vit.patch_embed(x)
+        x = x + self.core_vit.pos_embed
+        x = self.core_vit.pos_drop(x)
+
+        for blk in self.core_vit.blocks:
             x = blk(x)
-        x = self.norm(x)
+        x = self.core_vit.norm(x)
         x = x.permute(0, 2, 1)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            x = self.interpolate(x)
+
         x = self.adapt_head(x)
         if return_reshaped_features:
             return x
@@ -223,8 +243,8 @@ class NoClassVit(timm.VisionTransformer):
 
     def _remove_classification_token(self):
         # No classification token, so the positional embedding must be changed
-        num_patches = self.patch_embed.num_patches
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, self.embed_dim))
+        self.core_vit.pos_embed = nn.Parameter(self.core_vit.pos_embed[:,1:,:])
+
 
     @staticmethod
     def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
