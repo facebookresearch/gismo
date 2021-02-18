@@ -28,7 +28,8 @@ class _BaseModule(pl.LightningModule):
     def get_monitored_metric(self) -> MonitoredMetric:
         ...
 
-    def on_save_checkpoint(self, checkpoint: Dict[str, Any]):
+    '''
+    def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
         """
         Override Lightning module to move the state_dict saved in the checkpoint to CPU
 
@@ -37,18 +38,30 @@ class _BaseModule(pl.LightningModule):
         """
         self.recursively_move_to_cpu(checkpoint)
 
+    def on_load_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+        self.recursively_move_to_gpu(checkpoint)
+    '''
+
+    @classmethod
+    def recursively_move_to_gpu(cls, container):
+        cls.recursively_transform_tensors(container, lambda t: t.cuda())
+
     @classmethod
     def recursively_move_to_cpu(cls, container):
+        cls.recursively_transform_tensors(container, lambda t: t.cpu())
+
+    @classmethod
+    def recursively_transform_tensors(cls, container, transform):
         if isinstance(container, list):
             for i, x in enumerate(container):
-                container[i] = cls.recursively_move_to_cpu(x)
+                container[i] = cls.recursively_transform_tensors(x, transform)
             return container
         elif isinstance(container, dict):
             for k, v in container.items():
-                container[k] = cls.recursively_move_to_cpu(v)
+                container[k] = cls.recursively_transform_tensors(v, transform)
             return container
         elif torch.is_tensor(container):
-            return container.cpu()
+            return transform(container)
         else:
             return container
 
