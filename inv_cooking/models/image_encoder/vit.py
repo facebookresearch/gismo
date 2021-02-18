@@ -47,26 +47,60 @@ class OneClassVit(nn.Module):
             self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
         self.core_vit.head = nn.Identity()
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
+        self.additional_repr_levels = list(config.additional_repr_levels)
+        if self.additional_repr_levels:
+            self.additional_repr_norms = nn.ModuleList([
+                nn.LayerNorm(768, eps=1e-6) for _ in range(len(self.additional_repr_levels))
+            ])
 
     def forward(self, image: torch.Tensor, return_reshaped_features=True) -> torch.Tensor:
         """
         :param x: tensor of shape (batch_size, 3, height, width)
-        :return shape (batch_size, embedding_size, 1)
+        :return shape (batch_size, embedding_size, seq_len)
         """
         image = self.interpolate(image)
-        out = self.core_vit(image)
+        outputs = self.vit_encoding(self.core_vit, image)
+
+        # Concatenate each output as a sequence of length 1 + len(self.additional_repr_norms)
+        out = torch.stack(outputs, dim=-1)
         out = self.adapt_head(out)
+
+        # To stay compatible with the ResNet50 image encoder
         if return_reshaped_features:
-            return out.unsqueeze(-1)
+            return out
         else:
-            return out.unsqueeze(-1).unsqueeze(-1)  # To mimic a ResNet50
+            return out.unsqueeze(-1)
+
+    def vit_encoding(self, vit, x):
+        """
+        Adaptation of the implementation of the timm.VisionTransformer.forward_feature
+        to extract the representation at several level
+        """
+        batch_size = x.shape[0]
+        x = vit.patch_embed(x)
+
+        cls_tokens = vit.cls_token.expand(batch_size, -1, -1)
+        x = torch.cat((cls_tokens, x), dim=1)
+        x = x + vit.pos_embed
+        x = vit.pos_drop(x)
+
+        outputs = []
+        for i, blk in enumerate(vit.blocks):
+            x = blk(x)
+            if i in self.additional_repr_levels:
+                y = self.additional_repr_norms[self.additional_repr_levels.index(i)](x)
+                outputs.append(y[:, 0])
+
+        x = vit.norm(x)
+        outputs.append(x[:, 0])
+        return outputs
 
     @staticmethod
     def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
         if input_size == embed_size:
             return nn.Identity()
         return nn.Sequential(
-            nn.Linear(input_size, embed_size, bias=False),
+            nn.Conv1d(input_size, embed_size, kernel_size=1, stride=1, bias=False),
             nn.Dropout(dropout),
             nn.BatchNorm1d(embed_size),
             nn.ReLU(),
