@@ -14,7 +14,7 @@ from .trainer import create_model, load_data_set
 def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
     seed_everything(cfg.optimization.seed)
 
-    checkpoint_dir = get_checkpoint_directory(cfg)
+    checkpoint_dir = cfg.eval_checkpoint_dir
     all_checkpoints = list_available_checkpoints(checkpoint_dir)
     if len(all_checkpoints) == 0:
         raise ValueError(f"Checkpoint {checkpoint_dir} does not exist.")

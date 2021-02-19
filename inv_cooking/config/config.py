@@ -49,6 +49,7 @@ class Config:
     comment: str = MISSING
     debug_mode: bool = MISSING
     eval_on_test: bool = MISSING
+    eval_checkpoint_dir: str = MISSING  # Only used for eval.py
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
     optimization: OptimizationConfig = OptimizationConfig()
     checkpoint: CheckpointConfig = CheckpointConfig()

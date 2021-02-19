@@ -34,6 +34,7 @@ class RawConfig:
     name: str = MISSING
     debug_mode: bool = MISSING
     eval_on_test: bool = MISSING
+    eval_checkpoint_dir: str = MISSING
     checkpoint: CheckpointConfig = CheckpointConfig()
     dataset: DatasetConfig = DatasetConfig()
     slurm: SlurmConfig = SlurmConfig()
@@ -54,6 +55,7 @@ class RawConfig:
             config.comment = experiment.comment
             config.debug_mode = raw_config.debug_mode
             config.eval_on_test = raw_config.eval_on_test
+            config.eval_checkpoint_dir = raw_config.eval_checkpoint_dir
             config.slurm = raw_config.slurm
             config.dataset = raw_config.dataset
             config.dataset.loading = merge_with_non_missing(config.dataset.loading, experiment.loading)
