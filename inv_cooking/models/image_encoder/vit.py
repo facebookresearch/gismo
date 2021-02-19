@@ -121,6 +121,7 @@ class MultiClassVit(timm.VisionTransformer):
     - several classification tokens
     - several outputs (one by classification token)
     """
+
     def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
         super().__init__(
             img_size=image_size,
@@ -138,18 +139,20 @@ class MultiClassVit(timm.VisionTransformer):
             self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
         else:
             self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
-
         self.core_vit.head = nn.Identity()
-
-        # switch classification tokens
-        self._swith_classification_tokens(config.n_cls_tokens)
-        
+        self._switch_classification_tokens()
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
-    def _swith_classification_tokens(self, n_tokens: int):
-        self.core_vit.cls_token = nn.Parameter(self.core_vit.cls_token.repeat(1,self.n_cls_tokens,1))
-        self.core_vit.pos_embed = nn.Parameter(torch.cat((self.core_vit.pos_embed[:,0,:].repeat(1, self.n_cls_tokens,1), self.core_vit.pos_embed[:,1:,:]), dim=1))
-
+    def _switch_classification_tokens(self):
+        """
+        Repeat the class tokens and its position embedding several times and make
+        these learn-able so that the VIT can differentiate them during fine-tuning
+        """
+        new_cls_tokens = self.core_vit.cls_token.repeat(1, self.n_cls_tokens, 1)
+        self.core_vit.cls_token = nn.Parameter(new_cls_tokens)
+        cls_token_pos_embed = self.core_vit.pos_embed[:, 0, :].repeat(1, self.n_cls_tokens, 1)
+        new_position_embeddings = torch.cat([cls_token_pos_embed, self.core_vit.pos_embed[:, 1:, :]], dim=1)
+        self.core_vit.pos_embed = nn.Parameter(new_position_embeddings)
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
         """
@@ -213,11 +216,8 @@ class NoClassVit(timm.VisionTransformer):
             self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
         else:
             self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
-
-        self._remove_classification_token()
-
         self.core_vit.head = nn.Identity()
-        
+        self._remove_classification_token()
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
@@ -243,8 +243,7 @@ class NoClassVit(timm.VisionTransformer):
 
     def _remove_classification_token(self):
         # No classification token, so the positional embedding must be changed
-        self.core_vit.pos_embed = nn.Parameter(self.core_vit.pos_embed[:,1:,:])
-
+        self.core_vit.pos_embed = nn.Parameter(self.core_vit.pos_embed[:, 1:, :])
 
     @staticmethod
     def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
