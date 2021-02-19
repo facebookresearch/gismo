@@ -46,12 +46,17 @@ class OneClassVit(nn.Module):
         else:
             self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
         self.core_vit.head = nn.Identity()
-        self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
         self.additional_repr_levels = list(config.additional_repr_levels)
         if self.additional_repr_levels:
             self.additional_repr_norms = nn.ModuleList([
                 nn.LayerNorm(768, eps=1e-6) for _ in range(len(self.additional_repr_levels))
             ])
+        self.concatenate_repr_levels = config.concatenate_repr_levels
+        input_size_multiplier = (1 + len(self.additional_repr_levels)) if self.concatenate_repr_levels else 1
+        self.adapt_head = self._build_adaptation_head(
+            input_size=768 * input_size_multiplier,
+            embed_size=embed_size,
+            dropout=config.dropout)
 
     def forward(self, image: torch.Tensor, return_reshaped_features=True) -> torch.Tensor:
         """
@@ -61,8 +66,11 @@ class OneClassVit(nn.Module):
         image = self.interpolate(image)
         outputs = self.vit_encoding(self.core_vit, image)
 
-        # Concatenate each output as a sequence of length 1 + len(self.additional_repr_norms)
-        out = torch.stack(outputs, dim=-1)
+        # Combine each output either as a single representation, or as a sequence
+        if self.concatenate_repr_levels:
+            out = torch.cat(outputs, dim=-1).unsqueeze(-1)
+        else:
+            out = torch.stack(outputs, dim=-1)
         out = self.adapt_head(out)
 
         # To stay compatible with the ResNet50 image encoder

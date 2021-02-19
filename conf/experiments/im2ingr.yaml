@@ -65,12 +65,26 @@ im2ingr_vit_32_ff_bce_cat:
      n_cls_tokens: 1
      freeze: False
 
+im2ingr_vit_32_ff_bce_cat_multi_level:
+  parent: im2ingr_vit_32_ff_bce_cat
+  comment: 'Try a VIT pretrained classification encoder, extracting features at several levels'
+  image_encoder:
+     additional_repr_levels: [6, 8, 10]
+     concatenate_repr_levels: True
+
 im2ingr_vit_16_ff_bce_cat:
   parent: im2ingr_vit_32_ff_bce_cat
   loading:
     batch_size: 8
   image_encoder:
     patch_size: 16
+
+im2ingr_vit_16_ff_bce_cat_multi_level:
+  parent: im2ingr_vit_16_ff_bce_cat
+  comment: 'Try a VIT pretrained classification encoder, extracting features at several levels'
+  image_encoder:
+     additional_repr_levels: [6, 8, 10]
+     concatenate_repr_levels: True
 
 im2ingr_vit_multi_class_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
