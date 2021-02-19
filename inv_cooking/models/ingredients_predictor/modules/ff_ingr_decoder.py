@@ -7,7 +7,11 @@ import torch
 import torch.nn as nn
 
 
-class FFDecoder(nn.Module):
+class FFIngredientDecoder(nn.Module):
+    """
+    Feed Forward decoder
+    """
+
     def __init__(
         self,
         embed_size: int,
@@ -54,15 +58,17 @@ class FFDecoder(nn.Module):
         in_dim: int, n_layers: int, hidden_size: int, dropout: float
     ) -> Optional[nn.Module]:
         fc_layers = []
+        prev_size = in_dim
         for i in range(n_layers):
             fc_layers.extend(
                 [
-                    nn.Linear(in_dim, hidden_size, bias=False),
+                    nn.Linear(prev_size, hidden_size, bias=False),
                     nn.Dropout(dropout),
                     nn.BatchNorm1d(hidden_size, momentum=0.01),
                     nn.ReLU(),
                 ]
             )
+            prev_size = hidden_size
         if len(fc_layers) != 0:
             return nn.Sequential(*fc_layers)
         return None

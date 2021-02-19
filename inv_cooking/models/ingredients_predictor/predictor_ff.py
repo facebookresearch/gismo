@@ -12,9 +12,9 @@ from inv_cooking.config import (
     IngredientPredictorCriterion,
     IngredientPredictorFFConfig,
 )
-from inv_cooking.models.modules.ff_decoder import FFDecoder
 from inv_cooking.utils.criterion import SoftIoUCriterion, TargetDistributionCriterion
 
+from .modules.ff_ingr_decoder import FFIngredientDecoder
 from .predictor import IngredientsPredictor
 from .utils import label2_k_hots, predictions_to_indices
 
@@ -30,7 +30,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
     ) -> "FeedForwardIngredientsPredictor":
         cardinality_pred = config.cardinality_pred
         print(
-            "Building feed-forward decoder {}. Embed size {} / Dropout {} / "
+            "Building feed-forward ingredient predictor {}. Embed size {} / Dropout {} / "
             " Max. Num. Ingredients {} / Num. Layers {}".format(
                 config.model.name,
                 config.embed_size,
@@ -40,7 +40,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             ),
             flush=True,
         )
-        decoder = FFDecoder(
+        decoder = FFIngredientDecoder(
             embed_size=config.embed_size,
             vocab_size=vocab_size,
             hidden_size=config.embed_size,
@@ -65,7 +65,7 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         }
         label_loss = label_losses[config.criterion]
 
-        model = FeedForwardIngredientsPredictor(
+        return FeedForwardIngredientsPredictor(
             decoder,
             max_num_ingredients=max_num_ingredients,
             vocab_size=vocab_size,
@@ -75,8 +75,6 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
             crit_type=config.criterion,
             card_type=cardinality_pred,
         )
-        
-        return model
 
     def __init__(
         self,
