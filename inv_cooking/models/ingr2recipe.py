@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 
 from inv_cooking.config import RecipeGeneratorConfig
-from inv_cooking.models.ingredients_encoder import IngredientsEncoder
 from inv_cooking.models.ingredients_predictor import mask_from_eos
 from inv_cooking.models.recipe_generator import RecipeGenerator
+from inv_cooking.models.modules.ingredient_embeddings import IngredientEmbeddings
 
 
 class Ingr2Recipe(nn.Module):
@@ -24,7 +24,7 @@ class Ingr2Recipe(nn.Module):
         self.ingr_eos_value = ingr_eos_value
         self.instr_vocab_size = instr_vocab_size
 
-        self.ingr_encoder = IngredientsEncoder(
+        self.ingr_encoder = IngredientEmbeddings(
             recipe_gen_config.embed_size,
             voc_size=ingr_vocab_size,
             dropout=recipe_gen_config.dropout,

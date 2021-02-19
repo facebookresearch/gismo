@@ -12,12 +12,12 @@ from inv_cooking.config import (
     EncoderAttentionType,
 )
 from inv_cooking.models.image_encoder import create_image_encoder
-from inv_cooking.models.ingredients_encoder import IngredientsEncoder
 from inv_cooking.models.ingredients_predictor import (
     create_ingredient_predictor,
     mask_from_eos,
 )
 from inv_cooking.models.recipe_generator import RecipeGenerator
+from inv_cooking.models.modules.ingredient_embeddings import IngredientEmbeddings
 from inv_cooking.models.modules.transformer_encoder import EncoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
 
@@ -74,7 +74,7 @@ class Im2Recipe(nn.Module):
         else:
             self.img_features_transform = None
         
-        self.ingr_encoder = IngredientsEncoder(
+        self.ingr_encoder = IngredientEmbeddings(
             recipe_gen_config.embed_size,
             voc_size=ingr_vocab_size,
             dropout=recipe_gen_config.dropout,
