@@ -1,4 +1,10 @@
-from .config import CheckpointConfig, Config, TaskType, PretrainedConfig, IngredientTeacherForcingConfig
+from .config import (
+    CheckpointConfig,
+    Config,
+    IngredientTeacherForcingConfig,
+    PretrainedConfig,
+    TaskType,
+)
 from .dataset import (
     DatasetConfig,
     DatasetFilterConfig,
@@ -14,10 +20,8 @@ from .ingredient_predictor import (
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
     IngredientPredictorType,
+    IngredientPredictorVITConfig,
 )
 from .optimization import OptimizationConfig
-from .recipe_generator import (
-    RecipeGeneratorConfig,
-    EncoderAttentionType,
-)
+from .recipe_generator import EncoderAttentionType, RecipeGeneratorConfig
 from .slurm import SlurmConfig

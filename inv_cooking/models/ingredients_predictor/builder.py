@@ -10,11 +10,13 @@ from inv_cooking.config import (
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
     IngredientPredictorType,
+    IngredientPredictorVITConfig,
 )
 
 from .predictor import IngredientsPredictor
 from .predictor_ar import AutoRegressiveIngredientsPredictor
 from .predictor_ff import FeedForwardIngredientsPredictor
+from .predictor_vit import VITIngredientsPredictor
 
 
 def requires_eos_token(config: IngredientPredictorConfig) -> bool:
@@ -49,3 +51,6 @@ def create_ingredient_predictor(
         return AutoRegressiveIngredientsPredictor.create_tf_from_config(
             config, max_num_ingredients, vocab_size, eos_value
         )
+    elif config.model == IngredientPredictorType.vit:
+        config = cast(IngredientPredictorVITConfig, config)
+        return VITIngredientsPredictor(config, max_num_ingredients, vocab_size, eos_value)

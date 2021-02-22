@@ -5,10 +5,12 @@ from inv_cooking.config import (
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
     IngredientPredictorType,
+    IngredientPredictorVITConfig,
 )
 
 
 class FakeIngredientPredictorConfig:
+
     @staticmethod
     def ff_config() -> IngredientPredictorFFConfig:
         return IngredientPredictorFFConfig(
@@ -40,4 +42,14 @@ class FakeIngredientPredictorConfig:
             with_set_prediction=with_set_prediction,
             n_att=8,
             dropout=0.3,
+        )
+
+    @staticmethod
+    def vit_config(with_set_prediction: bool = False) -> IngredientPredictorVITConfig:
+        return IngredientPredictorVITConfig(
+            model=IngredientPredictorType.vit,
+            embed_size=2048,
+            with_set_prediction=with_set_prediction,
+            layers=2,
+            dropout=0.1,
         )

@@ -1,3 +1,6 @@
+import math
+
+import pytest
 import torch
 
 from inv_cooking.config import (
@@ -26,6 +29,17 @@ class TestIngredientPredictor:
         assert predictions.shape == expected_output_shape
         assert predictions.min() >= 0
         assert predictions.max() < self.vocab_size
+
+    def test_ff_with_all_losses(self):
+        config = FakeIngredientPredictorConfig.ff_config()
+        for criterion_type in [
+            IngredientPredictorCriterion.bce,
+            IngredientPredictorCriterion.iou,
+            IngredientPredictorCriterion.td,
+        ]:
+            config.criterion = criterion_type
+            losses, predictions = self._try_predictor(config)
+            assert losses["label_loss"] is not None
 
     @torch.no_grad()
     def test_ar_models(self):
@@ -62,21 +76,23 @@ class TestIngredientPredictor:
         assert losses["label_loss"] is not None
         assert losses["cardinality_loss"] is not None
 
-    def test_ff_with_all_losses(self):
-        config = FakeIngredientPredictorConfig.ff_config()
-        for criterion_type in [
-            IngredientPredictorCriterion.bce,
-            IngredientPredictorCriterion.iou,
-            IngredientPredictorCriterion.td,
-        ]:
-            config.criterion = criterion_type
-            losses, predictions = self._try_predictor(config)
-            assert losses["label_loss"] is not None
+    @pytest.mark.parametrize("with_set_prediction", [True, False])
+    def test_vit_model_with_set(self, with_set_prediction: bool):
+        torch.manual_seed(0)
+        config = FakeIngredientPredictorConfig.vit_config(with_set_prediction)
+        losses, predictions = self._try_predictor(
+            config,
+            include_eos=True,
+            seq_len=self.max_num_ingredients + 1)
+        assert predictions.shape == torch.Size([self.batch_size, self.max_num_ingredients + 1])
+        assert losses["label_loss"] != torch.tensor(math.inf)
+        if config.with_set_prediction:
+            assert losses["eos_loss"] != torch.tensor(math.inf)
 
     def _try_predictor(
-        self, config: IngredientPredictorConfig, include_eos: bool = False
+        self, config: IngredientPredictorConfig, include_eos: bool = False, seq_len: int = 49
     ):
-        image_features = torch.randn(size=(self.batch_size, config.embed_size, 49))
+        image_features = torch.randn(size=(self.batch_size, config.embed_size, seq_len))
         max_num_labels = self.max_num_ingredients + 1 if include_eos else self.max_num_ingredients
         label_target = torch.randint(
             low=0, high=self.vocab_size - 1, size=(self.batch_size, max_num_labels)

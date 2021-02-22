@@ -8,6 +8,7 @@ class IngredientPredictorType(Enum):
     ff = 0
     lstm = 1
     tf = 2
+    vit = 3
 
 
 @dataclass
@@ -33,6 +34,13 @@ class IngredientPredictorFFConfig(IngredientPredictorConfig):
     dropout: float = MISSING
     criterion: IngredientPredictorCriterion = MISSING
     cardinality_pred: CardinalityPredictionType = CardinalityPredictionType.none
+
+
+@dataclass
+class IngredientPredictorVITConfig(IngredientPredictorConfig):
+    with_set_prediction: bool = MISSING
+    layers: int = MISSING
+    dropout: float = MISSING
 
 
 @dataclass
