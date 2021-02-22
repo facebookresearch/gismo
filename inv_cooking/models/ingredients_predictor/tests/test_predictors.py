@@ -41,6 +41,13 @@ class TestIngredientPredictor:
             losses, predictions = self._try_predictor(config)
             assert losses["label_loss"] is not None
 
+    def test_ff_with_cardinality(self):
+        config = FakeIngredientPredictorConfig.ff_config()
+        config.cardinality_pred = CardinalityPredictionType.categorical
+        losses, predictions = self._try_predictor(config)
+        assert losses["label_loss"] is not None
+        assert losses["cardinality_loss"] is not None
+
     @torch.no_grad()
     def test_ar_models(self):
         torch.manual_seed(0)
@@ -68,13 +75,6 @@ class TestIngredientPredictor:
             assert predictions.shape == expected_prediction_shape
             assert predictions.min() >= 0
             assert predictions.max() < self.vocab_size
-
-    def test_ff_with_cardinality(self):
-        config = FakeIngredientPredictorConfig.ff_config()
-        config.cardinality_pred = CardinalityPredictionType.categorical
-        losses, predictions = self._try_predictor(config)
-        assert losses["label_loss"] is not None
-        assert losses["cardinality_loss"] is not None
 
     @pytest.mark.parametrize("with_set_prediction", [True, False])
     def test_vit_model_with_set(self, with_set_prediction: bool):

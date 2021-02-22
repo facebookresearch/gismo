@@ -11,11 +11,12 @@ from inv_cooking.config.ingredient_predictor import (
     IngredientPredictorFFConfig,
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
+    IngredientPredictorVITConfig,
 )
 from inv_cooking.config.slurm import SlurmConfig
+from inv_cooking.utils.hydra import merge_with_non_missing
 
 from .experiment import Experiment, Experiments, parse_experiments
-from ...utils.hydra import merge_with_non_missing
 
 
 @dataclass
@@ -86,6 +87,9 @@ class RawConfig:
             return OmegaConf.merge(schema, ingr_predictor)
         elif "tf" in model:
             schema = OmegaConf.structured(IngredientPredictorTransformerConfig)
+            return OmegaConf.merge(schema, ingr_predictor)
+        elif "vit" in model:
+            schema = OmegaConf.structured(IngredientPredictorVITConfig)
             return OmegaConf.merge(schema, ingr_predictor)
         else:
             raise ValueError(f"Invalid ingredient predictor model {model}")

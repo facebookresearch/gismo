@@ -129,8 +129,7 @@ class MultiClassVit(timm.VisionTransformer):
             patch_size=config.patch_size,
             embed_dim=768,
         )
-        self.n_cls_tokens = config.n_cls_tokens + 1  # to account for eos token
-
+        self.n_cls_tokens = config.n_cls_tokens
         if image_size != 384:
             self.interpolate = nn.Upsample(size=(384, 384))
         else:

@@ -65,6 +65,23 @@ im2ingr_vit_32_ff_bce_cat:
      n_cls_tokens: 1
      freeze: False
 
+im2ingr_vit_32_no_head:
+  parent: im2ingr
+  comment: 'Try with a multi class token VIT, where each token is an ingredient'
+  image_encoder:
+     model: vit
+     pretrained: True
+     dropout: 0.1
+     patch_size: 32
+     n_cls_tokens: 21
+     freeze: False
+  ingr_predictor:
+    model: vit
+    layers: 0
+    embed_size: 2048
+    with_set_prediction: true
+    dropout: 0.0
+
 im2ingr_vit_32_ff_bce_cat_multi_level:
   parent: im2ingr_vit_32_ff_bce_cat
   comment: 'Try a VIT pretrained classification encoder, extracting features at several levels'
