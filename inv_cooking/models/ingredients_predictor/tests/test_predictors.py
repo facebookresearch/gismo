@@ -27,19 +27,31 @@ class TestIngredientPredictor:
         assert predictions.min() >= 0
         assert predictions.max() < self.vocab_size
 
+    @torch.no_grad()
     def test_ar_models(self):
-        expected_output_shape = torch.Size([self.batch_size, self.max_num_ingredients + 1])
+        torch.manual_seed(0)
         all_configs = [
             FakeIngredientPredictorConfig.lstm_config(),
             FakeIngredientPredictorConfig.lstm_config(with_set_prediction=True),
             FakeIngredientPredictorConfig.tf_config(),
             FakeIngredientPredictorConfig.tf_config(with_set_prediction=True),
         ]
-        for config in all_configs:
+        results = [
+            {'label_loss': torch.tensor(2.9594)},
+            {'label_loss': torch.tensor(1.1755), 'eos_loss': torch.tensor(0.3032)},
+            {'label_loss': torch.tensor(4.3514)},
+            {'label_loss': torch.tensor(0.8165), 'eos_loss': torch.tensor(1.4536)}
+        ]
+        expected_prediction_shape = torch.Size([self.batch_size, self.max_num_ingredients + 1])
+        for i, config in enumerate(all_configs):
             losses, predictions = self._try_predictor(config, include_eos=True)
-            assert losses["label_loss"] is not None
+            assert torch.allclose(losses["label_loss"], results[i]["label_loss"], atol=1e-4)
+            if config.with_set_prediction:
+                assert torch.allclose(losses["eos_loss"], results[i]["eos_loss"], atol=1e-4)
+            else:
+                assert "eos_loss" not in losses
             assert "cardinality_loss" not in losses
-            assert predictions.shape == expected_output_shape
+            assert predictions.shape == expected_prediction_shape
             assert predictions.min() >= 0
             assert predictions.max() < self.vocab_size
 

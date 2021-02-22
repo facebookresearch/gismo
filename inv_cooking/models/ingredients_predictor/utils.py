@@ -12,7 +12,7 @@ def label2_k_hots(labels: torch.Tensor, pad_value: int, remove_eos: bool = False
     """
     :param labels: predictions of a model - shape (batch_size, max_num_labels)
     :param pad_value: last valid value of the vocabulary, which represents padding
-    :param remove_eos: remove the end of sequence token from the predictions
+    :param remove_eos: remove the end of sequence token from the predictions (value 0)
     :return shape (batch_size, pad_value + 1) with at most max_num_labels values set to 1
     """
 
