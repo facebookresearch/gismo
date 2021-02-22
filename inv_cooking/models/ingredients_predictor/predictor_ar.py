@@ -103,7 +103,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             criterion=criterion,
             pad_value=pad_value,
             eos_value=eos_value,
-            perminv=config.with_set_prediction,
+            permutation_invariant=config.with_set_prediction,
         )
 
     def __init__(
@@ -114,13 +114,13 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         criterion=None,
         pad_value: int = 0,
         eos_value: int = 0,
-        perminv: bool = True,
+        permutation_invariant: bool = True,
     ):
         super().__init__(requires_eos=False)
         self.decoder = decoder
         self.max_num_ingredients = max_num_ingredients
-        self.crit = criterion
-        self.perminv = perminv
+        self.criterion = criterion
+        self.permutation_invariant = permutation_invariant
         self.pad_value = pad_value
         self.eos_value = eos_value
         self.vocab_size = vocab_size
@@ -132,9 +132,6 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         compute_losses: bool = False,
         compute_predictions: bool = False,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
-
-        losses: Dict[str, torch.Tensor] = {}
-        predictions: Optional[torch.Tensor] = None
 
         # use auto-regressive decoder to predict labels (sample function)
         # output label_logits is only used to compute losses in case of self.perminv (no teacher forcing)
@@ -152,12 +149,13 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             predictions[sample_mask == 0] = self.pad_value
 
         if compute_losses:
-            if self.perminv:
+            if self.permutation_invariant:
                 # autoregressive mode for decoder when training with permutation invariant objective
-                losses = self.crit(label_logits, label_target)
+                losses = self.criterion(label_logits, label_target)
 
             else:
                 # other autoregressive models
+                losses: Dict[str, torch.Tensor] = {}
 
                 # add dummy first word to sequence and remove last
                 first_word = torch.zeros(len(label_target)).type_as(label_target)
@@ -171,7 +169,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
                 # compute label loss
                 label_target_v = label_target.view(-1)
-                loss = self.crit(label_logits_v, label_target_v)
+                loss = self.criterion(label_logits_v, label_target_v)
                 losses["label_loss"] = loss
 
         return losses, predictions
