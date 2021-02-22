@@ -35,12 +35,15 @@ def run_training(
     model = create_model(cfg, data_module)
 
     # logging
-    logger = pl_loggers.TensorBoardLogger(
-        save_dir=cfg.checkpoint.tensorboard_folder,
-        name=cfg.task.name + "-" + cfg.name,
-        version=get_log_version(),
-        default_hp_metric=False,
-    )
+    if not cfg.debug_mode:
+        logger = pl_loggers.TensorBoardLogger(
+            save_dir=cfg.checkpoint.tensorboard_folder,
+            name=cfg.task.name + "-" + cfg.name,
+            version=get_log_version(),
+            default_hp_metric=False,
+        )
+    else:
+        logger = False
 
     # check-pointing and early stopping
     monitored_metric = model.get_monitored_metric()
