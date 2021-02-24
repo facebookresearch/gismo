@@ -72,6 +72,32 @@ im2ingr_vit_32_ff_bce_cat_multi_level:
      additional_repr_levels: [6, 8, 10]
      concatenate_repr_levels: True
 
+im2ingr_vit_32_no_class_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'Try a VIT pretrained classification encoder'
+  loading:
+    batch_size: 16
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 0
+    freeze: False
+
+im2ingr_vit_16_no_class_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'Try a VIT pretrained classification encoder'
+  loading:
+    batch_size: 16
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 16
+    n_cls_tokens: 0
+    freeze: False
+
 im2ingr_vit_16_ff_bce_cat:
   parent: im2ingr_vit_32_ff_bce_cat
   loading:
