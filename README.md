@@ -9,26 +9,30 @@ Code for inversecooking2.0: merges image-to-set prediction with previous inverse
 This code uses Python 3.8.5 (Anaconda), PyTorch 1.7, Torchvision 0.8.1 and CUDA version 10.1.
 
 - Installing pytorch:
+
 ```bash
-$ conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
+conda install -c pytorch pytorch=1.7.1 torchvision cudatoolkit=10.2
+conda install -c conda-forge -c fvcore -c iopath fvcore iopath
+conda install pytorch3d -c pytorch3d
 ```
 
 - Install dependencies
+
 ```bash
-$ pip install -r requirements.txt --upgrade
+pip install -r requirements.txt --upgrade
 ```
 
 - Additional dependencies for developers (optional)
 
 ```bash
-$ pip install -r requirements_dev.txt --upgrade
-$ pip install -e ".[dev]"
+pip install -r requirements_dev.txt --upgrade
+pip install -e ".[dev]"
 ```
 
 - Install NLTK punkt (for pre-processing of datasets)
 
 ```bash
-$ python -c "import nltk; nltk.download("punkt")"
+python -c "import nltk; nltk.download('punkt')"
 ```
 
 <br>

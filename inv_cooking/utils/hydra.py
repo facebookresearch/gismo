@@ -19,7 +19,8 @@ def copy_source_code_to_cwd():
     for folder in folders_to_copy:
         src_folder = os.path.join(original_path, folder)
         dst_folder = os.path.join(target_path, folder)
-        shutil.copytree(src_folder, dst_folder, symlinks=True)
+        if not os.path.exists(dst_folder):
+            shutil.copytree(src_folder, dst_folder, symlinks=True)
     print(f"Copying done. Running code in folder {target_path}")
 
 

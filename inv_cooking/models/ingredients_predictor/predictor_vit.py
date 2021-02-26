@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from inv_cooking.config import IngredientPredictorVITConfig
 
-from .modules.permutation_invariant_criterion import SetPooledCrossEntropy
+from .modules.permutation_invariant_criterion import ProbaChamferDistance
 from .predictor import IngredientsPredictor
 from .utils import mask_from_eos
 
@@ -19,11 +19,11 @@ class VITIngredientsPredictor(IngredientsPredictor):
     """
 
     def __init__(
-            self,
-            config: IngredientPredictorVITConfig,
-            max_num_ingredients: int,
-            vocab_size: int,
-            eos_value: int,
+        self,
+        config: IngredientPredictorVITConfig,
+        max_num_ingredients: int,
+        vocab_size: int,
+        eos_value: int,
     ):
         super().__init__(requires_eos=True)
         self.max_num_ingredients = max_num_ingredients
@@ -32,7 +32,7 @@ class VITIngredientsPredictor(IngredientsPredictor):
         self.decoder = self._create_decoder(config, vocab_size)
         self.permutation_invariant = config.with_set_prediction
         if config.with_set_prediction:
-            self.criterion = SetPooledCrossEntropy(eos_value=eos_value, pad_value=self.pad_value)
+            self.criterion = ProbaChamferDistance(eos_value=eos_value, pad_value=self.pad_value)
         else:
             self.criterion = nn.CrossEntropyLoss(ignore_index=self.pad_value, reduction="mean")
 

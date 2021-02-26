@@ -112,9 +112,11 @@ im2ingr_vit_16_ff_bce_cat_multi_level:
      additional_repr_levels: [6, 8, 10]
      concatenate_repr_levels: True
 
-im2ingr_vit_32_multi_class_no_head:
+im2ingr_vit_32_multi_class_no_head_ordered:
   parent: im2ingr
   comment: 'Try with a multi class token VIT, where each token is an ingredient'
+  loading:
+    batch_size: 16
   image_encoder:
      model: vit
      pretrained: True
@@ -128,6 +130,12 @@ im2ingr_vit_32_multi_class_no_head:
     embed_size: 2048
     with_set_prediction: true
     dropout: 0.0
+
+im2ingr_vit_32_multi_class_no_head_no_order:
+  parent: im2ingr_vit_32_multi_class_no_head_ordered
+  comment: 'Try with a multi class token VIT, where each token is an ingredient (but sensitive to order of ingredients)'
+  ingr_predictor:
+    with_set_prediction: false
 
 im2ingr_vit_multi_class_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat

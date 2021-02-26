@@ -1,9 +1,40 @@
 import torch
+import pytest
 
-from .permutation_invariant_criterion import SetPooledCrossEntropy
+from .permutation_invariant_criterion import SetPooledCrossEntropy, BiPartiteAssignmentCriterion, ProbaChamferDistance
 
 
-def test_permutation_invariant_loss_typical_shapes():
+def test_BiPartiteAssignmentCriterions_shapes():
+    torch.manual_seed(0)
+    batch_size = 2
+    max_num_ingredients = 3
+    vocab_size = 5
+    criterion = BiPartiteAssignmentCriterion(eos_value=0, pad_value=vocab_size - 1)
+    logits = torch.randn(size=(batch_size, max_num_ingredients + 1, vocab_size - 1)).cuda()  # No pad value predicted
+    target = torch.randint(low=0, high=vocab_size-1, size=(batch_size, max_num_ingredients + 1)).cuda()
+    target[:, -1] = 0  # EOS at the end for every sample
+    target[-1, -2] = 0  # Adding EOS on step before the end
+    target[-1, -1] = vocab_size - 1  # Adding padding after the EOS
+    losses = criterion(logits, target)
+    print(losses)
+
+
+def test_ProbaChamferDistance_shapes():
+    torch.manual_seed(0)
+    batch_size = 2
+    max_num_ingredients = 3
+    vocab_size = 5
+    criterion = ProbaChamferDistance(eos_value=0, pad_value=vocab_size - 1)
+    logits = torch.randn(size=(batch_size, max_num_ingredients + 1, vocab_size - 1)).cuda()  # No pad value predicted
+    target = torch.randint(low=0, high=vocab_size-1, size=(batch_size, max_num_ingredients + 1)).cuda()
+    target[:, -1] = 0  # EOS at the end for every sample
+    target[-1, -2] = 0  # Adding EOS on step before the end
+    target[-1, -1] = vocab_size - 1  # Adding padding after the EOS
+    losses = criterion(logits, target)
+    print(losses)
+
+
+def test_SetPooledCrossEntropy_shapes():
     torch.manual_seed(0)
     batch_size = 2
     max_num_ingredients = 20
@@ -19,7 +50,7 @@ def test_permutation_invariant_loss_typical_shapes():
     assert torch.allclose(losses['eos_loss'], torch.tensor(0.0003), atol=1e-4)
 
 
-def test_permutation_invariant_loss_output():
+def test_SetPooledCrossEntropy_output():
     torch.manual_seed(0)
     max_num_ingredients = 3
     vocab_size = 5
@@ -48,7 +79,7 @@ def test_permutation_invariant_loss_output():
     assert torch.allclose(losses["eos_loss"], torch.tensor(2.2502), atol=1e-4)
 
 
-def test_permutation_invariant_is_invariant_to_order():
+def test_SetPooledCrossEntropy_is_invariant_to_order():
     torch.manual_seed(0)
     batch_size = 2
     max_num_ingredients = 20
