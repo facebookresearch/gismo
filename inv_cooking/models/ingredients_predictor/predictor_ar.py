@@ -10,11 +10,16 @@ import torch.nn as nn
 from inv_cooking.config import (
     IngredientPredictorLSTMConfig,
     IngredientPredictorTransformerConfig,
+    SetPredictionType,
 )
 from inv_cooking.models.modules.rnn_decoder import DecoderRNN
 from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 
-from .modules.permutation_invariant_criterion import SetPooledCrossEntropy
+from .modules.permutation_invariant_criterion import (
+    BiPartiteAssignmentCriterion,
+    PooledBinaryCrossEntropy,
+    ProbaChamferDistance,
+)
 from .predictor import IngredientsPredictor
 from .utils import mask_from_eos
 
@@ -57,7 +62,9 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             learned=False,
             activation=config.activation,
         )
-        return cls.from_decoder(config, decoder, max_num_ingredients, vocab_size, eos_value)
+        return cls.from_decoder(
+            config, decoder, max_num_ingredients, vocab_size, eos_value
+        )
 
     @classmethod
     def create_lstm_from_config(
@@ -70,7 +77,10 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         max_num_ingredients += 1  # required for EOS token
         print(
             "Building LSTM decoder {}. Embed size {} / Dropout {} / Max. Num. Labels {}. ".format(
-                config.model.name, config.embed_size, config.dropout, max_num_ingredients
+                config.model.name,
+                config.embed_size,
+                config.dropout,
+                max_num_ingredients,
             ),
             flush=True,
         )
@@ -81,7 +91,9 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             dropout=config.dropout,
             seq_length=max_num_ingredients,
         )
-        return cls.from_decoder(config, decoder, max_num_ingredients, vocab_size, eos_value)
+        return cls.from_decoder(
+            config, decoder, max_num_ingredients, vocab_size, eos_value
+        )
 
     @staticmethod
     def from_decoder(
@@ -92,10 +104,21 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         eos_value: int,
     ):
         pad_value = vocab_size - 1
-        if config.with_set_prediction:
-            criterion = SetPooledCrossEntropy(eos_value=eos_value, pad_value=vocab_size-1)
+        if config.with_set_prediction == SetPredictionType.pooled_bce:
+            criterion = PooledBinaryCrossEntropy(
+                eos_value=eos_value, pad_value=vocab_size - 1
+            )
+        elif config.with_set_prediction == SetPredictionType.bipartite:
+            criterion = BiPartiteAssignmentCriterion(
+                eos_value=eos_value, pad_value=vocab_size - 1
+            )
+        elif config.with_set_prediction == SetPredictionType.chamfer_l2:
+            criterion = ProbaChamferDistance(
+                eos_value=eos_value, pad_value=vocab_size - 1
+            )
         else:
             criterion = nn.CrossEntropyLoss(ignore_index=pad_value, reduction="mean")
+
         return AutoRegressiveIngredientsPredictor(
             decoder,
             max_num_ingredients=max_num_ingredients,
@@ -103,7 +126,7 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
             criterion=criterion,
             pad_value=pad_value,
             eos_value=eos_value,
-            permutation_invariant=config.with_set_prediction,
+            permutation_invariant=config.with_set_prediction != SetPredictionType.none,
         )
 
     def __init__(
@@ -137,15 +160,14 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         # output label_logits is only used to compute losses in case of self.perminv (no teacher forcing)
         # predictions output is used for all auto-regressive models
         predictions, label_logits = self.decoder.sample(
-            img_features,
-            None,
-            first_token_value=0,
-            replacement=False,
+            img_features, None, first_token_value=0, replacement=False,
         )
 
         if compute_predictions:
             # mask labels after finding eos
-            sample_mask = mask_from_eos(predictions, eos_value=self.eos_value, mult_before=False)
+            sample_mask = mask_from_eos(
+                predictions, eos_value=self.eos_value, mult_before=False
+            )
             predictions[sample_mask == 0] = self.pad_value
 
         if compute_losses:
@@ -159,7 +181,9 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
 
                 # add dummy first word to sequence and remove last
                 first_word = torch.zeros(len(label_target)).type_as(label_target)
-                shift_target = torch.cat([first_word.unsqueeze(-1), label_target], -1)[:, :-1]
+                shift_target = torch.cat([first_word.unsqueeze(-1), label_target], -1)[
+                    :, :-1
+                ]
 
                 # we need to recompute logits using teacher forcing (forward pass)
                 label_logits, _ = self.decoder(img_features, None, shift_target)

@@ -94,7 +94,7 @@ im2ingr_vit_16_no_class_ff_bce_cat:
   parent: im2ingr_vit_32_no_class_ff_bce_cat
   comment: 'VIT/16 pretrained classification encoder with average pooling instead of class tokens'
   loading:
-    batch_size: 16
+    batch_size: 12
   image_encoder:
     patch_size: 16
   optimization:
@@ -114,7 +114,7 @@ im2ingr_vit_16_ff_bce_cat_multi_level:
      additional_repr_levels: [6, 8, 10]
      concatenate_repr_levels: True
 
-im2ingr_vit_32_multi_class_no_head_set:
+im2ingr_vit_32_multi_class_no_head_bipartite:
   parent: im2ingr
   comment: 'Try with a multi class token VIT, where each token is an ingredient'
   loading:
@@ -130,7 +130,7 @@ im2ingr_vit_32_multi_class_no_head_set:
     model: vit
     layers: 0
     embed_size: 2048
-    with_set_prediction: true
+    with_set_prediction: bipartite
     dropout: 0.0
   optimization:
     loss_weights:
@@ -138,11 +138,28 @@ im2ingr_vit_32_multi_class_no_head_set:
       cardinality_loss: 0.0
       eos_loss: 0.001
 
+im2ingr_vit_32_multi_class_no_head_pooled_set:
+  parent: im2ingr_vit_32_multi_class_no_head_bipartite
+  comment: 'Try with a multi class token VIT, where each token is an ingredient'
+  ingr_predictor:
+    with_set_prediction: pooled_bce
+
+im2ingr_vit_32_multi_class_no_head_chamfer_l2_set:
+  parent: im2ingr_vit_32_multi_class_no_head_bipartite
+  comment: 'Try with a multi class token VIT, where each token is an ingredient'
+  ingr_predictor:
+    with_set_prediction: chamfer_l2
+
 im2ingr_vit_32_multi_class_no_head_list:
-  parent: im2ingr_vit_32_multi_class_no_head_set
+  parent: im2ingr_vit_32_multi_class_no_head_bipartite
   comment: 'Try with a multi class token VIT, where each token is an ingredient (but sensitive to order of ingredients)'
   ingr_predictor:
-    with_set_prediction: false
+    with_set_prediction: none
+  optimization:
+    loss_weights:
+      label_loss: 1.0
+      cardinality_loss: 0.0
+      eos_loss: 0.0
 
 
 # -----------------------------------------------------------------------------

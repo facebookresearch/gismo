@@ -6,11 +6,11 @@ from inv_cooking.config import (
     IngredientPredictorTransformerConfig,
     IngredientPredictorType,
     IngredientPredictorVITConfig,
+    SetPredictionType,
 )
 
 
 class FakeIngredientPredictorConfig:
-
     @staticmethod
     def ff_config() -> IngredientPredictorFFConfig:
         return IngredientPredictorFFConfig(
@@ -23,7 +23,9 @@ class FakeIngredientPredictorConfig:
         )
 
     @staticmethod
-    def lstm_config(with_set_prediction: bool = False) -> IngredientPredictorLSTMConfig:
+    def lstm_config(
+        with_set_prediction: SetPredictionType = SetPredictionType.none,
+    ) -> IngredientPredictorLSTMConfig:
         return IngredientPredictorLSTMConfig(
             model=IngredientPredictorType.lstm,
             embed_size=2048,
@@ -33,7 +35,7 @@ class FakeIngredientPredictorConfig:
 
     @staticmethod
     def tf_config(
-        with_set_prediction: bool = False,
+        with_set_prediction: SetPredictionType = SetPredictionType.none,
     ) -> IngredientPredictorTransformerConfig:
         return IngredientPredictorTransformerConfig(
             model=IngredientPredictorType.tf,
@@ -45,7 +47,9 @@ class FakeIngredientPredictorConfig:
         )
 
     @staticmethod
-    def vit_config(with_set_prediction: bool = False) -> IngredientPredictorVITConfig:
+    def vit_config(
+        with_set_prediction: SetPredictionType = SetPredictionType.none,
+    ) -> IngredientPredictorVITConfig:
         return IngredientPredictorVITConfig(
             model=IngredientPredictorType.vit,
             embed_size=2048,

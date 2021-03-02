@@ -3,9 +3,13 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from inv_cooking.config import IngredientPredictorVITConfig
+from inv_cooking.config import IngredientPredictorVITConfig, SetPredictionType
 
-from .modules.permutation_invariant_criterion import ProbaChamferDistance
+from .modules.permutation_invariant_criterion import (
+    BiPartiteAssignmentCriterion,
+    PooledBinaryCrossEntropy,
+    ProbaChamferDistance,
+)
 from .predictor import IngredientsPredictor
 from .utils import mask_from_eos
 
@@ -30,11 +34,25 @@ class VITIngredientsPredictor(IngredientsPredictor):
         self.eos_value = eos_value
         self.pad_value = vocab_size - 1
         self.decoder = self._create_decoder(config, vocab_size)
-        self.permutation_invariant = config.with_set_prediction
-        if config.with_set_prediction:
-            self.criterion = ProbaChamferDistance(eos_value=eos_value, pad_value=self.pad_value)
+        self.permutation_invariant = (
+            config.with_set_prediction != SetPredictionType.none
+        )
+        if config.with_set_prediction == SetPredictionType.bipartite:
+            self.criterion = BiPartiteAssignmentCriterion(
+                eos_value=self.eos_value, pad_value=self.pad_value
+            )
+        elif config.with_set_prediction == SetPredictionType.chamfer_l2:
+            self.criterion = ProbaChamferDistance(
+                eos_value=self.eos_value, pad_value=self.pad_value
+            )
+        elif config.with_set_prediction == SetPredictionType.pooled_bce:
+            self.criterion = PooledBinaryCrossEntropy(
+                eos_value=self.eos_value, pad_value=self.pad_value
+            )
         else:
-            self.criterion = nn.CrossEntropyLoss(ignore_index=self.pad_value, reduction="mean")
+            self.criterion = nn.CrossEntropyLoss(
+                ignore_index=self.pad_value, reduction="mean"
+            )
 
     @staticmethod
     def _create_decoder(config: IngredientPredictorVITConfig, vocab_size: int):
@@ -43,10 +61,7 @@ class VITIngredientsPredictor(IngredientsPredictor):
             decoder_layers.extend(
                 [
                     nn.Conv1d(
-                        config.embed_size,
-                        config.embed_size,
-                        kernel_size=1,
-                        bias=False,
+                        config.embed_size, config.embed_size, kernel_size=1, bias=False,
                     ),
                     nn.Dropout(config.dropout),
                     nn.BatchNorm1d(config.embed_size),
@@ -54,21 +69,16 @@ class VITIngredientsPredictor(IngredientsPredictor):
                 ]
             )
         decoder_layers.append(
-            nn.Conv1d(
-                config.embed_size,
-                vocab_size - 1,
-                kernel_size=1,
-                bias=False,
-            ),
+            nn.Conv1d(config.embed_size, vocab_size - 1, kernel_size=1, bias=False,),
         )
         return nn.Sequential(*decoder_layers)
 
     def _forward_impl(
-            self,
-            img_features: torch.Tensor,
-            label_target: Optional[torch.Tensor] = None,
-            compute_losses: bool = False,
-            compute_predictions: bool = False,
+        self,
+        img_features: torch.Tensor,
+        label_target: Optional[torch.Tensor] = None,
+        compute_losses: bool = False,
+        compute_predictions: bool = False,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         assert self.max_num_ingredients + 1 == img_features.size(-1)
@@ -86,8 +96,10 @@ class VITIngredientsPredictor(IngredientsPredictor):
                 losses = self.criterion(label_logits, label_target)
             else:
                 # Flatten the prediction and do a simple cross-entropy loss
-                label_logits_v = label_logits.reshape(label_logits.size(0) * label_logits.size(1), -1)
-                label_target_v = label_target.view(-1)
+                label_logits_v = label_logits.reshape(
+                    label_logits.size(0) * label_logits.size(1), -1
+                )
+                label_target_v = label_target.view(-1)  # TODO - padding value?
                 loss = self.criterion(label_logits_v, label_target_v)
                 losses["label_loss"] = loss
 
@@ -105,7 +117,11 @@ class VITIngredientsPredictor(IngredientsPredictor):
             if i == 0:
                 predicted_mask = torch.zeros(el.shape).type_as(el)
             else:
-                batch_ind = [j for j in range(el.shape[0]) if predictions[i - 1][j] != self.eos_value]
+                batch_ind = [
+                    j
+                    for j in range(el.shape[0])
+                    if predictions[i - 1][j] != self.eos_value
+                ]
                 predictions_new = predictions[i - 1][batch_ind]
                 predicted_mask[batch_ind, predictions_new] = float("-inf")
 

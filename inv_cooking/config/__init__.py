@@ -21,6 +21,7 @@ from .ingredient_predictor import (
     IngredientPredictorTransformerConfig,
     IngredientPredictorType,
     IngredientPredictorVITConfig,
+    SetPredictionType,
 )
 from .optimization import OptimizationConfig
 from .recipe_generator import EncoderAttentionType, RecipeGeneratorConfig

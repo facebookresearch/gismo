@@ -37,14 +37,14 @@ ingr_predictor_ff_with_card_pred:
 ingr_predictor_lstm:
   model: lstm
   embed_size: 2048
-  with_set_prediction: true
+  with_set_prediction: pooled_bce
   dropout: 0.1
 
 ingr_predictor_tf:
   model: tf
   layers: 1
   embed_size: 2048
-  with_set_prediction: false
+  with_set_prediction: none
   n_att: 8
   dropout: 0.3
   activation: "relu"

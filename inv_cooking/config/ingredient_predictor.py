@@ -28,6 +28,13 @@ class CardinalityPredictionType(Enum):
     categorical = 1
 
 
+class SetPredictionType(Enum):
+    none = 0
+    pooled_bce = 1
+    chamfer_l2 = 2
+    bipartite = 3
+
+
 @dataclass
 class IngredientPredictorFFConfig(IngredientPredictorConfig):
     layers: int = MISSING
@@ -38,14 +45,14 @@ class IngredientPredictorFFConfig(IngredientPredictorConfig):
 
 @dataclass
 class IngredientPredictorVITConfig(IngredientPredictorConfig):
-    with_set_prediction: bool = MISSING
+    with_set_prediction: SetPredictionType = SetPredictionType.none
     layers: int = MISSING
     dropout: float = MISSING
 
 
 @dataclass
 class IngredientPredictorARConfig(IngredientPredictorConfig):
-    with_set_prediction: bool = MISSING
+    with_set_prediction: SetPredictionType = SetPredictionType.none
 
 
 @dataclass

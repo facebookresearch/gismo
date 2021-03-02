@@ -19,7 +19,9 @@ class ProbaChamferDistance(nn.Module):
         self.eps = eps
         self.crit_eos = nn.BCELoss(reduction="none")
 
-    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, logits: torch.Tensor, targets: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
         from pytorch3d.loss.chamfer import chamfer_distance
 
         losses: Dict[str, torch.Tensor] = {}
@@ -45,11 +47,15 @@ class ProbaChamferDistance(nn.Module):
         probs = probs * eos_head.float().unsqueeze(-1)
 
         # select targets for real ingredients (before EOS)
-        target_k_hot = self._targets_to_one_hots(targets, num_classes=self.pad_value + 1, remove_eos=True)
+        target_k_hot = self._targets_to_one_hots(
+            targets, num_classes=self.pad_value + 1, remove_eos=True
+        )
         target_k_hot = target_k_hot * eos_head.float().unsqueeze(-1)
 
         # compute the l2 chamfer distance in the probability space
-        losses["label_loss"] = chamfer_distance(probs[:, :, 1:], target_k_hot.float())[0]
+        losses["label_loss"] = chamfer_distance(probs[:, :, 1:], target_k_hot.float())[
+            0
+        ]
 
         # compute eos loss
         eos_loss = self.crit_eos(eos_probs, eos_target.float())
@@ -57,12 +63,12 @@ class ProbaChamferDistance(nn.Module):
         # eos loss is computed for all timesteps <= eos in gt and
         # equally penalizes the head (all 0s) and the true eos position (1)
         losses["eos_loss"] = (
-                0.5
-                * (eos_loss * eos_pos.float()).sum(1)
-                / (eos_pos.float().sum(1) + self.eps)
-                + 0.5
-                * (eos_loss * eos_head.float()).sum(1)
-                / (eos_head.float().sum(1) + self.eps)
+            0.5
+            * (eos_loss * eos_pos.float()).sum(1)
+            / (eos_pos.float().sum(1) + self.eps)
+            + 0.5
+            * (eos_loss * eos_head.float()).sum(1)
+            / (eos_head.float().sum(1) + self.eps)
         ).mean()
         return losses
 
@@ -73,7 +79,9 @@ class ProbaChamferDistance(nn.Module):
         Output shape is (batch_size, max_num_ingredients + 1, vocab_size)
         """
         one_hots = nn.functional.one_hot(targets, num_classes=num_classes)
-        one_hots = one_hots[:, :, :-1]  # Remove the pad value (not in predicted targets)
+        one_hots = one_hots[
+            :, :, :-1
+        ]  # Remove the pad value (not in predicted targets)
         if remove_eos:
             one_hots = one_hots[:, :, 1:]
         return one_hots
@@ -95,7 +103,9 @@ class BiPartiteAssignmentCriterion(nn.Module):
         self.eps = eps
         self.cross_entropy = nn.CrossEntropyLoss()
 
-    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, logits: torch.Tensor, targets: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
         from scipy.optimize import linear_sum_assignment
 
         losses: Dict[str, torch.Tensor] = {}
@@ -131,7 +141,7 @@ class BiPartiteAssignmentCriterion(nn.Module):
         return losses
 
 
-class SetPooledCrossEntropy(nn.Module):
+class PooledBinaryCrossEntropy(nn.Module):
     """
     Permutation invariant loss for set prediction meant for Auto Regressive models:
     - the input is a list of predictions (batch_size, max_num_ingredients + 1, vocab_size)
@@ -148,7 +158,9 @@ class SetPooledCrossEntropy(nn.Module):
         self.crit = nn.BCELoss(reduction="mean")
         self.crit_eos = nn.BCELoss(reduction="none")
 
-    def forward(self, logits: torch.Tensor, target: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(
+        self, logits: torch.Tensor, target: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
         losses: Dict[str, torch.Tensor] = {}
 
         # Compute the probabilities of each label
@@ -184,11 +196,11 @@ class SetPooledCrossEntropy(nn.Module):
         # eos loss is computed for all timesteps <= eos in gt and
         # equally penalizes the head (all 0s) and the true eos position (1)
         losses["eos_loss"] = (
-                0.5
-                * (eos_loss * eos_pos.float()).sum(1)
-                / (eos_pos.float().sum(1) + self.eps)
-                + 0.5
-                * (eos_loss * eos_head.float()).sum(1)
-                / (eos_head.float().sum(1) + self.eps)
+            0.5
+            * (eos_loss * eos_pos.float()).sum(1)
+            / (eos_pos.float().sum(1) + self.eps)
+            + 0.5
+            * (eos_loss * eos_head.float()).sum(1)
+            / (eos_head.float().sum(1) + self.eps)
         ).mean()
         return losses
