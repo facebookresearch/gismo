@@ -54,6 +54,11 @@ im2ingr_resnext101_ff_bce_cat:
   loading:
     batch_size: 6
 
+
+# -----------------------------------------------------------------------------
+# VIT based image encoders
+# -----------------------------------------------------------------------------
+
 im2ingr_vit_32_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
   comment: 'Try a VIT pretrained classification encoder'
@@ -65,16 +70,16 @@ im2ingr_vit_32_ff_bce_cat:
      n_cls_tokens: 1
      freeze: False
 
-im2ingr_vit_32_ff_bce_cat_multi_level:
+im2ingr_vit_16_ff_bce_cat:
   parent: im2ingr_vit_32_ff_bce_cat
-  comment: 'Try a VIT pretrained classification encoder, extracting features at several levels'
+  loading:
+    batch_size: 8
   image_encoder:
-     additional_repr_levels: [6, 8, 10]
-     concatenate_repr_levels: True
+    patch_size: 16
 
 im2ingr_vit_32_no_class_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'Try a VIT pretrained classification encoder'
+  comment: 'VIT/32 pretrained classification encoder with average pooling instead of class tokens'
   loading:
     batch_size: 16
   image_encoder:
@@ -86,33 +91,30 @@ im2ingr_vit_32_no_class_ff_bce_cat:
     freeze: False
 
 im2ingr_vit_16_no_class_ff_bce_cat:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'Try a VIT pretrained classification encoder'
+  parent: im2ingr_vit_32_no_class_ff_bce_cat
+  comment: 'VIT/16 pretrained classification encoder with average pooling instead of class tokens'
   loading:
     batch_size: 16
   image_encoder:
-    model: vit
-    pretrained: True
-    dropout: 0.1
     patch_size: 16
-    n_cls_tokens: 0
-    freeze: False
+  optimization:
+    patience: 20
 
-im2ingr_vit_16_ff_bce_cat:
+im2ingr_vit_32_ff_bce_cat_multi_level:
   parent: im2ingr_vit_32_ff_bce_cat
-  loading:
-    batch_size: 8
-  image_encoder:
-    patch_size: 16
-
-im2ingr_vit_16_ff_bce_cat_multi_level:
-  parent: im2ingr_vit_16_ff_bce_cat
-  comment: 'Try a VIT pretrained classification encoder, extracting features at several levels'
+  comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
   image_encoder:
      additional_repr_levels: [6, 8, 10]
      concatenate_repr_levels: True
 
-im2ingr_vit_32_multi_class_no_head_ordered:
+im2ingr_vit_16_ff_bce_cat_multi_level:
+  parent: im2ingr_vit_16_ff_bce_cat
+  comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
+  image_encoder:
+     additional_repr_levels: [6, 8, 10]
+     concatenate_repr_levels: True
+
+im2ingr_vit_32_multi_class_no_head_set:
   parent: im2ingr
   comment: 'Try with a multi class token VIT, where each token is an ingredient'
   loading:
@@ -130,23 +132,22 @@ im2ingr_vit_32_multi_class_no_head_ordered:
     embed_size: 2048
     with_set_prediction: true
     dropout: 0.0
+  optimization:
+    loss_weights:
+      label_loss: 1.0
+      cardinality_loss: 0.0
+      eos_loss: 0.001
 
-im2ingr_vit_32_multi_class_no_head_no_order:
-  parent: im2ingr_vit_32_multi_class_no_head_ordered
+im2ingr_vit_32_multi_class_no_head_list:
+  parent: im2ingr_vit_32_multi_class_no_head_set
   comment: 'Try with a multi class token VIT, where each token is an ingredient (but sensitive to order of ingredients)'
   ingr_predictor:
     with_set_prediction: false
 
-im2ingr_vit_multi_class_ff_bce_cat:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'Try a VIT encoder with multi class token (not pretrained)'
-  image_encoder:
-     model: vit
-     pretrained: False
-     dropout: 0.1
-     patch_size: 32
-     n_cls_tokens: SEARCH[4, 8, 16, 32, 64]
-     freeze: False
+
+# -----------------------------------------------------------------------------
+# CLIP based image encoders
+# -----------------------------------------------------------------------------
 
 im2ingr_clip_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
