@@ -104,14 +104,13 @@ class BiPartiteAssignmentCriterion(nn.Module):
         eos_logits = []
         matching_targets = []
 
-        # TODO - index out of bound error triggered in CUDA to investigate
         batch_size = targets.size(0)
         for i in range(batch_size):
             logit = logits[i]
             target = targets[i]
             eos_indices = torch.nonzero(target == self.eos_value)
             if len(eos_indices):
-                eos_index = eos_indices[0]
+                eos_index = eos_indices.item()
                 eos_logits.append(logit[eos_index:])
                 target = target[:eos_index]
                 logit = logit[:eos_index]

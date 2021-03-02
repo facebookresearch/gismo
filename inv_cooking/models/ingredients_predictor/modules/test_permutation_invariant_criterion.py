@@ -6,16 +6,22 @@ from .permutation_invariant_criterion import SetPooledCrossEntropy, BiPartiteAss
 
 def test_BiPartiteAssignmentCriterions_shapes():
     torch.manual_seed(0)
-    batch_size = 2
-    max_num_ingredients = 3
-    vocab_size = 5
-    criterion = BiPartiteAssignmentCriterion(eos_value=0, pad_value=vocab_size - 1)
-    logits = torch.randn(size=(batch_size, max_num_ingredients + 1, vocab_size - 1)).cuda()  # No pad value predicted
-    target = torch.randint(low=0, high=vocab_size-1, size=(batch_size, max_num_ingredients + 1)).cuda()
-    target[:, -1] = 0  # EOS at the end for every sample
-    target[-1, -2] = 0  # Adding EOS on step before the end
-    target[-1, -1] = vocab_size - 1  # Adding padding after the EOS
-    losses = criterion(logits, target)
+    batch_size = 21
+    max_num_ingredients = 20
+    vocab_size = 1487
+    pad_value = vocab_size - 1
+    criterion = BiPartiteAssignmentCriterion(eos_value=0, pad_value=pad_value)
+    logits = torch.randn(size=(batch_size, max_num_ingredients + 1, vocab_size - 1))  # No pad value predicted
+    target = torch.randint(low=1, high=pad_value, size=(batch_size, max_num_ingredients + 1))  # Create valid ingr
+
+    # Try all possibilities of EOS position
+    for i in range(batch_size):
+        target[i, i] = 0  # Adding EOS before the end
+        target[i, i+1:] = pad_value  # Adding padding after the EOS
+
+    losses = criterion(logits.cuda(), target.cuda())
+    assert "label_loss" in losses
+    assert "eos_loss" in losses
     print(losses)
 
 
