@@ -8,7 +8,12 @@ from typing import Iterable
 
 
 class Vocabulary(object):
-    """Simple vocabulary wrapper."""
+    """
+    Simple vocabulary wrapper.
+    """
+
+    PAD_TOKEN = "<pad>"
+    END_TOKEN = "<end>"
 
     def __init__(self):
         self.word2idx = {}
@@ -33,7 +38,7 @@ class Vocabulary(object):
 
     def remove_eos(self):
         # get word id to remove
-        id_to_remove = self.word2idx["<end>"]
+        id_to_remove = self.word2idx[self.END_TOKEN]
 
         # remove word and shift all subsequent ids
         length = len(self.idx2word)
@@ -49,12 +54,12 @@ class Vocabulary(object):
         # remove last idx
         del self.idx2word[length - 1]
         # remove eos word
-        del self.word2idx["<end>"]
+        del self.word2idx[self.END_TOKEN]
         self.idx -= 1
 
     def __call__(self, word: str):
         if word not in self.word2idx:
-            return self.word2idx["<pad>"]
+            return self.word2idx[self.PAD_TOKEN]
         return self.word2idx[word]
 
     def __len__(self):

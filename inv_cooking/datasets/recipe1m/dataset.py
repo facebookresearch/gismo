@@ -10,6 +10,7 @@ import torch.utils.data as data
 from PIL import Image
 
 from inv_cooking.config import DatasetFilterConfig
+from inv_cooking.datasets.vocabulary import Vocabulary
 
 
 @dataclass
@@ -129,21 +130,24 @@ class Recipe1M(data.Dataset):
         return image, ret_ingr, recipe
 
     def load_ingredients(self, index: int):
-        ingr = self.dataset[index]["ingredients"]
+        raw_ingredients = self.dataset[index]["ingredients"]
 
-        # ingredients to idx
+        # Map string ingredient to their vocabulary index
         true_ingr_idxs = []
-        for i in range(len(ingr)):
-            true_ingr_idxs.append(self.ingr_vocab(ingr[i]))
+        pad_index = self.ingr_vocab(Vocabulary.PAD_TOKEN)
+        for i in range(len(raw_ingredients)):
+            ingredient_index = self.ingr_vocab(raw_ingredients[i])
+            if ingredient_index != pad_index:
+                true_ingr_idxs.append(ingredient_index)
         true_ingr_idxs = list(set(true_ingr_idxs))
 
+        # Add EOS if necessary
         if self.loading.with_ingredient_eos:
             true_ingr_idxs.append(self.ingr_vocab("<end>"))
 
-        ret_ingr = true_ingr_idxs + [self.ingr_pad_value] * (
-            self.max_num_labels + self.loading.with_ingredient_eos - len(true_ingr_idxs)
-        )
-        return ret_ingr
+        # Return the ingredients, completed with pad values
+        nb_pad_values = self.max_num_labels + self.loading.with_ingredient_eos - len(true_ingr_idxs)
+        return true_ingr_idxs + [self.ingr_pad_value] * nb_pad_values
 
     def _load_image(self, index: int):
         paths = self.dataset[index]["images"][0 : self.max_num_images]
