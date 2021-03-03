@@ -14,15 +14,18 @@ def knn_cross_entropy(
     """
     Find the closest YS point to each of the XS element:
     - The XS and YS points must live in a probability space (sum of axis == 1)
-    - The YS points must have non zero probability on each axis (cross entropy requirement due to log)
+    - The YS points must have non zero probability on each axis (for cross entropy)
+      so we use a softening mechanism (with eps) to make sure probabilities are not too low
     Return a tensor with the sum of those distances
     """
     min_distances = []
     batch_size = xs.size(0)
     nb_points = xs.size(1)
+    nb_dim = xs.size(2)
     for n in range(batch_size):
         for i in range(nb_points):
-            distances = (-1 * xs[n][i] * torch.log(ys[n] + eps)).sum(dim=-1)
+            soft_ys = ys[n].clip(min=eps, max=1 - (nb_dim - 1) * eps)
+            distances = (-1 * xs[n][i] * torch.log(soft_ys)).sum(dim=-1)
             min_distances.append(torch.min(distances))
     return torch.stack(min_distances).sum()
 

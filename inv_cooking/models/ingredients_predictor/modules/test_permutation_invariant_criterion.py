@@ -5,6 +5,8 @@ from .permutation_invariant_criterion import (
     ChamferDistanceType,
     chamfer_cross_entropy_distance,
     knn_cross_entropy,
+    PooledBinaryCrossEntropy,
+    BiPartiteAssignmentCriterion
 )
 
 
@@ -58,7 +60,6 @@ def test_ChamferDistance_shapes():
         print(losses)
 
 
-"""
 def test_BiPartiteAssignmentCriterions_shapes():
     torch.manual_seed(0)
     batch_size = 21
@@ -149,4 +150,3 @@ def test_SetPooledCrossEntropy_is_invariant_to_order():
 
         assert torch.allclose(losses["label_loss"], new_losses["label_loss"])
         assert torch.allclose(losses["eos_loss"], new_losses["eos_loss"])
-"""
