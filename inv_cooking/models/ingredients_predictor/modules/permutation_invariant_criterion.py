@@ -6,7 +6,7 @@ import torch.nn as nn
 from inv_cooking.models.ingredients_predictor.utils import label2_k_hots
 
 
-class ProbaChamferDistance(nn.Module):
+class ChamferDistanceL2(nn.Module):
     """
     Chamfer distance between points the probability distribution
     The distance is computed with L2 norm: TODO - cross-entropy distance
@@ -47,15 +47,14 @@ class ProbaChamferDistance(nn.Module):
         probs = probs * eos_head.float().unsqueeze(-1)
 
         # select targets for real ingredients (before EOS)
-        target_k_hot = self._targets_to_one_hots(
+        target_one_hot = self._targets_to_one_hots(
             targets, num_classes=self.pad_value + 1, remove_eos=True
         )
-        target_k_hot = target_k_hot * eos_head.float().unsqueeze(-1)
+        target_one_hot = target_one_hot * eos_head.float().unsqueeze(-1)
 
         # compute the l2 chamfer distance in the probability space
-        losses["label_loss"] = chamfer_distance(probs[:, :, 1:], target_k_hot.float())[
-            0
-        ]
+        chamfer_losses = chamfer_distance(probs[:, :, 1:], target_one_hot.float())
+        losses["label_loss"] = chamfer_losses[0]
 
         # compute eos loss
         eos_loss = self.crit_eos(eos_probs, eos_target.float())
@@ -79,9 +78,8 @@ class ProbaChamferDistance(nn.Module):
         Output shape is (batch_size, max_num_ingredients + 1, vocab_size)
         """
         one_hots = nn.functional.one_hot(targets, num_classes=num_classes)
-        one_hots = one_hots[
-            :, :, :-1
-        ]  # Remove the pad value (not in predicted targets)
+        # Remove the pad value (not in predicted targets)
+        one_hots = one_hots[:, :, :-1]
         if remove_eos:
             one_hots = one_hots[:, :, 1:]
         return one_hots

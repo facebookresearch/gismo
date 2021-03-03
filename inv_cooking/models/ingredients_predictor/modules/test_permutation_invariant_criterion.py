@@ -3,7 +3,7 @@ import torch
 from .permutation_invariant_criterion import (
     BiPartiteAssignmentCriterion,
     PooledBinaryCrossEntropy,
-    ProbaChamferDistance,
+    ChamferDistanceL2,
 )
 
 
@@ -37,7 +37,7 @@ def test_ProbaChamferDistance_shapes():
     batch_size = 2
     max_num_ingredients = 3
     vocab_size = 5
-    criterion = ProbaChamferDistance(eos_value=0, pad_value=vocab_size - 1)
+    criterion = ChamferDistanceL2(eos_value=0, pad_value=vocab_size - 1)
     logits = torch.randn(
         size=(batch_size, max_num_ingredients + 1, vocab_size - 1)
     ).cuda()  # No pad value predicted
