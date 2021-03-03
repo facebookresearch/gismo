@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Dict
 
 import torch
@@ -6,24 +7,62 @@ import torch.nn as nn
 from inv_cooking.models.ingredients_predictor.utils import label2_k_hots
 
 
-class ChamferDistanceL2(nn.Module):
+@torch.jit.script
+def knn_cross_entropy(
+    xs: torch.Tensor, ys: torch.Tensor, eps: float = 1e-8
+) -> torch.Tensor:
+    """
+    Find the closest YS point to each of the XS element:
+    - The XS and YS points must live in a probability space (sum of axis == 1)
+    - The YS points must have non zero probability on each axis (cross entropy requirement due to log)
+    Return a tensor with the sum of those distances
+    """
+    min_distances = []
+    batch_size = xs.size(0)
+    nb_points = xs.size(1)
+    for n in range(batch_size):
+        for i in range(nb_points):
+            distances = (-1 * xs[n][i] * torch.log(ys[n] + eps)).sum(dim=-1)
+            min_distances.append(torch.min(distances))
+    return torch.stack(min_distances).sum()
+
+
+def chamfer_cross_entropy_distance(
+    probs: torch.Tensor, one_hot_targets: torch.Tensor, eps: float = 1e-8
+):
+    d1 = knn_cross_entropy(one_hot_targets, probs, eps)
+    d2 = knn_cross_entropy(probs, one_hot_targets, eps)
+    return d1 + d2
+
+
+class ChamferDistanceType(Enum):
+    l2 = 0
+    cross_entropy = 1
+    unilateral_cross_entropy = 2
+
+
+class ChamferDistanceCriterion(nn.Module):
     """
     Chamfer distance between points the probability distribution
-    The distance is computed with L2 norm: TODO - cross-entropy distance
     """
 
-    def __init__(self, eos_value: int, pad_value: int, eps: float = 1e-8):
+    def __init__(
+        self,
+        eos_value: int,
+        pad_value: int,
+        eps: float = 1e-8,
+        distanceType: ChamferDistanceType = ChamferDistanceType.l2,
+    ):
         super().__init__()
         self.eos_value = eos_value
         self.pad_value = pad_value
         self.eps = eps
-        self.crit_eos = nn.BCELoss(reduction="none")
+        self.criterion_eos = nn.BCELoss(reduction="none")
+        self.distanceType = distanceType
 
     def forward(
         self, logits: torch.Tensor, targets: torch.Tensor
     ) -> Dict[str, torch.Tensor]:
-        from pytorch3d.loss.chamfer import chamfer_distance
-
         losses: Dict[str, torch.Tensor] = {}
 
         # Compute the probabilities of each label
@@ -53,11 +92,24 @@ class ChamferDistanceL2(nn.Module):
         target_one_hot = target_one_hot * eos_head.float().unsqueeze(-1)
 
         # compute the l2 chamfer distance in the probability space
-        chamfer_losses = chamfer_distance(probs[:, :, 1:], target_one_hot.float())
-        losses["label_loss"] = chamfer_losses[0]
+        if self.distanceType == ChamferDistanceType.l2:
+            from pytorch3d.loss.chamfer import chamfer_distance as chamfer_distance_l2
+
+            chamfer_losses = chamfer_distance_l2(
+                probs[:, :, 1:], target_one_hot.float()
+            )
+            losses["label_loss"] = chamfer_losses[0]
+        elif self.distanceType == ChamferDistanceType.cross_entropy:
+            losses["label_loss"] = chamfer_cross_entropy_distance(
+                probs[:, :, 1:], target_one_hot.float(), self.eps
+            )
+        elif self.distanceType == ChamferDistanceType.unilateral_cross_entropy:
+            losses["label_loss"] = knn_cross_entropy(
+                target_one_hot.float(), probs[:, :, 1:], self.eps
+            )
 
         # compute eos loss
-        eos_loss = self.crit_eos(eos_probs, eos_target.float())
+        eos_loss = self.criterion_eos(eos_probs, eos_target.float())
 
         # eos loss is computed for all timesteps <= eos in gt and
         # equally penalizes the head (all 0s) and the true eos position (1)

@@ -7,8 +7,9 @@ from inv_cooking.config import IngredientPredictorVITConfig, SetPredictionType
 
 from .modules.permutation_invariant_criterion import (
     BiPartiteAssignmentCriterion,
+    ChamferDistanceCriterion,
+    ChamferDistanceType,
     PooledBinaryCrossEntropy,
-    ChamferDistanceL2,
 )
 from .predictor import IngredientsPredictor
 from .utils import mask_from_eos
@@ -42,8 +43,22 @@ class VITIngredientsPredictor(IngredientsPredictor):
                 eos_value=self.eos_value, pad_value=self.pad_value
             )
         elif config.with_set_prediction == SetPredictionType.chamfer_l2:
-            self.criterion = ChamferDistanceL2(
-                eos_value=self.eos_value, pad_value=self.pad_value
+            self.criterion = ChamferDistanceCriterion(
+                eos_value=self.eos_value,
+                pad_value=self.pad_value,
+                distanceType=ChamferDistanceType.l2,
+            )
+        elif config.with_set_prediction == SetPredictionType.chamfer_ce:
+            self.criterion = ChamferDistanceCriterion(
+                eos_value=self.eos_value,
+                pad_value=self.pad_value,
+                distanceType=ChamferDistanceType.cross_entropy,
+            )
+        elif config.with_set_prediction == SetPredictionType.chamfer_unilateral_ce:
+            self.criterion = ChamferDistanceCriterion(
+                eos_value=self.eos_value,
+                pad_value=self.pad_value,
+                distanceType=ChamferDistanceType.unilateral_cross_entropy,
             )
         elif config.with_set_prediction == SetPredictionType.pooled_bce:
             self.criterion = PooledBinaryCrossEntropy(

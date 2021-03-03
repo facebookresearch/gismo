@@ -17,8 +17,9 @@ from inv_cooking.models.modules.transformer_decoder import DecoderTransformer
 
 from .modules.permutation_invariant_criterion import (
     BiPartiteAssignmentCriterion,
+    ChamferDistanceCriterion,
+    ChamferDistanceType,
     PooledBinaryCrossEntropy,
-    ChamferDistanceL2,
 )
 from .predictor import IngredientsPredictor
 from .utils import mask_from_eos
@@ -113,8 +114,22 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
                 eos_value=eos_value, pad_value=vocab_size - 1
             )
         elif config.with_set_prediction == SetPredictionType.chamfer_l2:
-            criterion = ChamferDistanceL2(
-                eos_value=eos_value, pad_value=vocab_size - 1
+            criterion = ChamferDistanceCriterion(
+                eos_value=eos_value,
+                pad_value=vocab_size - 1,
+                distanceType=ChamferDistanceType.l2,
+            )
+        elif config.with_set_prediction == SetPredictionType.chamfer_ce:
+            criterion = ChamferDistanceCriterion(
+                eos_value=eos_value,
+                pad_value=vocab_size - 1,
+                distanceType=ChamferDistanceType.cross_entropy,
+            )
+        elif config.with_set_prediction == SetPredictionType.chamfer_unilateral_ce:
+            criterion = ChamferDistanceCriterion(
+                eos_value=eos_value,
+                pad_value=vocab_size - 1,
+                distanceType=ChamferDistanceType.chamfer_unilateral_ce,
             )
         else:
             criterion = nn.CrossEntropyLoss(ignore_index=pad_value, reduction="mean")

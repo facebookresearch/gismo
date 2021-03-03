@@ -1,12 +1,64 @@
 import torch
 
 from .permutation_invariant_criterion import (
-    BiPartiteAssignmentCriterion,
-    PooledBinaryCrossEntropy,
-    ChamferDistanceL2,
+    ChamferDistanceCriterion,
+    ChamferDistanceType,
+    chamfer_cross_entropy_distance,
+    knn_cross_entropy,
 )
 
 
+def test_knn_cross_entropy():
+    targets = torch.tensor(
+        [
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        ]
+    )
+    probs = torch.tensor(
+        [
+            [[0.05, 0.9, 0.05], [0.9, 0.05, 0.05]],
+            [[0.9, 0.05, 0.05], [0.05, 0.9, 0.05]],
+            [[0.9, 0.05, 0.05], [0.05, 0.05, 0.9]],
+        ]
+    )
+    expected = -5 * torch.log(torch.tensor(0.9)) - torch.log(torch.tensor(0.05))
+    output = knn_cross_entropy(targets.cuda(), probs.cuda())
+    assert torch.allclose(expected.cuda(), output.cuda(), atol=1e-4)
+    print(chamfer_cross_entropy_distance(probs.cuda(), targets.cuda()))
+
+
+def test_ChamferDistance_shapes():
+    torch.manual_seed(0)
+    batch_size = 2
+    max_num_ingredients = 3
+    vocab_size = 5
+
+    # Don't predict a pad value
+    logits = torch.randn(
+        size=(batch_size, max_num_ingredients + 1, vocab_size - 1)
+    ).cuda()
+    target = torch.randint(
+        low=0, high=vocab_size - 1, size=(batch_size, max_num_ingredients + 1)
+    ).cuda()
+    target[:, -1] = 0  # EOS at the end for every sample
+    target[-1, -2] = 0  # Adding EOS on step before the end
+    target[-1, -1] = vocab_size - 1  # Adding padding after the EOS
+
+    for distanceType in [
+        ChamferDistanceType.l2,
+        ChamferDistanceType.cross_entropy,
+        ChamferDistanceType.unilateral_cross_entropy,
+    ]:
+        criterion = ChamferDistanceCriterion(
+            eos_value=0, pad_value=vocab_size - 1, distanceType=distanceType
+        )
+        losses = criterion(logits, target)
+        print(losses)
+
+
+"""
 def test_BiPartiteAssignmentCriterions_shapes():
     torch.manual_seed(0)
     batch_size = 21
@@ -29,25 +81,6 @@ def test_BiPartiteAssignmentCriterions_shapes():
     losses = criterion(logits.cuda(), target.cuda())
     assert "label_loss" in losses
     assert "eos_loss" in losses
-    print(losses)
-
-
-def test_ProbaChamferDistance_shapes():
-    torch.manual_seed(0)
-    batch_size = 2
-    max_num_ingredients = 3
-    vocab_size = 5
-    criterion = ChamferDistanceL2(eos_value=0, pad_value=vocab_size - 1)
-    logits = torch.randn(
-        size=(batch_size, max_num_ingredients + 1, vocab_size - 1)
-    ).cuda()  # No pad value predicted
-    target = torch.randint(
-        low=0, high=vocab_size - 1, size=(batch_size, max_num_ingredients + 1)
-    ).cuda()
-    target[:, -1] = 0  # EOS at the end for every sample
-    target[-1, -2] = 0  # Adding EOS on step before the end
-    target[-1, -1] = vocab_size - 1  # Adding padding after the EOS
-    losses = criterion(logits, target)
     print(losses)
 
 
@@ -116,3 +149,4 @@ def test_SetPooledCrossEntropy_is_invariant_to_order():
 
         assert torch.allclose(losses["label_loss"], new_losses["label_loss"])
         assert torch.allclose(losses["eos_loss"], new_losses["eos_loss"])
+"""

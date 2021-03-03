@@ -33,6 +33,8 @@ class SetPredictionType(Enum):
     pooled_bce = 1
     chamfer_l2 = 2
     bipartite = 3
+    chamfer_ce = 4
+    chamfer_unilateral_ce = 5
 
 
 @dataclass

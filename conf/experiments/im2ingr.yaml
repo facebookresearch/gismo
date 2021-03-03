@@ -150,6 +150,18 @@ im2ingr_vit_32_multi_class_no_head_chamfer_l2_set:
   ingr_predictor:
     with_set_prediction: chamfer_l2
 
+im2ingr_vit_32_multi_class_no_head_chamfer_ce_set:
+  parent: im2ingr_vit_32_multi_class_no_head_bipartite
+  comment: 'Try with a multi class token VIT, where each token is an ingredient'
+  ingr_predictor:
+    with_set_prediction: chamfer_ce
+
+im2ingr_vit_32_multi_class_no_head_chamfer_unilat_ce_set:
+  parent: im2ingr_vit_32_multi_class_no_head_bipartite
+  comment: 'Try with a multi class token VIT, where each token is an ingredient'
+  ingr_predictor:
+    with_set_prediction: chamfer_unilateral_ce
+
 im2ingr_vit_32_multi_class_no_head_list:
   parent: im2ingr_vit_32_multi_class_no_head_bipartite
   comment: 'Try with a multi class token VIT, where each token is an ingredient (but sensitive to order of ingredients)'
