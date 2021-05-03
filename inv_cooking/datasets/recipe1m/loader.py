@@ -89,13 +89,12 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def _get_dataset(self, stage: str, which_split: Optional[str] = None):
 
         # reads the file with ids to use for the corresponding split
-        if stage == 'test' and which_split is not None:
-            splits_filename = os.path.join(self.dataset_config.splits_path, which_split + ".txt")
+        if which_split == 'val':
+            splits_filename = os.path.join(self.dataset_config.splits_path, which_split + ".txt")  ## PROBLEM IS HERE
+            with open(splits_filename, "r") as f:
+                selected_indices = np.array([int(line.rstrip("\n")) for line in f])
         else:
-            splits_filename = os.path.join(self.dataset_config.splits_path, stage + ".txt")
-
-        with open(splits_filename, "r") as f:
-            selected_indices = np.array([int(line.rstrip("\n")) for line in f])
+            selected_indices =  None
 
         dataset = Recipe1M(
             self.dataset_config.path,
@@ -105,6 +104,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             use_lmdb=False,  # TODO - check if necessary
             selected_indices=selected_indices,
             loading=self.loading_options,
+            preprocessed_folder=self.dataset_config.pre_processing.save_path,
         )
         return dataset
 

@@ -31,12 +31,13 @@ class Recipe1M(data.Dataset):
         split: str,
         filtering: DatasetFilterConfig,
         loading: LoadingOptions,
+        preprocessed_folder: str,
         transform=None,
         use_lmdb: bool = False,
         selected_indices: np.ndarray = None,
     ):
         self.image_dir = os.path.join(data_dir, "images", split)
-        self.pre_processed_dir = os.path.join(data_dir, "preprocessed")
+        self.pre_processed_dir = preprocessed_folder  #os.path.join(data_dir, "preprocessed")  ## PROBLEM IS HERE
         self.split = split
         self.max_num_images = filtering.max_num_images
         self.max_num_labels = filtering.max_num_labels
@@ -115,7 +116,10 @@ class Recipe1M(data.Dataset):
             if len(entry["images"]) == 0:
                 continue
             ids.append(i)
-        ids = np.array(ids)[selected_indices]
+
+        if selected_indices is not None:
+            selected_indices = [s for s in selected_indices if s < len(ids)]
+            ids = np.array(ids)[selected_indices]
         self.dataset = [self.dataset[i] for i in ids]
 
     def __len__(self):

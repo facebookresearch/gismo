@@ -8,6 +8,8 @@
 import json
 import os
 import pickle
+import re
+import pandas as pd
 from collections import Counter
 
 import nltk
@@ -19,6 +21,8 @@ from inv_cooking.datasets.recipe1m.parsing import (
     InstructionParser,
     cluster_ingredients,
     remove_plurals,
+    remove_plurals_flavorgraph,
+    match_flavorgraph,
 )
 from inv_cooking.datasets.vocabulary import Vocabulary
 
@@ -111,15 +115,21 @@ def update_counter(sentence_list, counter_toks):
         counter_toks.update(tokens)
 
 
-def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
+def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: str=None):
     id_to_images_index = {}
     for i, entry in enumerate(layer2):
         id_to_images_index[entry["id"]] = i
 
-    ingredient_parser = IngredientParser(
-        replace_dict={"and": ["&", "'n"], "": ["%", ",", ".", "#", "[", "]", "!", "?"]}
-    )
-
+    # ingredient parser
+    if args.flavor_graph:
+        ingredient_parser = IngredientParser(
+            replace_dict={"_": ["-"], "": ["#", "[", "]", "!", "?"]}
+        )
+    else:
+         ingredient_parser = IngredientParser(
+            replace_dict={"and": ["&", "'n"], "": ["%", ",", ".", "#", "[", "]", "!", "?"]}
+        )
+    # instruction parser
     instruction_parser = InstructionParser(
         replace_dict={"and": ["&", "'n"], "": ["#", "[", "]"]}
     )
@@ -139,7 +149,7 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
 
         # retrieve pre-detected ingredients for this entry
         det_entry = dets[idx2ind[entry["id"]]]
-        ingrs_list = list(ingredient_parser.parse_entry(det_entry))
+        ingrs_list = list(ingredient_parser.parse_entry(det_entry, clean_digits=not args.flavor_graph))
 
         # get raw text for instructions of this entry
         acc_len, instrs_list = instruction_parser.parse_entry(entry)
@@ -166,14 +176,27 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
         if base_word not in counter_ingrs.keys():
             counter_ingrs[base_word] = 1
 
-    counter_ingrs, cluster_ingrs = cluster_ingredients(counter_ingrs)
-    counter_ingrs, cluster_ingrs = remove_plurals(counter_ingrs, cluster_ingrs)
+    if args.flavor_graph:
+        ingrs_df = pd.read_csv(os.path.join(os.path.dirname(recipe1m_path), 'flavorgraph', 'nodes_191120.csv'))
+        ingredients = ingrs_df.loc[ingrs_df['node_type'] == 'ingredient']
+        all_flavorgraph_ingrs = ingredients['name']
+        pattern = "(?P<char>[" + re.escape("_") + "])(?P=char)+"
+        counter_ingrs = {k.replace(k, re.sub(pattern, r"\1", k)): v for k, v in counter_ingrs.items()}
+        cluster_ingrs, counter_ingrs = remove_plurals_flavorgraph(counter_ingrs)
+        cluster_ingrs, counter_ingrs = match_flavorgraph(counter_ingrs, cluster_ingrs, list(all_flavorgraph_ingrs))
 
-    # If the ingredient frequency is less than 'threshold', then the ingredient is discarded.
-    words = [word for word, cnt in counter_toks.items() if cnt >= args.threshold_words]
-    ingrs = {
-        word: cnt for word, cnt in counter_ingrs.items() if cnt >= args.threshold_ingrs
-    }
+        # If the ingredient frequency is less than 'threshold', then the ingredient is discarded.
+        words = [word for word, cnt in counter_toks.items() if cnt >= args.threshold_words]
+        ingrs = cluster_ingrs
+    else:
+        counter_ingrs, cluster_ingrs = cluster_ingredients(counter_ingrs)
+        counter_ingrs, cluster_ingrs = remove_plurals(counter_ingrs, cluster_ingrs)
+
+        # If the ingredient frequency is less than 'threshold', then the ingredient is discarded.
+        words = [word for word, cnt in counter_toks.items() if cnt >= args.threshold_words]
+        ingrs = {
+            word: cnt for word, cnt in counter_ingrs.items() if cnt >= args.threshold_ingrs
+        }
 
     # Recipe vocab
     # Create a vocab wrapper and add some special tokens.
@@ -207,7 +230,7 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig):
         labels = []
         ingrs_list = []
         det_entry = dets[idx2ind[entry["id"]]]
-        for det_ingr_undrs in ingredient_parser.parse_entry(det_entry):
+        for det_ingr_undrs in ingredient_parser.parse_entry(det_entry, clean_digits=not args.flavor_graph):
             ingrs_list.append(det_ingr_undrs)
             label_idx = vocab_ingrs(det_ingr_undrs)
             if label_idx is not vocab_ingrs("<pad>") and label_idx not in labels:
@@ -278,7 +301,7 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
 
     # Build vocabularies and dataset
     vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(
-        dets, layer1, layer2, config
+        dets, layer1, layer2, config, recipe1m_path, 
     )
 
     # Save the vocabularies and dataset

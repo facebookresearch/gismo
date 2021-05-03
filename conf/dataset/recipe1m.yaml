@@ -19,7 +19,7 @@ filtering:
   max_instruction_length: 15
 
 pre_processing:
-  save_path: 'data/recipe1m/preprocessed'
+  save_path: "data/recipe1m/preprocessed_flavorgraph"  #  012319/preprocessed# 'data/recipe1m/preprocessed_new'
   threshold_ingrs: 10  # minimum ingr count threshold
   threshold_words: 10  # minimum word count threshold
   maxnuminstrs: 20  # max number of instructions (sentences)
@@ -27,3 +27,4 @@ pre_processing:
   minnuminstrs: 2  # min number of instructions (sentences)
   minnumingrs: 2  # min number of ingredients
   minnumwords: 20  # minimum number of characters in recipe
+  flavor_graph: True
