@@ -22,6 +22,7 @@ class DatasetFilterConfig:
     max_num_labels: int = MISSING
     max_num_instructions: int = MISSING
     max_instruction_length: int = MISSING
+    max_title_seq_len: int = MISSING
 
 
 @dataclass

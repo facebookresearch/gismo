@@ -19,9 +19,10 @@ class LoadingOptions:
     with_ingredient: bool = False
     with_ingredient_eos: bool = False
     with_recipe: bool = False
+    with_title: bool = False
 
     def need_load(self) -> bool:
-        return self.with_image or self.with_ingredient or self.with_recipe
+        return self.with_image or self.with_ingredient or self.with_recipe or self.with_title
 
 
 class Recipe1M(data.Dataset):
@@ -41,6 +42,7 @@ class Recipe1M(data.Dataset):
         self.split = split
         self.max_num_images = filtering.max_num_images
         self.max_num_labels = filtering.max_num_labels
+        self.max_title_seq_len = filtering.max_title_seq_len
         self.max_seq_length = (
             filtering.max_num_instructions * filtering.max_instruction_length
         )
@@ -72,6 +74,17 @@ class Recipe1M(data.Dataset):
                 self.ingr_pad_value = self.get_ingr_vocab_size() - 1
                 self.ingr_eos_value = self.ingr_vocab("<end>")
 
+        # load title vocabulary
+        if self.loading.with_title:
+            self.title_vocab = pickle.load(
+                open(
+                    os.path.join(
+                        self.pre_processed_dir, "final_recipe1m_vocab_title.pkl"
+                    ),
+                    "rb",
+                )
+            )
+
         # load recipe instructions voc
         if self.loading.with_recipe:
             self.instr_vocab = pickle.load(
@@ -95,7 +108,7 @@ class Recipe1M(data.Dataset):
             )
         else:
             raise ValueError(
-                """Dataset loader asked to not return images, nor ingredients, nor recipes. 
+                """Dataset loader asked to not return images, nor ingredients, nor titles, nor recipes. 
                                 Please set either return_images, return_ingr or return_recipe to True."""
             )
 
@@ -125,13 +138,14 @@ class Recipe1M(data.Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "recipe"]:
+    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "title", "recipe"]:
         image = self._load_image(index) if self.loading.with_image else None
         ret_ingr = (
             self.load_ingredients(index) if self.loading.with_ingredient else None
         )
         recipe = self._load_recipe(index) if self.loading.with_recipe else None
-        return image, ret_ingr, recipe
+        title = self._load_title(index) if self.loading.with_title else None
+        return image, ret_ingr, title, recipe
 
     def load_ingredients(self, index: int):
         raw_ingredients = self.dataset[index]["ingredients"]
@@ -184,6 +198,15 @@ class Recipe1M(data.Dataset):
             image = self.transform(image)
         return image
 
+    def _load_title(self, index: int):
+        tokens = self.dataset[index]["title"]
+        out = [self.title_vocab(token) for token in tokens]
+        out.append(self.title_vocab("<end>"))
+        out = out[0: self.max_title_seq_len]
+        pad_count = self.max_title_seq_len - len(out)
+        out = out + [self.instr_vocab("<pad>")] * pad_count
+        return out
+
     def _load_recipe(self, index: int):
         title = self.dataset[index]["title"]
         instructions = self.dataset[index]["tokenized"]
@@ -206,13 +229,15 @@ class Recipe1M(data.Dataset):
 
     @staticmethod
     def collate_fn(data):
-        img, ingr, recipe = zip(*data)
+        img, ingr, title, recipe = zip(*data)
         ret = {}
         # Merge images, ingredients and recipes in minibatch
         if img[0] is not None:
             ret["image"] = torch.stack(img, 0)
         if ingr[0] is not None:
             ret["ingredients"] = torch.tensor(ingr)
+        if title[0] is not None:
+            ret["title"] = torch.tensor(title)
         if recipe[0] is not None:
             ret["recipe"] = torch.tensor(recipe)
         return ret

@@ -17,6 +17,7 @@ filtering:
   max_num_labels: 20
   max_num_instructions: 10
   max_instruction_length: 15
+  max_title_seq_len: 20
 
 pre_processing:
   save_path: "data/recipe1m/preprocessed_flavorgraph"  #  012319/preprocessed# 'data/recipe1m/preprocessed_new'
