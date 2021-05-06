@@ -24,6 +24,7 @@ from inv_cooking.datasets.recipe1m.parsing import (
     remove_plurals_flavorgraph,
     match_flavorgraph,
 )
+from inv_cooking.datasets.recipe1m.parsing.titles import TitleParser
 from inv_cooking.datasets.vocabulary import Vocabulary
 
 BASE_WORDS = [
@@ -134,6 +135,8 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
         replace_dict={"and": ["&", "'n"], "": ["#", "[", "]"]}
     )
 
+    title_parser = TitleParser()
+
     idx2ind = {}
     for i, entry in enumerate(dets):
         idx2ind[entry["id"]] = i
@@ -143,7 +146,8 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
     #####
 
     counter_ingrs = Counter()
-    counter_toks = Counter()
+    counter_recipe_tokens = Counter()
+    counter_title_tokens = Counter()
 
     for i, entry in tqdm(enumerate(layer1)):
 
@@ -166,9 +170,10 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
 
         # tokenize sentences and update counter
         if entry["partition"] == "train":
-            update_counter(instrs_list, counter_toks)
-            title = nltk.tokenize.word_tokenize(entry["title"].lower())
-            counter_toks.update(title)
+            update_counter(instrs_list, counter_recipe_tokens)
+            title = title_parser.parse_entry(entry)
+            counter_recipe_tokens.update(title)
+            counter_title_tokens.update(title)
             counter_ingrs.update(ingrs_list)
 
     # manually add missing entries for better clustering
@@ -186,27 +191,36 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
         cluster_ingrs, counter_ingrs = match_flavorgraph(counter_ingrs, cluster_ingrs, list(all_flavorgraph_ingrs))
 
         # If the ingredient frequency is less than 'threshold', then the ingredient is discarded.
-        words = [word for word, cnt in counter_toks.items() if cnt >= args.threshold_words]
+        words = [word for word, cnt in counter_recipe_tokens.items() if cnt >= args.threshold_words]
         ingrs = cluster_ingrs
     else:
         counter_ingrs, cluster_ingrs = cluster_ingredients(counter_ingrs)
         counter_ingrs, cluster_ingrs = remove_plurals(counter_ingrs, cluster_ingrs)
 
         # If the ingredient frequency is less than 'threshold', then the ingredient is discarded.
-        words = [word for word, cnt in counter_toks.items() if cnt >= args.threshold_words]
+        words = [word for word, cnt in counter_recipe_tokens.items() if cnt >= args.threshold_words]
         ingrs = {
             word: cnt for word, cnt in counter_ingrs.items() if cnt >= args.threshold_ingrs
         }
+    title_words = [word for word, cnt in counter_recipe_tokens.items()]
 
     # Recipe vocab
     # Create a vocab wrapper and add some special tokens.
-    vocab_toks = Vocabulary()
-    vocab_toks.add_word("<start>")
-    vocab_toks.add_word("<end>")
-    vocab_toks.add_word("<eoi>")
+    vocab_recipe = Vocabulary()
+    vocab_recipe.add_word("<start>")
+    vocab_recipe.add_word("<end>")
+    vocab_recipe.add_word("<eoi>")
     for word in words:
-        vocab_toks.add_word(word)
-    vocab_toks.add_word("<pad>")
+        vocab_recipe.add_word(word)
+    vocab_recipe.add_word("<pad>")
+
+    # Create a vocabulary for titles
+    # - The use case is prediction of titles as potential pre-training
+    vocab_title = Vocabulary()
+    vocab_title.add_word("<end>")
+    for word in title_words:
+        vocab_title.add_word(word)
+    vocab_title.add_word("<pad>")
 
     # Ingredient vocab
     # Create a vocab wrapper for ingredients
@@ -217,7 +231,8 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
     vocab_ingrs.add_word("<pad>")
 
     print("Total ingr vocabulary size: {}".format(len(vocab_ingrs)))
-    print("Total token vocabulary size: {}".format(len(vocab_toks)))
+    print("Total recipe token vocabulary size: {}".format(len(vocab_recipe)))
+    print("Total title token vocabulary size: {}".format(len(vocab_title)))
 
     dataset = {"train": [], "val": [], "test": []}
 
@@ -263,7 +278,7 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
             tokenized_instructions.append(tokens)
 
         # tokenize title
-        title = nltk.tokenize.word_tokenize(entry["title"].lower())
+        title = title_parser.parse_entry(entry)
 
         new_entry = {
             "id": entry["id"],
@@ -279,7 +294,7 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
     for split in dataset.keys():
         print(split, ":", len(dataset[split]))
 
-    return vocab_ingrs, vocab_toks, dataset
+    return vocab_ingrs, vocab_recipe, vocab_title, dataset
 
 
 def load_unprocessed_dataset(recipe1m_path):
@@ -292,6 +307,12 @@ def load_unprocessed_dataset(recipe1m_path):
     return dets, layer1, layer2
 
 
+def save_vocabulary(folder: str, file: str, vocab: Vocabulary):
+    ingredients_path = os.path.join(folder, file)
+    with open(ingredients_path, "wb") as f:
+        pickle.dump(vocab, f)
+
+
 def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
     if not os.path.exists(config.save_path):
         os.mkdir(config.save_path)
@@ -300,19 +321,16 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
     dets, layer1, layer2 = load_unprocessed_dataset(recipe1m_path)
 
     # Build vocabularies and dataset
-    vocab_ingrs, vocab_toks, dataset = build_vocab_recipe1m(
-        dets, layer1, layer2, config, recipe1m_path, 
+    vocab_ingrs, vocab_toks, vocab_title, dataset = build_vocab_recipe1m(
+        dets, layer1, layer2, config, recipe1m_path,
     )
 
-    # Save the vocabularies and dataset
-    ingredients_path = os.path.join(config.save_path, "final_recipe1m_vocab_ingrs.pkl")
-    with open(ingredients_path, "wb") as f:
-        pickle.dump(vocab_ingrs, f)
+    # Save the vocabularies
+    save_vocabulary(config.save_path, "final_recipe1m_vocab_ingrs.pkl", vocab_ingrs)
+    save_vocabulary(config.save_path, "final_recipe1m_vocab_toks.pkl", vocab_toks)
+    save_vocabulary(config.save_path, "final_recipe1m_vocab_title.pkl", vocab_title)
 
-    vocab_tokens_path = os.path.join(config.save_path, "final_recipe1m_vocab_toks.pkl")
-    with open(vocab_tokens_path, "wb") as f:
-        pickle.dump(vocab_toks, f)
-
+    # Save the dataset
     for split in dataset.keys():
         split_file_name = "final_recipe1m_" + split + ".pkl"
         split_file_name = os.path.join(config.save_path, split_file_name)
