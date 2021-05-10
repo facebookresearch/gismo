@@ -204,7 +204,7 @@ class Recipe1M(data.Dataset):
         out.append(self.title_vocab("<end>"))
         out = out[0: self.max_title_seq_len]
         pad_count = self.max_title_seq_len - len(out)
-        out = out + [self.instr_vocab("<pad>")] * pad_count
+        out = out + [self.title_vocab("<pad>")] * pad_count
         return out
 
     def _load_recipe(self, index: int):
