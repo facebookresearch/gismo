@@ -40,6 +40,8 @@ class IngredientTeacherForcingConfig:
 @dataclass
 class TitleEncoderConfig:
     with_title: bool = False
+    layers: int = 0
+    layer_dim: int = 512
 
 
 @dataclass

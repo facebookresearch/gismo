@@ -11,6 +11,7 @@ from inv_cooking.config import (
 from inv_cooking.config.config import TitleEncoderConfig
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
+from inv_cooking.models.title_encoder import TitleEncoder
 
 
 class Im2Ingr(nn.Module):
@@ -32,7 +33,7 @@ class Im2Ingr(nn.Module):
         )
 
         if title_encoder_config.with_title:
-            self.title_encoder = self.create_title_encoder(
+            self.title_encoder = TitleEncoder(
                 config=title_encoder_config,
                 title_vocab_size=title_vocab_size,
                 embed_size=ingr_pred_config.embed_size,
@@ -46,10 +47,6 @@ class Im2Ingr(nn.Module):
             max_num_ingredients=max_num_ingredients,
             eos_value=ingr_eos_value,
         )
-
-    @staticmethod
-    def create_title_encoder(config: TitleEncoderConfig, title_vocab_size: int, embed_size: int):
-        return nn.Embedding(num_embeddings=title_vocab_size, embedding_dim=embed_size)
 
     def forward(
         self,
@@ -72,8 +69,7 @@ class Im2Ingr(nn.Module):
 
         # If title is provided, combine the sequences of both representations
         if title is not None:
-            title_features = self.title_encoder(title)  # shape (N, seq2, C)
-            title_features = title_features.permute((0, 2, 1))  # shape (N, C, seq2)
+            title_features = self.title_encoder(title)  # shape (N, C, seq2)
             features = torch.cat([img_features, title_features], dim=2)
         else:
             features = img_features

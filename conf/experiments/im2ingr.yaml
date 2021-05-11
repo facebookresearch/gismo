@@ -52,6 +52,7 @@ im2ingr_resnet50_ff_bce_cat_with_title:
   comment: 'Try if title helps predicting ingredient'
   title_encoder:
     with_title: true
+    layers: 2
 
 im2ingr_resnext101_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
