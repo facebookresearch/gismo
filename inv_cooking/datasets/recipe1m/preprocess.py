@@ -202,7 +202,7 @@ def build_vocab_recipe1m(dets, layer1, layer2, args: DictConfig, recipe1m_path: 
         ingrs = {
             word: cnt for word, cnt in counter_ingrs.items() if cnt >= args.threshold_ingrs
         }
-    title_words = [word for word, cnt in counter_recipe_tokens.items()]
+    title_words = [word for word, cnt in counter_title_tokens.items() if cnt >= args.threshold_title]
 
     # Recipe vocab
     # Create a vocab wrapper and add some special tokens.

@@ -23,6 +23,7 @@ pre_processing:
   save_path: "data/recipe1m/preprocessed_flavorgraph"  #  012319/preprocessed# 'data/recipe1m/preprocessed_new'
   threshold_ingrs: 10  # minimum ingr count threshold
   threshold_words: 10  # minimum word count threshold
+  threshold_title: 10  # minimum word count threshold for title
   maxnuminstrs: 20  # max number of instructions (sentences)
   maxnumingrs: 20  # max number of ingredients
   minnuminstrs: 2  # min number of instructions (sentences)

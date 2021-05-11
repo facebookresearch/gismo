@@ -39,6 +39,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         if stage == "fit":
             self.dataset_train = self._get_dataset("train")
             self.dataset_val = self._get_dataset("val")
+            self.title_vocab_size = self.dataset_train.get_title_vocab_size()
             self.ingr_vocab_size = self.dataset_train.get_ingr_vocab_size()
             self.instr_vocab_size = self.dataset_train.get_instr_vocab_size()
             self.ingr_eos_value = self.dataset_train.ingr_eos_value
@@ -47,6 +48,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         elif stage == "test":
             self.dataset_test = self._get_dataset(stage, self.dataset_config.eval_split)
             print(f"Eval split: {self.dataset_config.eval_split} composed of {len(self.dataset_test)} samples.")
+            self.title_vocab_size = self.dataset_train.get_title_vocab_size()
             self.ingr_vocab_size = self.dataset_test.get_ingr_vocab_size()
             self.instr_vocab_size = self.dataset_test.get_instr_vocab_size()
             self.ingr_eos_value = self.dataset_test.ingr_eos_value

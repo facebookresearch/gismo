@@ -248,6 +248,9 @@ class Recipe1M(data.Dataset):
             for w in self.ingr_vocab.idx2word.values()
         ]  # includes '<pad>' and eventually '<end>'
 
+    def get_title_vocab_size(self):
+        return len(self.title_vocab)
+
     def get_ingr_vocab_size(self):
         return len(self.get_ingr_vocab())
 
