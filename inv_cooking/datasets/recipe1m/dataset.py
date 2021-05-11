@@ -84,6 +84,8 @@ class Recipe1M(data.Dataset):
                     "rb",
                 )
             )
+        else:
+            self.title_vocab = Vocabulary()
 
         # load recipe instructions voc
         if self.loading.with_recipe:

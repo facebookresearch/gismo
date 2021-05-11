@@ -7,6 +7,7 @@ from inv_cooking.config import (
     IngredientPredictorConfig,
     OptimizationConfig,
 )
+from inv_cooking.config.config import TitleEncoderConfig
 from inv_cooking.models.im2ingr import Im2Ingr
 from inv_cooking.training.utils import MonitoredMetric, OptimizationGroup, _BaseModule
 from inv_cooking.utils.metrics import DistributedF1, DistributedValLosses
@@ -16,16 +17,20 @@ class ImageToIngredients(_BaseModule):
     def __init__(
         self,
         image_encoder_config: ImageEncoderConfig,
+        title_encoder_config: TitleEncoderConfig,
         ingr_pred_config: IngredientPredictorConfig,
         optim_config: OptimizationConfig,
         max_num_ingredients: int,
+        title_vocab_size: int,
         ingr_vocab_size: int,
         ingr_eos_value: int,
     ):
         super().__init__()
         self.model = Im2Ingr(
             image_encoder_config,
+            title_encoder_config,
             ingr_pred_config,
+            title_vocab_size=title_vocab_size,
             ingr_vocab_size=ingr_vocab_size,
             max_num_ingredients=max_num_ingredients,
             ingr_eos_value=ingr_eos_value,
@@ -54,13 +59,15 @@ class ImageToIngredients(_BaseModule):
 
     def forward(
         self,
-        image: Optional[torch.Tensor] = None,
+        image: Optional[torch.Tensor],
+        title: Optional[torch.Tensor] = None,
         ingredients: Optional[torch.Tensor] = None,
         compute_losses: bool = False,
         compute_predictions: bool = False,
     ):
         out = self.model(
             image=image,
+            title=title,
             target_ingredients=ingredients,
             compute_losses=compute_losses,
             compute_predictions=compute_predictions,
@@ -69,7 +76,10 @@ class ImageToIngredients(_BaseModule):
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
         out = self(
-            compute_losses=True, image=batch["image"], ingredients=batch["ingredients"]
+            image=batch["image"],
+            title=batch.get("title", None),
+            ingredients=batch["ingredients"],
+            compute_losses=True,
         )
         return out[0]
 
@@ -82,6 +92,7 @@ class ImageToIngredients(_BaseModule):
     def _evaluation_step(self, batch: Dict[str, torch.Tensor]):
         out = self(
             image=batch["image"],
+            title=batch.get("title", None),
             ingredients=batch["ingredients"],
             compute_predictions=True,
             compute_losses=True,

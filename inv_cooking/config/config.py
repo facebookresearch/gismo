@@ -35,7 +35,12 @@ class IngredientTeacherForcingConfig:
     train: bool = MISSING
     val: bool = MISSING
     test: bool = MISSING
-    
+
+
+@dataclass
+class TitleEncoderConfig:
+    with_title: bool = False
+
 
 @dataclass
 class Config:
@@ -55,6 +60,7 @@ class Config:
     checkpoint: CheckpointConfig = CheckpointConfig()
     dataset: DatasetConfig = DatasetConfig()
     image_encoder: ImageEncoderConfig = ImageEncoderConfig()
+    title_encoder: TitleEncoderConfig = TitleEncoderConfig()
     ingr_predictor: IngredientPredictorConfig = MISSING
     slurm: SlurmConfig = SlurmConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()

@@ -111,7 +111,10 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
     include_eos = requires_eos_token(cfg.ingr_predictor)
     if cfg.task == TaskType.im2ingr:
         return LoadingOptions(
-            with_image=True, with_ingredient=True, with_ingredient_eos=include_eos,
+            with_image=True,
+            with_ingredient=True,
+            with_ingredient_eos=include_eos,
+            with_title=cfg.title_encoder.with_title,
         )
     elif cfg.task == TaskType.im2recipe:
         return LoadingOptions(
@@ -136,10 +139,12 @@ def create_model(cfg: Config, data_module: Recipe1MDataModule):
     )
     if cfg.task == TaskType.im2ingr:
         return ImageToIngredients(
-            cfg.image_encoder,
-            cfg.ingr_predictor,
-            cfg.optimization,
+            image_encoder_config=cfg.image_encoder,
+            title_encoder_config=cfg.title_encoder,
+            ingr_pred_config=cfg.ingr_predictor,
+            optim_config=cfg.optimization,
             max_num_ingredients=max_num_ingredients,
+            title_vocab_size=data_module.title_vocab_size,
             ingr_vocab_size=data_module.ingr_vocab_size,
             ingr_eos_value=data_module.ingr_eos_value,
         )

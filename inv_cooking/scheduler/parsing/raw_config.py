@@ -62,6 +62,7 @@ class RawConfig:
             config.dataset.loading = merge_with_non_missing(config.dataset.loading, experiment.loading)
             config.recipe_gen = experiment.recipe_gen
             config.image_encoder = experiment.image_encoder
+            config.title_encoder = experiment.title_encoder
             config.ingr_predictor = cls._get_ingr_predictor(experiment.ingr_predictor)
             config.checkpoint = raw_config.checkpoint
             config.optimization = experiment.optimization

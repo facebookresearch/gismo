@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Tuple
 
 from omegaconf import DictConfig, OmegaConf
 
+from inv_cooking.config.config import TitleEncoderConfig
 from inv_cooking.config.image_encoder import ImageEncoderConfig
 from inv_cooking.config.optimization import OptimizationConfig
 from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
@@ -45,6 +46,7 @@ class Experiment:
     loading: DatasetLoadingConfig = DatasetLoadingConfig()  # Allow to override the dataset config
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
     image_encoder: ImageEncoderConfig = ImageEncoderConfig()
+    title_encoder: TitleEncoderConfig = TitleEncoderConfig()
     ingr_predictor: DictConfig = untyped_config()
     optimization: OptimizationConfig = OptimizationConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()
