@@ -9,7 +9,7 @@ from inv_cooking.config import Config, TaskType
 from inv_cooking.datasets.recipe1m import LoadingOptions, Recipe1MDataModule
 from inv_cooking.models.ingredients_predictor.builder import requires_eos_token
 from inv_cooking.utils.checkpointing import get_checkpoint_directory
-from inv_cooking.utils.logging import get_log_version
+from inv_cooking.utils.logging import dump_configuration, get_log_version
 
 from .image_to_ingredients import ImageToIngredients
 from .image_to_recipe import ImageToRecipe
@@ -20,6 +20,7 @@ def run_training(
     cfg: Config, gpus: int, nodes: int, distributed_mode: str, load_checkpoint: bool,
 ) -> None:
     seed_everything(cfg.optimization.seed)
+    dump_configuration(cfg)
 
     checkpoint_dir = get_checkpoint_directory(cfg)
     os.makedirs(checkpoint_dir, exist_ok=True)
