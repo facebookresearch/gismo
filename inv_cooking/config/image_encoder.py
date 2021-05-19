@@ -6,6 +6,7 @@ from omegaconf import MISSING
 
 @dataclass
 class ImageEncoderConfig:
+    with_image_encoder: bool = True  # Set to false to to title to ingredient
     model: str = MISSING
     pretrained: bool = MISSING
     dropout: float = MISSING

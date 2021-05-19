@@ -50,7 +50,7 @@ class Im2Ingr(nn.Module):
 
     def forward(
         self,
-        image: torch.Tensor,
+        image: Optional[torch.Tensor] = None,
         title: Optional[torch.Tensor] = None,
         target_ingredients: Optional[torch.Tensor] = None,
         compute_losses: bool = False,
@@ -59,18 +59,28 @@ class Im2Ingr(nn.Module):
         """
         Predict a set of ingredients from an image
         :param image: input image - shape is (N, C, H, W)
+        :param title: input title - shape is (N, seq)
         :param target_ingredients: ground truth of ingredients to predict - shape is (N, max_num_ingredients)
         :param compute_losses: whether or not to compute the loss
         :param compute_predictions: whether or not to output the ingredients prediction
         """
 
+        assert image is not None or title is not None, "Need some input to deduce the ingredients"
+
         # Compute the representation of the image
-        img_features = self.image_encoder(image)  # shape (N, C, seq1)
+        if image is not None:
+            img_features = self.image_encoder(image)  # shape (N, C, seq1)
+        else:
+            img_features = None
 
         # If title is provided, combine the sequences of both representations
         if title is not None:
             title_features = self.title_encoder(title)  # shape (N, C, seq2)
-            features = torch.cat([img_features, title_features], dim=2)
+            if img_features is not None:
+                print(img_features.shape, title_features.shape)
+                features = torch.cat([img_features, title_features], dim=2)
+            else:
+                features = title_features
         else:
             features = img_features
 

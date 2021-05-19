@@ -5,6 +5,7 @@ from inv_cooking.config import (
     IngredientTeacherForcingConfig,
     EncoderAttentionType,
 )
+from inv_cooking.config.config import TitleEncoderConfig
 
 
 class FakeConfig:
@@ -15,6 +16,22 @@ class FakeConfig:
             pretrained=False,
             dropout=0.1,
             freeze=False,
+        )
+
+    @staticmethod
+    def no_title_encoder_config() -> TitleEncoderConfig:
+        return TitleEncoderConfig(
+            with_title=False,
+            layers=0,
+            layer_dim=512,
+        )
+
+    @staticmethod
+    def with_title_encoder_config() -> TitleEncoderConfig:
+        return TitleEncoderConfig(
+            with_title=True,
+            layers=2,
+            layer_dim=512,
         )
 
     @staticmethod

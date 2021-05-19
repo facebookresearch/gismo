@@ -76,7 +76,7 @@ class ImageToIngredients(_BaseModule):
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
         out = self(
-            image=batch["image"],
+            image=batch.get("image", None),
             title=batch.get("title", None),
             ingredients=batch["ingredients"],
             compute_losses=True,
@@ -91,13 +91,13 @@ class ImageToIngredients(_BaseModule):
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor]):
         out = self(
-            image=batch["image"],
+            image=batch.get("image", None),
             title=batch.get("title", None),
             ingredients=batch["ingredients"],
             compute_predictions=True,
             compute_losses=True,
         )
-        out[0]["n_samples"] = batch["image"].shape[0]
+        out[0]["n_samples"] = batch["ingredients"].shape[0]
         out[0]["ingr_pred"] = out[1][0]
         out[0]["ingr_gt"] = batch["ingredients"]
         return out[0]

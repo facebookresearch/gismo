@@ -1,5 +1,12 @@
 # @package _group_
 
+no_image_encoder:
+  with_image_encoder: False
+  model: resnet50
+  pretrained: True
+  dropout: 0.1
+  freeze: False
+
 resnet50_encoder:
   model: resnet50
   pretrained: True

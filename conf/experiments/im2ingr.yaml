@@ -54,6 +54,28 @@ im2ingr_resnet50_ff_bce_cat_with_title:
     with_title: true
     layers: 2
 
+im2ingr_resnet50_ff_bce_cat_with_title_search:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'Try if title helps predicting ingredient'
+  title_encoder:
+    with_title: true
+    layers: SEARCH[0,1,2,3,4,5]
+
+im2ingr_resnet50_ff_bce_cat_only_title:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'Try if title can predicting ingredient'
+  image_encoder: no_image_encoder
+  title_encoder:
+    with_title: true
+    layers: 2
+
+im2ingr_resnet50_ff_bce_cat_only_title_search:
+  parent: im2ingr_resnet50_ff_bce_cat_only_title
+  comment: 'Try if title can predicting ingredient'
+  title_encoder:
+    with_title: true
+    layers: SEARCH[0,1,2,3,4,5]
+
 im2ingr_resnext101_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
   comment: 'searching for ResNet101 CAT'
