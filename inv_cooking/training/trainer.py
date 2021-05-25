@@ -13,6 +13,7 @@ from inv_cooking.utils.logging import dump_configuration, get_log_version
 
 from .image_to_ingredients import ImageToIngredients
 from .image_to_recipe import ImageToRecipe
+from .image_to_title import ImageToTitle
 from .ingredient_to_recipe import IngredientToRecipe
 
 
@@ -128,6 +129,8 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
         return LoadingOptions(
             with_ingredient=True, with_ingredient_eos=include_eos, with_recipe=True,
         )
+    elif cfg.task == TaskType.im2title:
+        return LoadingOptions(with_image=True, with_title=True)
     else:
         raise ValueError(f"Unknown task: {cfg.task.name}.")
 
@@ -171,6 +174,15 @@ def create_model(cfg: Config, data_module: Recipe1MDataModule):
             ingr_vocab_size=data_module.ingr_vocab_size,
             instr_vocab_size=data_module.instr_vocab_size,
             ingr_eos_value=data_module.ingr_eos_value,
+        )
+    elif cfg.task == TaskType.im2title:
+        return ImageToTitle(
+            image_encoder_config=cfg.image_encoder,
+            ingr_pred_config=cfg.ingr_predictor,
+            title_gen_config=cfg.recipe_gen,
+            optim_config=cfg.optimization,
+            max_title_len=cfg.dataset.filtering.max_title_seq_len,
+            title_vocab_size=data_module.title_vocab_size,
         )
     else:
         raise ValueError(f"Unknown task: {cfg.task.name}.")

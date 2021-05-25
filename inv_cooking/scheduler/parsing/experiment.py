@@ -32,6 +32,7 @@ class Experiments:
     im2ingr: Dict[str, Any] = field(default_factory=dict)
     im2recipe: Dict[str, Any] = field(default_factory=dict)
     ingr2recipe: Dict[str, Any] = field(default_factory=dict)
+    im2title: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

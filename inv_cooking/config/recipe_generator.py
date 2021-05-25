@@ -3,11 +3,13 @@ from enum import Enum
 
 from omegaconf import MISSING
 
+
 class EncoderAttentionType(Enum):
     concat = 0
     seq_img_first = 1
     seq_ingr_first = 2
     concat_tf = 3
+
 
 @dataclass
 class RecipeGeneratorConfig:

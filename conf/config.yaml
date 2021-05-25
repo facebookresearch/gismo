@@ -10,6 +10,7 @@ defaults:
   - experiments@experiments.im2ingr: im2ingr
   - experiments@experiments.im2recipe: im2recipe
   - experiments@experiments.ingr2recipe: ingr2recipe
+  - experiments@experiments.im2title: im2title
 
 task: im2recipe
 name: ""

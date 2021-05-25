@@ -50,8 +50,8 @@ class Recipe1M(data.Dataset):
         self.transform = transform
         self.use_lmdb = use_lmdb
 
-        self.ingr_vocab = []
-        self.instr_vocab = []
+        self.ingr_vocab = Vocabulary()
+        self.instr_vocab = Vocabulary()
         self.dataset = []
 
         # load ingredient voc
@@ -73,6 +73,9 @@ class Recipe1M(data.Dataset):
             else:
                 self.ingr_pad_value = self.get_ingr_vocab_size() - 1
                 self.ingr_eos_value = self.ingr_vocab("<end>")
+        else:
+            self.ingr_eos_value = 0
+            self.ingr_pad_value = 0
 
         # load title vocabulary
         if self.loading.with_title:

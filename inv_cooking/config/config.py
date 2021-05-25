@@ -15,6 +15,7 @@ class TaskType(Enum):
     im2ingr = 0
     im2recipe = 1
     ingr2recipe = 2
+    im2title = 3
 
 
 @dataclass
