@@ -23,14 +23,21 @@ class ResnetImageEncoder(nn.Module):
         super().__init__()
 
         # Load the pre-trained resnet encoder
-        pretrained_net = resnet.__dict__[config.model](pretrained=config.pretrained)
+        if config.pretrained and config.pretrained_weights:
+            pretrained_net = resnet.__dict__[config.model](pretrained=False)
+            in_dim = pretrained_net.fc.in_features
+            pretrained_net.fc = nn.Identity()
+            pretrained_weights = torch.load(config.pretrained_weights)
+            pretrained_net.load_state_dict(pretrained_weights, strict=False)
+        else:
+            pretrained_net = resnet.__dict__[config.model](pretrained=config.pretrained)
+            in_dim = pretrained_net.fc.in_features
 
         # Delete avg pooling and last fc layer
         modules = list(pretrained_net.children())[:-2]
         self.pretrained_net = nn.Sequential(*modules)
 
         # Adapt the output dimension in case of mismatch
-        in_dim = pretrained_net.fc.in_features
         self.last_module = self._build_adaptation_head(in_dim, embed_size, dropout=config.dropout)
         self._freeze_layers(config.freeze)
 

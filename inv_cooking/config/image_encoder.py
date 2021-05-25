@@ -9,6 +9,7 @@ class ImageEncoderConfig:
     with_image_encoder: bool = True  # Set to false to to title to ingredient
     model: str = MISSING
     pretrained: bool = MISSING
+    pretrained_weights: str = ""  # Path to pre-trained weights
     dropout: float = MISSING
     freeze: bool = False
     patch_size: int = MISSING  # Only used for VIT: 16 or 32
