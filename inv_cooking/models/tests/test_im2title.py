@@ -31,6 +31,6 @@ def test_Im2Title():
     )
 
     assert len(losses) >= 1
-    assert losses["recipe_loss"] is not None
+    assert losses["title_loss"] is not None
     assert recipe_predictions.shape == torch.Size([batch_size, max_recipe_len])
     assert recipe_predictions.max() <= ingr_vocab_size - 1

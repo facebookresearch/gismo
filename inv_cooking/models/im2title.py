@@ -94,5 +94,5 @@ class Im2Title(nn.Module):
             compute_predictions=compute_predictions,
         )
 
-        losses["recipe_loss"] = loss
+        losses["title_loss"] = loss
         return losses, title_predictions

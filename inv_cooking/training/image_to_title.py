@@ -24,7 +24,7 @@ class ImageToTitle(_BaseModule):
         title_vocab_size: int,
     ):
         super().__init__()
-
+        self.optim_config = optim_config
         self.model = Im2Title(
             image_encoder_config=image_encoder_config,
             embed_size=ingr_pred_config.embed_size,
@@ -33,16 +33,15 @@ class ImageToTitle(_BaseModule):
             max_title_len=max_title_len,
         )
 
-        self.optimization = optim_config
-
         # check if pretrained models
         self.pretrained_imenc = image_encoder_config.pretrained
 
         # metrics to track at validation time
-        self.perplexity = DistributedAverage()
+        self.val_title_loss = DistributedAverage()
+        self.val_perplexity = DistributedAverage()
 
     def get_monitored_metric(self) -> MonitoredMetric:
-        return MonitoredMetric(name="val_perplexity", mode="min")
+        return MonitoredMetric(name="val_title_loss", mode="min")
 
     def forward(
         self,
@@ -51,7 +50,6 @@ class ImageToTitle(_BaseModule):
         compute_losses: bool = False,
         compute_predictions: bool = False,
     ):
-        assert isinstance(self.model, Im2Title)
         out = self.model(
             image=image,
             target_title=title,
@@ -61,7 +59,12 @@ class ImageToTitle(_BaseModule):
         return out[0], out[1:]
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self(compute_losses=True, **batch)
+        out = self(
+            image=batch["image"],
+            title=batch["title"],
+            compute_losses=True,
+            compute_predictions=False,
+        )
         return out[0]
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
@@ -71,12 +74,16 @@ class ImageToTitle(_BaseModule):
         return self._evaluation_step(batch)
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor]):
-        out = self(**batch, compute_predictions=False, compute_losses=True)
-        out[0]["n_samples"] = batch["title"].shape[0]
+        out = self(
+            image=batch["image"],
+            title=batch["title"],
+            compute_losses=True,
+            compute_predictions=False,
+        )
         return out[0]
 
     def training_step_end(self, losses: Dict[str, torch.Tensor]):
-        return self.log_training_losses(losses, self.optimization)
+        return self.log_training_losses(losses, self.optim_config)
 
     def validation_step_end(self, step_output: Dict[str, Any]):
         self._evaluation_step_end(step_output)
@@ -85,7 +92,8 @@ class ImageToTitle(_BaseModule):
         self._evaluation_step_end(step_output)
 
     def _evaluation_step_end(self, step_output: Dict[str, Any]):
-        self.perplexity(torch.exp(step_output["recipe_loss"]))
+        self.val_title_loss(step_output["title_loss"])
+        self.val_perplexity(torch.exp(step_output["title_loss"]))
 
     def validation_epoch_end(self, out):
         self._eval_epoch_end(split="val")
@@ -94,12 +102,13 @@ class ImageToTitle(_BaseModule):
         self._eval_epoch_end(split="test")
 
     def _eval_epoch_end(self, split: str):
-        self.log(f"{split}_perplexity", self.perplexity.compute())
+        self.log(f"{split}_title_loss", self.val_title_loss.compute())
+        self.log(f"{split}_title_perplexity", self.val_perplexity.compute())
 
     def configure_optimizers(self):
         return self.create_optimizers(
             optim_groups=self.create_optimization_groups(),
-            optim_config=self.optimization,
+            optim_config=self.optim_config,
         )
 
     def create_optimization_groups(self):
@@ -117,6 +126,6 @@ class ImageToTitle(_BaseModule):
             OptimizationGroup(
                 model=self.model.recipe_gen,
                 pretrained=False,
-                name="recipe generator",
+                name="title generator",
             ),
         ]
