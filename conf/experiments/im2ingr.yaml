@@ -56,6 +56,19 @@ im2ingr_resnet50_ff_bce_cat_pretrained_on_title:
     dropout: 0.1
     freeze: False
 
+im2ingr_resnet50_ff_bce_cat_frozen:
+  parent: im2ingr_resnet50_ff_bce_cat
+  image_encoder:
+    model: resnet50
+    pretrained: True
+    dropout: 0.1
+    freeze: True
+
+im2ingr_resnet50_ff_bce_cat_pretrained_on_title_frozen:
+  parent: im2ingr_resnet50_ff_bce_cat_pretrained_on_title
+  image_encoder:
+    freeze: True
+
 im2ingr_resnet50_ff_bce_cat_with_title:
   parent: im2ingr_resnet50_ff_bce_cat
   comment: 'Try if title helps predicting ingredient'
