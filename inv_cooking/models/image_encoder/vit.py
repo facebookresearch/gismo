@@ -28,15 +28,24 @@ def create_vit_image_encoder(embed_size: int, config: ImageEncoderConfig, image_
 class BaseVit(nn.Module):
     def __init__(self, config: ImageEncoderConfig, image_size: int):
         super().__init__()
+        self._create_image_size_adapter(image_size)
+        self._create_vit_trunk(config)
+
+    def _create_image_size_adapter(self, image_size: int):
         if image_size != 384:
             self.interpolate = nn.Upsample(size=(384, 384))
         else:
             self.interpolate = nn.Identity()
+
+    def _create_vit_trunk(self, config: ImageEncoderConfig):
         if config.patch_size == 32:
-            self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
+            self.pretrained_net = timm.vit_base_patch32_384(pretrained=config.pretrained)
         else:
-            self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
-        self.core_vit.head = nn.Identity()
+            self.pretrained_net = timm.vit_base_patch16_384(pretrained=config.pretrained)
+        self.pretrained_net.head = nn.Identity()
+        if config.pretrained and config.pretrained_weights:
+            state_dict = torch.load(config.pretrained_weights, map_location='cpu')
+            self.pretrained_net.load_state_dict(state_dict, strict=False)
 
 
 class OneClassVit(BaseVit):
@@ -66,7 +75,7 @@ class OneClassVit(BaseVit):
         :return shape (batch_size, embedding_size, seq_len)
         """
         image = self.interpolate(image)
-        outputs = self.vit_encoding(self.core_vit, image)
+        outputs = self.vit_encoding(self.pretrained_net, image)
 
         # Combine each output either as a single representation, or as a sequence
         if self.concatenate_repr_levels:
@@ -138,11 +147,11 @@ class MultiClassVit(BaseVit):
         Repeat the class tokens and its position embedding several times and make
         these learn-able so that the VIT can differentiate them during fine-tuning
         """
-        new_cls_tokens = self.core_vit.cls_token.repeat(1, self.n_cls_tokens, 1)
-        self.core_vit.cls_token = nn.Parameter(new_cls_tokens)
-        cls_token_pos_embed = self.core_vit.pos_embed[:, 0, :].repeat(1, self.n_cls_tokens, 1)
-        new_position_embeddings = torch.cat([cls_token_pos_embed, self.core_vit.pos_embed[:, 1:, :]], dim=1)
-        self.core_vit.pos_embed = nn.Parameter(new_position_embeddings)
+        new_cls_tokens = self.pretrained_net.cls_token.repeat(1, self.n_cls_tokens, 1)
+        self.pretrained_net.cls_token = nn.Parameter(new_cls_tokens)
+        cls_token_pos_embed = self.pretrained_net.pos_embed[:, 0, :].repeat(1, self.n_cls_tokens, 1)
+        new_position_embeddings = torch.cat([cls_token_pos_embed, self.pretrained_net.pos_embed[:, 1:, :]], dim=1)
+        self.pretrained_net.pos_embed = nn.Parameter(new_position_embeddings)
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
         """
@@ -151,15 +160,15 @@ class MultiClassVit(BaseVit):
         """
         B = x.shape[0]
         x = self.interpolate(x)
-        x = self.core_vit.patch_embed(x)
-        cls_tokens = self.core_vit.cls_token.expand(B, -1, -1)
+        x = self.pretrained_net.patch_embed(x)
+        cls_tokens = self.pretrained_net.cls_token.expand(B, -1, -1)
         x = torch.cat((cls_tokens, x), dim=1)
 
-        x = x + self.core_vit.pos_embed
-        x = self.core_vit.pos_drop(x)
-        for blk in self.core_vit.blocks:
+        x = x + self.pretrained_net.pos_embed
+        x = self.pretrained_net.pos_drop(x)
+        for blk in self.pretrained_net.blocks:
             x = blk(x)
-        x = self.core_vit.norm(x)
+        x = self.pretrained_net.norm(x)
         x = x.permute(0, 2, 1)
         x = x[:, :, :self.n_cls_tokens]
         x = self.adapt_head(x)
@@ -202,13 +211,13 @@ class NoClassVit(BaseVit):
         :return shape (batch_size, embedding_size, seq_len)
         """
         x = self.interpolate(x)
-        x = self.core_vit.patch_embed(x)
-        x = x + self.core_vit.pos_embed
-        x = self.core_vit.pos_drop(x)
+        x = self.pretrained_net.patch_embed(x)
+        x = x + self.pretrained_net.pos_embed
+        x = self.pretrained_net.pos_drop(x)
 
-        for blk in self.core_vit.blocks:
+        for blk in self.pretrained_net.blocks:
             x = blk(x)
-        x = self.core_vit.norm(x)
+        x = self.pretrained_net.norm(x)
         x = x.permute(0, 2, 1)
 
         x = self.adapt_head(x)
@@ -219,7 +228,7 @@ class NoClassVit(BaseVit):
 
     def _remove_classification_token(self):
         # No classification token, so the positional embedding must be changed
-        self.core_vit.pos_embed = nn.Parameter(self.core_vit.pos_embed[:, 1:, :])
+        self.pretrained_net.pos_embed = nn.Parameter(self.pretrained_net.pos_embed[:, 1:, :])
 
     @staticmethod
     def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
