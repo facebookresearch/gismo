@@ -112,7 +112,7 @@ class OneClassVit(nn.Module):
         )
 
 
-class MultiClassVit(timm.VisionTransformer):
+class MultiClassVit(nn.Module):
     """
     Encodes the image using the encoder part of a ViT (vision transformer).
     The flavor of ViT used is the small one (embedding size of 768).
@@ -123,12 +123,7 @@ class MultiClassVit(timm.VisionTransformer):
     """
 
     def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
-        super().__init__(
-            img_size=image_size,
-            drop_rate=config.dropout,
-            patch_size=config.patch_size,
-            embed_dim=768,
-        )
+        super().__init__()
         self.n_cls_tokens = config.n_cls_tokens
         if image_size != 384:
             self.interpolate = nn.Upsample(size=(384, 384))
@@ -189,7 +184,7 @@ class MultiClassVit(timm.VisionTransformer):
         )
 
 
-class NoClassVit(timm.VisionTransformer):
+class NoClassVit(nn.Module):
     """
     Encodes the image using the encoder part of a ViT (vision transformer).
     The flavor of ViT used is the small one (embedding size of 768).
@@ -201,12 +196,7 @@ class NoClassVit(timm.VisionTransformer):
     """
 
     def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
-        super().__init__(
-            img_size=image_size,
-            drop_rate=config.dropout,
-            patch_size=config.patch_size,
-            embed_dim=768,
-        )
+        super().__init__()
         if image_size != 384:
             self.interpolate = nn.Upsample(size=(384, 384))
         else:

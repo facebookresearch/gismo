@@ -102,4 +102,4 @@ def test_multi_class_vit(patch_size: int):
     )
     x = torch.randn(size=(2, 3, 448, 448))
     out = vit(x)
-    assert out.shape == torch.Size([2, 1024, 5])  # 5 to take into account the EOS token
+    assert out.shape == torch.Size([2, 1024, 4])  # 5 to take into account the EOS token

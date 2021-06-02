@@ -18,3 +18,14 @@ im2title:
     patience: 20
     loss_weights:
       title_loss: 1.0
+
+im2title_vit:
+  parent: im2title
+  comment: 'vit configuration for im2title'
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 1
+    freeze: False
