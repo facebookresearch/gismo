@@ -25,14 +25,8 @@ def create_vit_image_encoder(embed_size: int, config: ImageEncoderConfig, image_
         return MultiClassVit(embed_size=embed_size, config=config, image_size=image_size)
 
 
-class OneClassVit(nn.Module):
-    """
-    Simple Wrapper around a potentially pretrained image VIT classifier on imagenet:
-    - handles the resizing of the inputs
-    - handles the adaptation of the output size
-    """
-
-    def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
+class BaseVit(nn.Module):
+    def __init__(self, config: ImageEncoderConfig, image_size: int):
         super().__init__()
         if image_size != 384:
             self.interpolate = nn.Upsample(size=(384, 384))
@@ -43,6 +37,17 @@ class OneClassVit(nn.Module):
         else:
             self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
         self.core_vit.head = nn.Identity()
+
+
+class OneClassVit(BaseVit):
+    """
+    Simple Wrapper around a potentially pretrained image VIT classifier on imagenet:
+    - handles the resizing of the inputs
+    - handles the adaptation of the output size
+    """
+
+    def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
+        super().__init__(config, image_size)
         self.additional_repr_levels = list(config.additional_repr_levels)
         if self.additional_repr_levels:
             self.additional_repr_norms = nn.ModuleList([
@@ -112,7 +117,7 @@ class OneClassVit(nn.Module):
         )
 
 
-class MultiClassVit(nn.Module):
+class MultiClassVit(BaseVit):
     """
     Encodes the image using the encoder part of a ViT (vision transformer).
     The flavor of ViT used is the small one (embedding size of 768).
@@ -123,17 +128,8 @@ class MultiClassVit(nn.Module):
     """
 
     def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
-        super().__init__()
+        super().__init__(config, image_size)
         self.n_cls_tokens = config.n_cls_tokens
-        if image_size != 384:
-            self.interpolate = nn.Upsample(size=(384, 384))
-        else:
-            self.interpolate = nn.Identity()
-        if config.patch_size == 32:
-            self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
-        else:
-            self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
-        self.core_vit.head = nn.Identity()
         self._switch_classification_tokens()
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
@@ -184,7 +180,7 @@ class MultiClassVit(nn.Module):
         )
 
 
-class NoClassVit(nn.Module):
+class NoClassVit(BaseVit):
     """
     Encodes the image using the encoder part of a ViT (vision transformer).
     The flavor of ViT used is the small one (embedding size of 768).
@@ -196,16 +192,7 @@ class NoClassVit(nn.Module):
     """
 
     def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
-        super().__init__()
-        if image_size != 384:
-            self.interpolate = nn.Upsample(size=(384, 384))
-        else:
-            self.interpolate = nn.Identity()
-        if config.patch_size == 32:
-            self.core_vit = timm.vit_base_patch32_384(pretrained=config.pretrained)
-        else:
-            self.core_vit = timm.vit_base_patch16_384(pretrained=config.pretrained)
-        self.core_vit.head = nn.Identity()
+        super().__init__(config, image_size)
         self._remove_classification_token()
         self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
 
