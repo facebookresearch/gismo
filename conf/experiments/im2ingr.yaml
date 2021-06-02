@@ -47,6 +47,15 @@ im2ingr_resnet50_ff_bce_cat:
       cardinality_loss: 0.001
       eos_loss: 0.0
 
+im2ingr_resnet50_ff_bce_cat_pretrained_on_title:
+  parent: im2ingr_resnet50_ff_bce_cat
+  image_encoder:
+    model: resnet50
+    pretrained: True
+    pretrained_weights: "/checkpoint/qduval/inversecooking2.0/pretrained_title_best.torch"
+    dropout: 0.1
+    freeze: False
+
 im2ingr_resnet50_ff_bce_cat_with_title:
   parent: im2ingr_resnet50_ff_bce_cat
   comment: 'Try if title helps predicting ingredient'

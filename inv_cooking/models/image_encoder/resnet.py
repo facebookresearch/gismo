@@ -27,15 +27,16 @@ class ResnetImageEncoder(nn.Module):
             pretrained_net = resnet.__dict__[config.model](pretrained=False)
             in_dim = pretrained_net.fc.in_features
             pretrained_net.fc = nn.Identity()
-            pretrained_weights = torch.load(config.pretrained_weights)
+            pretrained_weights = torch.load(config.pretrained_weights, map_location='cpu')
             pretrained_net.load_state_dict(pretrained_weights, strict=False)
         else:
             pretrained_net = resnet.__dict__[config.model](pretrained=config.pretrained)
             in_dim = pretrained_net.fc.in_features
 
         # Delete avg pooling and last fc layer
-        modules = list(pretrained_net.children())[:-2]
-        self.pretrained_net = nn.Sequential(*modules)
+        pretrained_net.avgpool = nn.Identity()
+        pretrained_net.fc = nn.Identity()
+        self.pretrained_net = pretrained_net
 
         # Adapt the output dimension in case of mismatch
         self.last_module = self._build_adaptation_head(in_dim, embed_size, dropout=config.dropout)
@@ -61,10 +62,24 @@ class ResnetImageEncoder(nn.Module):
         if images is None:
             return None
 
-        features = self.pretrained_net(images)
+        features = self._forward_encoder(images)
         if self.last_module is not None:
             features = self.last_module(features)
         if return_reshaped_features:
             return features.reshape(features.size(0), features.size(1), -1)
         else:
             return features
+
+    def _forward_encoder(self, images):
+        """
+        Same as ResNet forward but the flatten is removed
+        """
+        x = self.pretrained_net.conv1(images)
+        x = self.pretrained_net.bn1(x)
+        x = self.pretrained_net.relu(x)
+        x = self.pretrained_net.maxpool(x)
+        x = self.pretrained_net.layer1(x)
+        x = self.pretrained_net.layer2(x)
+        x = self.pretrained_net.layer3(x)
+        x = self.pretrained_net.layer4(x)
+        return x
