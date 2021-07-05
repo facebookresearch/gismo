@@ -1,3 +1,4 @@
+import re
 from typing import Dict, List, Any
 
 
@@ -25,8 +26,6 @@ class IngredientParser:
         det_ingr_undrs = det_ingr["text"].lower()
         if clean_digits:
             det_ingr_undrs = "".join(c for c in det_ingr_undrs if not c.isdigit())
-        else:
-            det_ingr_undrs = "".join(c for c in det_ingr_undrs)
 
         for rep, char_list in self.replace_dict.items():
             for c_ in char_list:
@@ -35,6 +34,11 @@ class IngredientParser:
 
         det_ingr_undrs = det_ingr_undrs.strip()
         det_ingr_undrs = det_ingr_undrs.replace(" ", "_")
+
+        if not clean_digits:
+            pattern = "(?P<char>[" + re.escape("_") + "])(?P=char)+"
+            det_ingr_undrs = re.sub(pattern, r"\1", det_ingr_undrs)
+            
         return det_ingr_undrs
 
 
