@@ -44,6 +44,7 @@ class Recipe1M(data.Dataset):
         ablations: DatasetAblationConfig,
         loading: LoadingOptions,
         preprocessed_folder: str,
+        filter_without_images: bool,
         transform=None,
         use_lmdb: bool = False,
         selected_indices: np.ndarray = None,
@@ -65,6 +66,7 @@ class Recipe1M(data.Dataset):
         self.ingr_vocab = Vocabulary()
         self.instr_vocab = Vocabulary()
         self.dataset = []
+        
 
         # load ingredient voc
         if self.loading.with_ingredient:

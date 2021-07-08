@@ -119,6 +119,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             selected_indices=selected_indices,
             loading=self.loading_options,
             preprocessed_folder=self.dataset_config.pre_processing.save_path,
+            filter_without_images=self.dataset_config['pre_processing']['filter_without_images']
         )
         return dataset
 
