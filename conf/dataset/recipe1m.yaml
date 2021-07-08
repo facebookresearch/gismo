@@ -30,3 +30,5 @@ pre_processing:
   minnumingrs: 2  # min number of ingredients
   minnumwords: 20  # minimum number of characters in recipe
   flavor_graph: True
+  filter_without_images: False
+
