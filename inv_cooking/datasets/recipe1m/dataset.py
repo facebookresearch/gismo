@@ -20,7 +20,7 @@ class LoadingOptions:
     with_ingredient_eos: bool = False
     with_recipe: bool = False
     with_title: bool = False
-
+    with_id: bool = False
     def need_load(self) -> bool:
         return self.with_image or self.with_ingredient or self.with_recipe or self.with_title
 
@@ -33,6 +33,7 @@ class Recipe1M(data.Dataset):
         filtering: DatasetFilterConfig,
         loading: LoadingOptions,
         preprocessed_folder: str,
+        filter_without_images: bool,
         transform=None,
         use_lmdb: bool = False,
         selected_indices: np.ndarray = None,
@@ -53,6 +54,7 @@ class Recipe1M(data.Dataset):
         self.ingr_vocab = Vocabulary()
         self.instr_vocab = Vocabulary()
         self.dataset = []
+        
 
         # load ingredient voc
         if self.loading.with_ingredient:
@@ -131,7 +133,7 @@ class Recipe1M(data.Dataset):
         # get ids of data samples used and prune dataset
         ids = []
         for i, entry in enumerate(self.dataset):
-            if len(entry["images"]) == 0:
+            if len(entry["images"]) == 0 and filter_without_images:
                 continue
             ids.append(i)
 
@@ -143,14 +145,16 @@ class Recipe1M(data.Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "title", "recipe"]:
+    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "title", "recipe", "id"]:
         image = self._load_image(index) if self.loading.with_image else None
         ret_ingr = (
             self.load_ingredients(index) if self.loading.with_ingredient else None
         )
         recipe = self._load_recipe(index) if self.loading.with_recipe else None
         title = self._load_title(index) if self.loading.with_title else None
-        return image, ret_ingr, title, recipe
+        id = self._load_id(index) if self.loading.with_id else None
+
+        return image, ret_ingr, title, recipe, id
 
     def load_ingredients(self, index: int):
         raw_ingredients = self.dataset[index]["ingredients"]
@@ -203,6 +207,10 @@ class Recipe1M(data.Dataset):
             image = self.transform(image)
         return image
 
+    def _load_id(self, index: int):
+        id = self.dataset[index]["id"]
+        return id
+
     def _load_title(self, index: int):
         tokens = self.dataset[index]["title"]
         out = [self.title_vocab(token) for token in tokens]
@@ -234,7 +242,7 @@ class Recipe1M(data.Dataset):
 
     @staticmethod
     def collate_fn(data):
-        img, ingr, title, recipe = zip(*data)
+        img, ingr, title, recipe, id = zip(*data)
         ret = {}
         # Merge images, ingredients and recipes in minibatch
         if img[0] is not None:
@@ -245,6 +253,8 @@ class Recipe1M(data.Dataset):
             ret["title"] = torch.tensor(title)
         if recipe[0] is not None:
             ret["recipe"] = torch.tensor(recipe)
+        if id is not None:
+            ret["id"] = id
         return ret
 
     def get_ingr_vocab(self):
