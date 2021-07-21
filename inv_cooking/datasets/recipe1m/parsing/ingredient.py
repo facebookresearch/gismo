@@ -1,12 +1,9 @@
 import os
 import pickle
 import re
-<<<<<<< HEAD
-from typing import Any, Dict, List
-=======
+import os
 import pickle
-from typing import Dict, List, Any
->>>>>>> f31be4d (read the hand creafted ingredient matching")
+from typing import Any, Dict, List
 
 
 class IngredientParser:
