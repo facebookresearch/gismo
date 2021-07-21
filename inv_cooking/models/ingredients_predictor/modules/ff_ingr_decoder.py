@@ -32,7 +32,9 @@ class FFIngredientDecoder(nn.Module):
         self.fc_cardinality = None
 
     def add_cardinality_prediction(self, max_num_ingredients: int):
-        self.fc_cardinality = nn.Linear(self.classifier.in_features, max_num_ingredients)
+        self.fc_cardinality = nn.Linear(
+            self.classifier.in_features, max_num_ingredients
+        )
 
     def forward(
         self, img_features: torch.Tensor

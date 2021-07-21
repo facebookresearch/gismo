@@ -16,6 +16,7 @@ class TaskType(Enum):
     im2recipe = 1
     ingr2recipe = 2
     im2title = 3
+    ingrsubs = 4
 
 
 @dataclass
@@ -27,7 +28,7 @@ class CheckpointConfig:
 
 @dataclass
 class PretrainedConfig:
-    freeze: bool = MISSING 
+    freeze: bool = MISSING
     load_pretrained_from: str = MISSING
 
 

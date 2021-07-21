@@ -1,12 +1,12 @@
 import torch
 
 from .permutation_invariant_criterion import (
+    BiPartiteAssignmentCriterion,
     ChamferDistanceCriterion,
     ChamferDistanceType,
+    PooledBinaryCrossEntropy,
     chamfer_cross_entropy_distance,
     knn_cross_entropy,
-    PooledBinaryCrossEntropy,
-    BiPartiteAssignmentCriterion
 )
 
 

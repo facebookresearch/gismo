@@ -4,10 +4,7 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 
-from inv_cooking.config import (
-    ImageEncoderConfig,
-    IngredientPredictorConfig,
-)
+from inv_cooking.config import ImageEncoderConfig, IngredientPredictorConfig
 from inv_cooking.config.config import TitleEncoderConfig
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.ingredients_predictor import create_ingredient_predictor
@@ -65,7 +62,9 @@ class Im2Ingr(nn.Module):
         :param compute_predictions: whether or not to output the ingredients prediction
         """
 
-        assert image is not None or title is not None, "Need some input to deduce the ingredients"
+        assert (
+            image is not None or title is not None
+        ), "Need some input to deduce the ingredients"
 
         # Compute the representation of the image
         if image is not None:

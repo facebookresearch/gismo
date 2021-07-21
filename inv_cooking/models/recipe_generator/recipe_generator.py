@@ -8,7 +8,11 @@ from inv_cooking.utils.criterion import MaskedCrossEntropyCriterion
 
 class RecipeGenerator(nn.Module):
     def __init__(
-        self, args: RecipeGeneratorConfig, instr_vocab_size: int, maxrecipelen: int, num_cross_attn: int
+        self,
+        args: RecipeGeneratorConfig,
+        instr_vocab_size: int,
+        maxrecipelen: int,
+        num_cross_attn: int,
     ):
         super().__init__()
 

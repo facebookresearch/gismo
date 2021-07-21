@@ -5,10 +5,10 @@ import torch
 from inv_cooking.config import (
     ImageEncoderConfig,
     IngredientPredictorConfig,
-    OptimizationConfig,
-    RecipeGeneratorConfig,
-    PretrainedConfig,
     IngredientTeacherForcingConfig,
+    OptimizationConfig,
+    PretrainedConfig,
+    RecipeGeneratorConfig,
 )
 from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.training.utils import MonitoredMetric, OptimizationGroup, _BaseModule
@@ -94,7 +94,9 @@ class ImageToRecipe(_BaseModule):
         return out[0], out[1:]
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        out = self(compute_losses=True, use_ingr_pred=not self.ingr_teachforce.train, **batch)
+        out = self(
+            compute_losses=True, use_ingr_pred=not self.ingr_teachforce.train, **batch
+        )
         return out[0]
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
@@ -105,7 +107,10 @@ class ImageToRecipe(_BaseModule):
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor], use_ingr_pred: bool):
         out = self(
-            **batch, use_ingr_pred=use_ingr_pred, compute_predictions=False, compute_losses=True,
+            **batch,
+            use_ingr_pred=use_ingr_pred,
+            compute_predictions=False,
+            compute_losses=True,
         )
         out[0]["n_samples"] = batch["recipe"].shape[0]
         out[0]["ingr_pred"] = out[1][0]
@@ -177,6 +182,8 @@ class ImageToRecipe(_BaseModule):
                 name="ingredient predictor",
             ),
             OptimizationGroup(
-                model=self.model.recipe_gen, pretrained=False, name="recipe generator",
+                model=self.model.recipe_gen,
+                pretrained=False,
+                name="recipe generator",
             ),
         ]

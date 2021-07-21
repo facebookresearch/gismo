@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 
 from inv_cooking.config import DatasetConfig
 
-from .dataset import Recipe1M, LoadingOptions
+from .dataset import LoadingOptions, Recipe1M
 from .preprocess import run_dataset_pre_processing
 
 
@@ -47,7 +47,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
             print(f"Validation set composed of {len(self.dataset_val)} samples.")
         elif stage == "test":
             self.dataset_test = self._get_dataset(stage, self.dataset_config.eval_split)
-            print(f"Eval split: {self.dataset_config.eval_split} composed of {len(self.dataset_test)} samples.")
+            print(
+                f"Eval split: {self.dataset_config.eval_split} composed of {len(self.dataset_test)} samples."
+            )
             self.title_vocab_size = self.dataset_train.get_title_vocab_size()
             self.ingr_vocab_size = self.dataset_test.get_ingr_vocab_size()
             self.instr_vocab_size = self.dataset_test.get_instr_vocab_size()
@@ -91,12 +93,14 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def _get_dataset(self, stage: str, which_split: Optional[str] = None):
 
         # reads the file with ids to use for the corresponding split
-        if which_split == 'val':
-            splits_filename = os.path.join(self.dataset_config.splits_path, which_split + ".txt")  ## PROBLEM IS HERE
+        if which_split == "val":
+            splits_filename = os.path.join(
+                self.dataset_config.splits_path, which_split + ".txt"
+            )  ## PROBLEM IS HERE
             with open(splits_filename, "r") as f:
                 selected_indices = np.array([int(line.rstrip("\n")) for line in f])
         else:
-            selected_indices =  None
+            selected_indices = None
 
         dataset = Recipe1M(
             self.dataset_config.path,
@@ -107,7 +111,6 @@ class Recipe1MDataModule(pl.LightningDataModule):
             selected_indices=selected_indices,
             loading=self.loading_options,
             preprocessed_folder=self.dataset_config.pre_processing.save_path,
-            filter_without_images=self.dataset_config['pre_processing']['filter_without_images']
         )
         return dataset
 

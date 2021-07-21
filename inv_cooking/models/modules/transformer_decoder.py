@@ -22,7 +22,9 @@ from inv_cooking.models.modules.positional_embedding import (
 class TransformerDecoderLayer(nn.Module):
     """Decoder layer block."""
 
-    def __init__(self, embed_dim, n_att, dropout=0.5, activation="relu", n_cross_attn=1):
+    def __init__(
+        self, embed_dim, n_att, dropout=0.5, activation="relu", n_cross_attn=1
+    ):
         super().__init__()
 
         self.embed_dim = embed_dim
@@ -37,11 +39,14 @@ class TransformerDecoderLayer(nn.Module):
 
         # cross attention between encoder and decoder
         self.cross_attn = nn.ModuleList(
-            [MultiheadAttention(self.embed_dim,
-                                n_att,
-                                dropout=dropout,
-                            )
-            for i in range(n_cross_attn)]
+            [
+                MultiheadAttention(
+                    self.embed_dim,
+                    n_att,
+                    dropout=dropout,
+                )
+                for i in range(n_cross_attn)
+            ]
         )
 
         self.fc1 = Linear(self.embed_dim, self.embed_dim)
@@ -84,7 +89,9 @@ class TransformerDecoderLayer(nn.Module):
         # cross attention
         residual = x
         x = self.layer_norms[1](x)
-        assert (len(encoder_out) == len(encoder_padding_mask)) and (len(encoder_out) == len(self.cross_attn))
+        assert (len(encoder_out) == len(encoder_padding_mask)) and (
+            len(encoder_out) == len(self.cross_attn)
+        )
         for i, (e, m) in enumerate(zip(encoder_out, encoder_padding_mask)):
             x, _ = self.cross_attn[i](
                 query=x,
@@ -134,7 +141,7 @@ class DecoderTransformer(nn.Module):
 
         if pos_embeddings:
             self.embed_positions = PositionalEmbedding(
-                self.seq_length+1, embed_size, 0, left_pad=False, learned=learned
+                self.seq_length + 1, embed_size, 0, left_pad=False, learned=learned
             )
         else:
             self.embed_positions = None
@@ -157,9 +164,7 @@ class DecoderTransformer(nn.Module):
 
         self.linear = Linear(embed_size, vocab_size - 1)
 
-    def forward(
-        self, features, masks, captions, incremental_state=None
-    ):
+    def forward(self, features, masks, captions, incremental_state=None):
 
         if not isinstance(features, list):
             features = [features]
@@ -223,7 +228,7 @@ class DecoderTransformer(nn.Module):
         # create dummy previous word
         assert all(f.size(0) == features[0].size(0) for f in features)
         fs = features[0].size(0)
-        first_word = torch.ones(fs).type_as(features[0]) * first_token_value       
+        first_word = torch.ones(fs).type_as(features[0]) * first_token_value
 
         first_word = first_word.long()
         sampled_ids = [first_word]

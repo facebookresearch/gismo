@@ -1,9 +1,9 @@
 from inv_cooking.config import (
-    ImageEncoderConfig,
-    RecipeGeneratorConfig,
-    PretrainedConfig,
-    IngredientTeacherForcingConfig,
     EncoderAttentionType,
+    ImageEncoderConfig,
+    IngredientTeacherForcingConfig,
+    PretrainedConfig,
+    RecipeGeneratorConfig,
 )
 from inv_cooking.config.config import TitleEncoderConfig
 
@@ -37,8 +37,11 @@ class FakeConfig:
     @staticmethod
     def recipe_gen_config() -> RecipeGeneratorConfig:
         return RecipeGeneratorConfig(
-            dropout=0.1, embed_size=2048, n_att_heads=1,
-            tf_enc_layers=0, tf_dec_layers=1,
+            dropout=0.1,
+            embed_size=2048,
+            n_att_heads=1,
+            tf_enc_layers=0,
+            tf_dec_layers=1,
             encoder_attn=EncoderAttentionType.concat,
             activation="relu",
         )
@@ -46,11 +49,14 @@ class FakeConfig:
     @staticmethod
     def pretrained_config() -> PretrainedConfig:
         return PretrainedConfig(
-            freeze=False, load_pretrained_from="None",
+            freeze=False,
+            load_pretrained_from="None",
         )
 
     @staticmethod
     def ingr_teachforce_config() -> IngredientTeacherForcingConfig:
         return IngredientTeacherForcingConfig(
-            train=True, val=True, test=False,
+            train=True,
+            val=True,
+            test=False,
         )

@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-import warnings
 
 import timm.models.vision_transformer as timm
 import torch
@@ -10,7 +9,9 @@ import torch.nn as nn
 from inv_cooking.config import ImageEncoderConfig
 
 
-def create_vit_image_encoder(embed_size: int, config: ImageEncoderConfig, image_size: int = 448):
+def create_vit_image_encoder(
+    embed_size: int, config: ImageEncoderConfig, image_size: int = 448
+):
     """
     Create an image encoder based on VIT. Several flavors are available:
     - no classification token: use the full sequence as output
@@ -22,7 +23,9 @@ def create_vit_image_encoder(embed_size: int, config: ImageEncoderConfig, image_
     elif config.n_cls_tokens == 0:
         return NoClassVit(embed_size=embed_size, config=config, image_size=image_size)
     elif config.n_cls_tokens > 1:
-        return MultiClassVit(embed_size=embed_size, config=config, image_size=image_size)
+        return MultiClassVit(
+            embed_size=embed_size, config=config, image_size=image_size
+        )
 
 
 class BaseVit(nn.Module):
@@ -39,12 +42,16 @@ class BaseVit(nn.Module):
 
     def _create_vit_trunk(self, config: ImageEncoderConfig):
         if config.patch_size == 32:
-            self.pretrained_net = timm.vit_base_patch32_384(pretrained=config.pretrained)
+            self.pretrained_net = timm.vit_base_patch32_384(
+                pretrained=config.pretrained
+            )
         else:
-            self.pretrained_net = timm.vit_base_patch16_384(pretrained=config.pretrained)
+            self.pretrained_net = timm.vit_base_patch16_384(
+                pretrained=config.pretrained
+            )
         self.pretrained_net.head = nn.Identity()
         if config.pretrained and config.pretrained_weights:
-            state_dict = torch.load(config.pretrained_weights, map_location='cpu')
+            state_dict = torch.load(config.pretrained_weights, map_location="cpu")
             self.pretrained_net.load_state_dict(state_dict, strict=False)
 
 
@@ -59,17 +66,27 @@ class OneClassVit(BaseVit):
         super().__init__(config, image_size)
         self.additional_repr_levels = list(config.additional_repr_levels)
         if self.additional_repr_levels:
-            self.additional_repr_norms = nn.ModuleList([
-                nn.LayerNorm(768, eps=1e-6) for _ in range(len(self.additional_repr_levels))
-            ])
+            self.additional_repr_norms = nn.ModuleList(
+                [
+                    nn.LayerNorm(768, eps=1e-6)
+                    for _ in range(len(self.additional_repr_levels))
+                ]
+            )
         self.concatenate_repr_levels = config.concatenate_repr_levels
-        input_size_multiplier = (1 + len(self.additional_repr_levels)) if self.concatenate_repr_levels else 1
+        input_size_multiplier = (
+            (1 + len(self.additional_repr_levels))
+            if self.concatenate_repr_levels
+            else 1
+        )
         self.adapt_head = self._build_adaptation_head(
             input_size=768 * input_size_multiplier,
             embed_size=embed_size,
-            dropout=config.dropout)
+            dropout=config.dropout,
+        )
 
-    def forward(self, image: torch.Tensor, return_reshaped_features=True) -> torch.Tensor:
+    def forward(
+        self, image: torch.Tensor, return_reshaped_features=True
+    ) -> torch.Tensor:
         """
         :param x: tensor of shape (batch_size, 3, height, width)
         :return shape (batch_size, embedding_size, seq_len)
@@ -140,7 +157,9 @@ class MultiClassVit(BaseVit):
         super().__init__(config, image_size)
         self.n_cls_tokens = config.n_cls_tokens
         self._switch_classification_tokens()
-        self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
+        self.adapt_head = self._build_adaptation_head(
+            input_size=768, embed_size=embed_size, dropout=config.dropout
+        )
 
     def _switch_classification_tokens(self):
         """
@@ -149,8 +168,12 @@ class MultiClassVit(BaseVit):
         """
         new_cls_tokens = self.pretrained_net.cls_token.repeat(1, self.n_cls_tokens, 1)
         self.pretrained_net.cls_token = nn.Parameter(new_cls_tokens)
-        cls_token_pos_embed = self.pretrained_net.pos_embed[:, 0, :].repeat(1, self.n_cls_tokens, 1)
-        new_position_embeddings = torch.cat([cls_token_pos_embed, self.pretrained_net.pos_embed[:, 1:, :]], dim=1)
+        cls_token_pos_embed = self.pretrained_net.pos_embed[:, 0, :].repeat(
+            1, self.n_cls_tokens, 1
+        )
+        new_position_embeddings = torch.cat(
+            [cls_token_pos_embed, self.pretrained_net.pos_embed[:, 1:, :]], dim=1
+        )
         self.pretrained_net.pos_embed = nn.Parameter(new_position_embeddings)
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
@@ -170,7 +193,7 @@ class MultiClassVit(BaseVit):
             x = blk(x)
         x = self.pretrained_net.norm(x)
         x = x.permute(0, 2, 1)
-        x = x[:, :, :self.n_cls_tokens]
+        x = x[:, :, : self.n_cls_tokens]
         x = self.adapt_head(x)
         if return_reshaped_features:
             return x
@@ -203,7 +226,9 @@ class NoClassVit(BaseVit):
     def __init__(self, embed_size: int, config: ImageEncoderConfig, image_size: int):
         super().__init__(config, image_size)
         self._remove_classification_token()
-        self.adapt_head = self._build_adaptation_head(input_size=768, embed_size=embed_size, dropout=config.dropout)
+        self.adapt_head = self._build_adaptation_head(
+            input_size=768, embed_size=embed_size, dropout=config.dropout
+        )
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
         """
@@ -228,7 +253,9 @@ class NoClassVit(BaseVit):
 
     def _remove_classification_token(self):
         # No classification token, so the positional embedding must be changed
-        self.pretrained_net.pos_embed = nn.Parameter(self.pretrained_net.pos_embed[:, 1:, :])
+        self.pretrained_net.pos_embed = nn.Parameter(
+            self.pretrained_net.pos_embed[:, 1:, :]
+        )
 
     @staticmethod
     def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):

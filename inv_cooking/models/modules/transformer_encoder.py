@@ -1,18 +1,16 @@
 import math
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from inv_cooking.models.modules.multihead_attention import MultiheadAttention
-from inv_cooking.models.modules.positional_embedding import (
-    PositionalEmbedding,
-    SinusoidalPositionalEmbedding,
-)
+from inv_cooking.models.modules.positional_embedding import PositionalEmbedding
 from inv_cooking.models.modules.transformer_decoder import Linear
+
 
 class TransformerEncoderLayer(nn.Module):
     """Encoder layer block."""
+
     def __init__(self, embed_dim, n_att, dropout=0.1, activation="relu"):
         super(TransformerEncoderLayer, self).__init__()
 
@@ -35,19 +33,16 @@ class TransformerEncoderLayer(nn.Module):
         elif activation == "gelu":
             self.activation = F.gelu
 
-    def forward(self,
-                x,
-                mask,
-                incremental_state):
+    def forward(self, x, mask, incremental_state):
 
         residual = x
         x, _ = self.self_attn(
-             query=x,
-             key=x,
-             value=x,
-             key_padding_mask=mask,
-             incremental_state=incremental_state,
-             static_kv=True,
+            query=x,
+            key=x,
+            value=x,
+            key_padding_mask=mask,
+            incremental_state=incremental_state,
+            static_kv=True,
         )
         x = residual + F.dropout(x, p=self.dropout, training=self.training)
 
@@ -78,7 +73,11 @@ class EncoderTransformer(nn.Module):
 
         if pos_embeddings:
             self.embed_positions = PositionalEmbedding(
-                217, embed_size, 0, left_pad=False, learned=learned  ## TODO: 217 works with resnet50+20 ingr predictions
+                217,
+                embed_size,
+                0,
+                left_pad=False,
+                learned=learned,  ## TODO: 217 works with resnet50+20 ingr predictions
             )
         else:
             self.embed_positions = None
@@ -98,9 +97,7 @@ class EncoderTransformer(nn.Module):
             ]
         )
 
-    def forward(
-        self, features, masks, incremental_state=None
-    ):
+    def forward(self, features, masks, incremental_state=None):
 
         # embed positions
         if self.embed_positions is not None:
@@ -125,6 +122,3 @@ class EncoderTransformer(nn.Module):
         x = x.permute(1, 2, 0)
 
         return x
-
-
-

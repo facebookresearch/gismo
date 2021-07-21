@@ -6,8 +6,8 @@ import torch.nn as nn
 
 from inv_cooking.config import RecipeGeneratorConfig
 from inv_cooking.models.ingredients_predictor import mask_from_eos
-from inv_cooking.models.recipe_generator import RecipeGenerator
 from inv_cooking.models.modules.ingredient_embeddings import IngredientEmbeddings
+from inv_cooking.models.recipe_generator import RecipeGenerator
 
 
 class Ingr2Recipe(nn.Module):
@@ -31,7 +31,10 @@ class Ingr2Recipe(nn.Module):
             scale_grad=False,
         )
         self.recipe_gen = RecipeGenerator(
-            recipe_gen_config, instr_vocab_size, max_recipe_len, num_cross_attn=1,
+            recipe_gen_config,
+            instr_vocab_size,
+            max_recipe_len,
+            num_cross_attn=1,
         )
 
     def forward(
@@ -54,7 +57,7 @@ class Ingr2Recipe(nn.Module):
         ingr_mask = mask_from_eos(
             ingredients, eos_value=self.ingr_eos_value, mult_before=False
         )
-        ingr_mask = (1- ingr_mask).bool()
+        ingr_mask = (1 - ingr_mask).bool()
 
         # generate recipe and compute losses if necessary
         loss, predictions = self.recipe_gen(

@@ -59,7 +59,9 @@ class RawConfig:
             config.eval_checkpoint_dir = raw_config.eval_checkpoint_dir
             config.slurm = raw_config.slurm
             config.dataset = raw_config.dataset
-            config.dataset.loading = merge_with_non_missing(config.dataset.loading, experiment.loading)
+            config.dataset.loading = merge_with_non_missing(
+                config.dataset.loading, experiment.loading
+            )
             config.recipe_gen = experiment.recipe_gen
             config.image_encoder = experiment.image_encoder
             config.title_encoder = experiment.title_encoder

@@ -3,7 +3,6 @@ from pytorch_lightning import seed_everything
 
 from inv_cooking.config import Config
 from inv_cooking.utils.checkpointing import (
-    get_checkpoint_directory,
     list_available_checkpoints,
     select_best_checkpoint,
 )

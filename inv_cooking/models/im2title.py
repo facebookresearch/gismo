@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 
 from inv_cooking.config import (
+    EncoderAttentionType,
     ImageEncoderConfig,
     RecipeGeneratorConfig,
-    EncoderAttentionType,
 )
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.modules.transformer_encoder import EncoderTransformer
@@ -31,7 +31,13 @@ class Im2Title(nn.Module):
 
         if embed_size != title_gen_config.embed_size:
             self.img_features_transform = nn.Sequential(
-                nn.Conv2d(embed_size, title_gen_config.embed_size, kernel_size=1, padding=0, bias=False),
+                nn.Conv2d(
+                    embed_size,
+                    title_gen_config.embed_size,
+                    kernel_size=1,
+                    padding=0,
+                    bias=False,
+                ),
                 nn.Dropout(title_gen_config.dropout),
                 nn.BatchNorm2d(title_gen_config.embed_size, momentum=0.01),
                 nn.ReLU(),
@@ -49,17 +55,26 @@ class Im2Title(nn.Module):
                 learned=False,
                 activation=title_gen_config.activation,
             )
-            
+
         # recipe generator
-        if self.encoder_attn in [EncoderAttentionType.concat, EncoderAttentionType.concat_tf]:
+        if self.encoder_attn in [
+            EncoderAttentionType.concat,
+            EncoderAttentionType.concat_tf,
+        ]:
             num_cross_attn = 1
-        elif self.encoder_attn in [EncoderAttentionType.seq_img_first, EncoderAttentionType.seq_ingr_first]:
+        elif self.encoder_attn in [
+            EncoderAttentionType.seq_img_first,
+            EncoderAttentionType.seq_ingr_first,
+        ]:
             num_cross_attn = 2
         else:
             assert False, f"Invalid encoder attention type: {self.encoder_attn}"
 
         self.recipe_gen = RecipeGenerator(
-            title_gen_config, title_vocab_size, max_title_len, num_cross_attn,
+            title_gen_config,
+            title_vocab_size,
+            max_title_len,
+            num_cross_attn,
         )
 
     def forward(
@@ -81,7 +96,9 @@ class Im2Title(nn.Module):
 
         # transform image features and create mask where all features are taken into account
         img_features = self.img_features_transform(img_features)
-        img_features = img_features.reshape(img_features.size(0), img_features.size(1), -1)
+        img_features = img_features.reshape(
+            img_features.size(0), img_features.size(1), -1
+        )
         img_mask = torch.zeros(img_features.shape[0], img_features.shape[2])
         img_mask = img_mask.bool().to(device=img_features.device)
 

@@ -1,13 +1,11 @@
 import submitit
-import torch
 from omegaconf import OmegaConf
 
 from inv_cooking.config import Config
 from inv_cooking.scheduler.parsing import RawConfig
-from inv_cooking.training import run_training, run_eval
+from inv_cooking.training import run_eval, run_training
 from inv_cooking.utils.hydra import copy_source_code_to_cwd
 from inv_cooking.utils.slurm import get_job_id
-
 
 # Allow to use the slurm_job_id in the configuration
 OmegaConf.register_resolver("slurm_job_id", get_job_id)

@@ -53,4 +53,6 @@ def create_ingredient_predictor(
         )
     elif config.model == IngredientPredictorType.vit:
         config = cast(IngredientPredictorVITConfig, config)
-        return VITIngredientsPredictor(config, max_num_ingredients, vocab_size, eos_value)
+        return VITIngredientsPredictor(
+            config, max_num_ingredients, vocab_size, eos_value
+        )

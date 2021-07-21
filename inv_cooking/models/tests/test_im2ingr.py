@@ -43,7 +43,10 @@ def test_Im2Ingr():
         )
 
         losses, predictions = model(
-            image=image, target_ingredients=labels, compute_losses=True, compute_predictions=True
+            image=image,
+            target_ingredients=labels,
+            compute_losses=True,
+            compute_predictions=True,
         )
 
         assert losses["label_loss"] is not None
@@ -89,7 +92,11 @@ def test_Im2Ingr_with_title_encoder():
         )
 
         losses, predictions = model(
-            image=image, title=title, target_ingredients=labels, compute_losses=True, compute_predictions=True
+            image=image,
+            title=title,
+            target_ingredients=labels,
+            compute_losses=True,
+            compute_predictions=True,
         )
         assert losses["label_loss"] is not None
         assert predictions.shape == expected_prediction_shape
@@ -97,7 +104,11 @@ def test_Im2Ingr_with_title_encoder():
         assert predictions.max() <= vocab_size - 1
 
         losses, predictions = model(
-            image=None, title=title, target_ingredients=labels, compute_losses=True, compute_predictions=True
+            image=None,
+            title=title,
+            target_ingredients=labels,
+            compute_losses=True,
+            compute_predictions=True,
         )
         assert losses["label_loss"] is not None
         assert predictions.shape == expected_prediction_shape

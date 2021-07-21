@@ -14,5 +14,7 @@ class ImageEncoderConfig:
     freeze: bool = False
     patch_size: int = MISSING  # Only used for VIT: 16 or 32
     n_cls_tokens: int = MISSING  # Only used for VIT
-    additional_repr_levels: List[int] = field(default_factory=list)  # Only used for VIT with one class token
+    additional_repr_levels: List[int] = field(
+        default_factory=list
+    )  # Only used for VIT with one class token
     concatenate_repr_levels: bool = False  # Only used for VIT with one class token

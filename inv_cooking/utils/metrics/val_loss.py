@@ -13,11 +13,16 @@ class DistributedValLosses(DistributedCompositeAverage):
     Metric to compute the average of the validation losses tracked for recipe
     """
 
-    def __init__(self, weights: Dict[str, float], monitor_ingr_losses=False, dist_sync_on_step=False):
+    def __init__(
+        self,
+        weights: Dict[str, float],
+        monitor_ingr_losses=False,
+        dist_sync_on_step=False,
+    ):
         super().__init__(
             weights=self.filter_weights(weights, monitor_ingr_losses),
             total="total_loss",
-            dist_sync_on_step=dist_sync_on_step
+            dist_sync_on_step=dist_sync_on_step,
         )
 
     @staticmethod

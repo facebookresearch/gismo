@@ -5,9 +5,13 @@ from inv_cooking.config.config import TitleEncoderConfig
 
 
 class TitleEncoder(nn.Module):
-    def __init__(self, config: TitleEncoderConfig, title_vocab_size: int, embed_size: int):
+    def __init__(
+        self, config: TitleEncoderConfig, title_vocab_size: int, embed_size: int
+    ):
         super().__init__()
-        self.embed = nn.Embedding(num_embeddings=title_vocab_size, embedding_dim=config.layer_dim)
+        self.embed = nn.Embedding(
+            num_embeddings=title_vocab_size, embedding_dim=config.layer_dim
+        )
         layers = []
         for _ in range(config.layers):
             layers.append(nn.TransformerEncoderLayer(d_model=config.layer_dim, nhead=8))

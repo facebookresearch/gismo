@@ -5,7 +5,6 @@ from inv_cooking.training.tests.utils import _BaseTest
 
 
 class TestIngredientToRecipe(_BaseTest):
-
     @torch.no_grad()
     def test_ingr2recipe(self):
         module = IngredientToRecipe(
@@ -19,7 +18,9 @@ class TestIngredientToRecipe(_BaseTest):
 
         batch_size = 5
         ingredients = torch.randint(
-            low=0, high=self.INGR_VOCAB_SIZE, size=(batch_size, self.MAX_NUM_INGREDIENTS + 1)
+            low=0,
+            high=self.INGR_VOCAB_SIZE,
+            size=(batch_size, self.MAX_NUM_INGREDIENTS + 1),
         )
         recipe = torch.randint(
             low=0, high=self.RECIPE_VOCAB_SIZE, size=(batch_size, self.MAX_RECIPE_LEN)

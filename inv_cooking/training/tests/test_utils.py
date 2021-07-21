@@ -9,9 +9,7 @@ def test_checkpoint_to_cpu():
     fake_state = torch.randn(size=(200, 10)).cuda()
     checkpoint = {
         "state_dict": model.state_dict(),
-        "optimizer_state": {
-            "grads": [fake_state]
-        }
+        "optimizer_state": {"grads": [fake_state]},
     }
 
     _BaseModule.recursively_move_to_cpu(checkpoint)

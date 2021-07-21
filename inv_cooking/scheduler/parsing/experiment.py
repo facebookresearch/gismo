@@ -13,11 +13,15 @@ from typing import Any, Dict, List, Tuple
 
 from omegaconf import DictConfig, OmegaConf
 
+from inv_cooking.config import (
+    DatasetLoadingConfig,
+    IngredientTeacherForcingConfig,
+    PretrainedConfig,
+)
 from inv_cooking.config.config import TitleEncoderConfig
 from inv_cooking.config.image_encoder import ImageEncoderConfig
 from inv_cooking.config.optimization import OptimizationConfig
 from inv_cooking.config.recipe_generator import RecipeGeneratorConfig
-from inv_cooking.config import PretrainedConfig, IngredientTeacherForcingConfig, DatasetLoadingConfig
 from inv_cooking.config.utils import untyped_config
 
 
@@ -33,6 +37,7 @@ class Experiments:
     im2recipe: Dict[str, Any] = field(default_factory=dict)
     ingr2recipe: Dict[str, Any] = field(default_factory=dict)
     im2title: Dict[str, Any] = field(default_factory=dict)
+    ingrsubs: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -44,7 +49,9 @@ class Experiment:
 
     name: str = ""
     comment: str = ""
-    loading: DatasetLoadingConfig = DatasetLoadingConfig()  # Allow to override the dataset config
+    loading: DatasetLoadingConfig = (
+        DatasetLoadingConfig()
+    )  # Allow to override the dataset config
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
     image_encoder: ImageEncoderConfig = ImageEncoderConfig()
     title_encoder: TitleEncoderConfig = TitleEncoderConfig()

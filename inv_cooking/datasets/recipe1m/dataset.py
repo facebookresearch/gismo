@@ -21,8 +21,14 @@ class LoadingOptions:
     with_recipe: bool = False
     with_title: bool = False
     with_id: bool = False
+
     def need_load(self) -> bool:
-        return self.with_image or self.with_ingredient or self.with_recipe or self.with_title
+        return (
+            self.with_image
+            or self.with_ingredient
+            or self.with_recipe
+            or self.with_title
+        )
 
 
 class Recipe1M(data.Dataset):
@@ -33,13 +39,12 @@ class Recipe1M(data.Dataset):
         filtering: DatasetFilterConfig,
         loading: LoadingOptions,
         preprocessed_folder: str,
-        filter_without_images: bool,
         transform=None,
         use_lmdb: bool = False,
         selected_indices: np.ndarray = None,
     ):
         self.image_dir = os.path.join(data_dir, "images", split)
-        self.pre_processed_dir = preprocessed_folder  #os.path.join(data_dir, "preprocessed")  ## PROBLEM IS HERE
+        self.pre_processed_dir = preprocessed_folder  # os.path.join(data_dir, "preprocessed")  ## PROBLEM IS HERE
         self.split = split
         self.max_num_images = filtering.max_num_images
         self.max_num_labels = filtering.max_num_labels
@@ -54,7 +59,6 @@ class Recipe1M(data.Dataset):
         self.ingr_vocab = Vocabulary()
         self.instr_vocab = Vocabulary()
         self.dataset = []
-        
 
         # load ingredient voc
         if self.loading.with_ingredient:
@@ -133,7 +137,7 @@ class Recipe1M(data.Dataset):
         # get ids of data samples used and prune dataset
         ids = []
         for i, entry in enumerate(self.dataset):
-            if len(entry["images"]) == 0 and filter_without_images:
+            if len(entry["images"]) == 0 and self.loading.with_image:
                 continue
             ids.append(i)
 
@@ -145,7 +149,9 @@ class Recipe1M(data.Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, index: int) -> Tuple[Image.Image, "ingredients", "title", "recipe", "id"]:
+    def __getitem__(
+        self, index: int
+    ) -> Tuple[Image.Image, "ingredients", "title", "recipe", "id"]:
         image = self._load_image(index) if self.loading.with_image else None
         ret_ingr = (
             self.load_ingredients(index) if self.loading.with_ingredient else None
@@ -173,7 +179,9 @@ class Recipe1M(data.Dataset):
             true_ingr_idxs.append(self.ingr_vocab("<end>"))
 
         # Return the ingredients, completed with pad values
-        nb_pad_values = self.max_num_labels + self.loading.with_ingredient_eos - len(true_ingr_idxs)
+        nb_pad_values = (
+            self.max_num_labels + self.loading.with_ingredient_eos - len(true_ingr_idxs)
+        )
         return true_ingr_idxs + [self.ingr_pad_value] * nb_pad_values
 
     def _load_image(self, index: int):
@@ -215,7 +223,7 @@ class Recipe1M(data.Dataset):
         tokens = self.dataset[index]["title"]
         out = [self.title_vocab(token) for token in tokens]
         out.append(self.title_vocab("<end>"))
-        out = out[0: self.max_title_seq_len]
+        out = out[0 : self.max_title_seq_len]
         pad_count = self.max_title_seq_len - len(out)
         out = out + [self.title_vocab("<pad>")] * pad_count
         return out

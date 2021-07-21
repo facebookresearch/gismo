@@ -18,7 +18,11 @@ from .ingredient_to_recipe import IngredientToRecipe
 
 
 def run_training(
-    cfg: Config, gpus: int, nodes: int, distributed_mode: str, load_checkpoint: bool,
+    cfg: Config,
+    gpus: int,
+    nodes: int,
+    distributed_mode: str,
+    load_checkpoint: bool,
 ) -> None:
     seed_everything(cfg.optimization.seed)
     dump_configuration(cfg)
@@ -124,15 +128,23 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
             with_ingredient=True,
             with_ingredient_eos=include_eos,
             with_recipe=True,
-            with_title=True,
-            with_id = True
         )
     elif cfg.task == TaskType.ingr2recipe:
         return LoadingOptions(
-            with_ingredient=True, with_ingredient_eos=include_eos, with_recipe=True,
+            with_ingredient=True,
+            with_ingredient_eos=include_eos,
+            with_recipe=True,
         )
     elif cfg.task == TaskType.im2title:
         return LoadingOptions(with_image=True, with_title=True)
+    elif cfg.task == TaskType.ingrsubs:
+        return LoadingOptions(
+            with_ingredient=True,
+            with_ingredient_eos=include_eos,
+            with_recipe=True,
+            with_title=True,
+            with_id=True,
+        )
     else:
         raise ValueError(f"Unknown task: {cfg.task.name}.")
 
@@ -186,5 +198,7 @@ def create_model(cfg: Config, data_module: Recipe1MDataModule):
             max_title_len=cfg.dataset.filtering.max_title_seq_len,
             title_vocab_size=data_module.title_vocab_size,
         )
+    elif cfg.task == TaskType.ingrsubs:
+        raise Exception("TO DO")
     else:
         raise ValueError(f"Unknown task: {cfg.task.name}.")
