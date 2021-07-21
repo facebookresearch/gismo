@@ -17,7 +17,7 @@ def test_no_class_vit(patch_size: int, expected_seq_len: int):
             n_cls_tokens=0,
             patch_size=patch_size,
         ),
-        image_size=448
+        image_size=448,
     )
     x = torch.randn(size=(1, 3, 448, 448))
     y = encoder(x)
@@ -38,7 +38,7 @@ def test_one_class_vit_multi_layer_concatenated(patch_size: int, pretrained: boo
             additional_repr_levels=[5, 8],
             concatenate_repr_levels=True,
         ),
-        image_size=448
+        image_size=448,
     )
     x = torch.randn(size=(2, 3, 448, 448))
     out = vit(x)
@@ -59,7 +59,7 @@ def test_one_class_vit_multi_layer_as_sequence(patch_size: int, pretrained: bool
             additional_repr_levels=[5, 8],
             concatenate_repr_levels=False,
         ),
-        image_size=448
+        image_size=448,
     )
     x = torch.randn(size=(2, 3, 448, 448))
     out = vit(x)
@@ -78,7 +78,7 @@ def test_one_class_vit(patch_size: int, pretrained: bool):
             n_cls_tokens=1,
             patch_size=patch_size,
         ),
-        image_size=448
+        image_size=448,
     )
 
     x = torch.randn(size=(2, 3, 448, 448))
@@ -98,7 +98,7 @@ def test_multi_class_vit(patch_size: int):
             n_cls_tokens=4,
             patch_size=patch_size,
         ),
-        image_size=448
+        image_size=448,
     )
     x = torch.randn(size=(2, 3, 448, 448))
     out = vit(x)

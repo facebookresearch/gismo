@@ -1,14 +1,14 @@
 import torch
 
 from inv_cooking.config import (
+    EncoderAttentionType,
     ImageEncoderConfig,
     IngredientPredictorTransformerConfig,
     IngredientPredictorType,
-    OptimizationConfig,
-    RecipeGeneratorConfig,
-    PretrainedConfig,
     IngredientTeacherForcingConfig,
-    EncoderAttentionType,
+    OptimizationConfig,
+    PretrainedConfig,
+    RecipeGeneratorConfig,
 )
 
 
@@ -53,7 +53,11 @@ class _BaseTest:
             max_epochs=400,
             patience=10,
             sync_batchnorm=False,
-            loss_weights={"label_loss": 1.0, "cardinality_loss": 0.0, "eos_loss": 0.0,},
+            loss_weights={
+                "label_loss": 1.0,
+                "cardinality_loss": 0.0,
+                "eos_loss": 0.0,
+            },
         )
 
     @staticmethod

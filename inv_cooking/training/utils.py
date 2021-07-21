@@ -84,12 +84,19 @@ class _BaseModule(pl.LightningModule):
 
     def log_on_progress_bar(self, key: str, value: Any):
         self.log(
-            key, value, on_step=True, on_epoch=True, prog_bar=True, logger=True,
+            key,
+            value,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
         )
 
     @classmethod
     def create_optimizers(
-        cls, optim_groups: List[OptimizationGroup], optim_config: OptimizationConfig,
+        cls,
+        optim_groups: List[OptimizationGroup],
+        optim_config: OptimizationConfig,
     ):
         parameter_groups = []
         for optim_group in optim_groups:

@@ -5,7 +5,6 @@ from inv_cooking.training.tests.utils import _BaseTest
 
 
 class TestImageToIngredients(_BaseTest):
-
     @torch.no_grad()
     def test_im2ingr(self):
         module = ImageToIngredients(
@@ -20,7 +19,9 @@ class TestImageToIngredients(_BaseTest):
         batch_size = 5
         image = torch.randn(size=(batch_size, 3, 224, 224))
         ingredients = torch.randint(
-            low=0, high=self.INGR_VOCAB_SIZE, size=(batch_size, self.MAX_NUM_INGREDIENTS + 1)
+            low=0,
+            high=self.INGR_VOCAB_SIZE,
+            size=(batch_size, self.MAX_NUM_INGREDIENTS + 1),
         )
 
         # Try building an optimizer
@@ -52,11 +53,15 @@ class TestImageToIngredients(_BaseTest):
         assert losses["label_loss"].shape == torch.Size([])
         assert losses["n_samples"] == 5
         assert losses["ingr_gt"].shape == torch.Size([5, self.MAX_NUM_INGREDIENTS + 1])
-        assert losses["ingr_pred"].shape == torch.Size([5, self.MAX_NUM_INGREDIENTS + 1])
+        assert losses["ingr_pred"].shape == torch.Size(
+            [5, self.MAX_NUM_INGREDIENTS + 1]
+        )
 
         # Try "test" step
         losses = module.test_step(batch=batch, batch_idx=0)
         assert losses["label_loss"].shape == torch.Size([])
         assert losses["n_samples"] == 5
         assert losses["ingr_gt"].shape == torch.Size([5, self.MAX_NUM_INGREDIENTS + 1])
-        assert losses["ingr_pred"].shape == torch.Size([5, self.MAX_NUM_INGREDIENTS + 1])
+        assert losses["ingr_pred"].shape == torch.Size(
+            [5, self.MAX_NUM_INGREDIENTS + 1]
+        )

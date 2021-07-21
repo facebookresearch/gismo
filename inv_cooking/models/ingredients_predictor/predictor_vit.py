@@ -76,7 +76,10 @@ class VITIngredientsPredictor(IngredientsPredictor):
             decoder_layers.extend(
                 [
                     nn.Conv1d(
-                        config.embed_size, config.embed_size, kernel_size=1, bias=False,
+                        config.embed_size,
+                        config.embed_size,
+                        kernel_size=1,
+                        bias=False,
                     ),
                     nn.Dropout(config.dropout),
                     nn.BatchNorm1d(config.embed_size),
@@ -84,7 +87,12 @@ class VITIngredientsPredictor(IngredientsPredictor):
                 ]
             )
         decoder_layers.append(
-            nn.Conv1d(config.embed_size, vocab_size - 1, kernel_size=1, bias=False,),
+            nn.Conv1d(
+                config.embed_size,
+                vocab_size - 1,
+                kernel_size=1,
+                bias=False,
+            ),
         )
         return nn.Sequential(*decoder_layers)
 
@@ -121,9 +129,7 @@ class VITIngredientsPredictor(IngredientsPredictor):
         return losses, predictions
 
     def _compute_predictions(self, label_logits: torch.Tensor):
-        """
-
-        """
+        """"""
         predictions = []
         label_logits = label_logits.clone().detach()
         for i in range(label_logits.shape[1]):

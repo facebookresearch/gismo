@@ -11,7 +11,6 @@ from inv_cooking.models.ingredients_predictor import label2_k_hots
 
 
 class DistributedF1(pl.metrics.Metric):
-
     @staticmethod
     def create_all(
         which_f1: List[str],

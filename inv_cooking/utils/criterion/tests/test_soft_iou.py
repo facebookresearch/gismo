@@ -1,11 +1,21 @@
 import torch
 
-from inv_cooking.utils.criterion.soft_iou import (SoftIoUCriterion, soft_iou)
+from inv_cooking.utils.criterion.soft_iou import SoftIoUCriterion, soft_iou
 
 
 def test_soft_iou():
-    logits = torch.FloatTensor([[12, 15, -10], [17, -50, 30],])
-    targets = torch.LongTensor([[1, 0, 0], [1, 0, 1],])
+    logits = torch.FloatTensor(
+        [
+            [12, 15, -10],
+            [17, -50, 30],
+        ]
+    )
+    targets = torch.LongTensor(
+        [
+            [1, 0, 0],
+            [1, 0, 1],
+        ]
+    )
 
     out = soft_iou(logits, targets)
     expected = torch.tensor([[0.5], [1.0]])

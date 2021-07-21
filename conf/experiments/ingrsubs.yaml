@@ -1,0 +1,18 @@
+# @package _group_
+
+ingrsubs:
+  comment: 'default configuration for ingrsubs'
+  image_encoder: resnet50_encoder
+  ingr_predictor: ingr_predictor_ff
+  recipe_gen: recipe_gen_tf
+  optimization:
+    seed: 1235
+    lr: 0.001
+    scale_lr_pretrained: 0.01
+    lr_decay_rate: 0.99
+    lr_decay_every: 1
+    weight_decay: 0.0
+    max_epochs: 400
+    patience: 10
+    loss_weights:
+      recipe_loss: 1.0

@@ -13,10 +13,12 @@ def test_parsing_instructions():
         images=["image1.jpg"],
     )
 
-    parser = InstructionParser(replace_dict={
-        "and": ["&", "'n"],
-    })
+    parser = InstructionParser(
+        replace_dict={
+            "and": ["&", "'n"],
+        }
+    )
 
     total_len, instructions = parser.parse_entry(raw_dataset.layer1[0])
-    assert instructions == ['first do a', 'then do b and c']
+    assert instructions == ["first do a", "then do b and c"]
     assert total_len == sum(len(instr) for instr in instructions)

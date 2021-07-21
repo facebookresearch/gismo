@@ -27,7 +27,9 @@ class ResnetImageEncoder(nn.Module):
             pretrained_net = resnet.__dict__[config.model](pretrained=False)
             in_dim = pretrained_net.fc.in_features
             pretrained_net.fc = nn.Identity()
-            pretrained_weights = torch.load(config.pretrained_weights, map_location='cpu')
+            pretrained_weights = torch.load(
+                config.pretrained_weights, map_location="cpu"
+            )
             pretrained_net.load_state_dict(pretrained_weights, strict=False)
         else:
             pretrained_net = resnet.__dict__[config.model](pretrained=config.pretrained)
@@ -39,7 +41,9 @@ class ResnetImageEncoder(nn.Module):
         self.pretrained_net = pretrained_net
 
         # Adapt the output dimension in case of mismatch
-        self.last_module = self._build_adaptation_head(in_dim, embed_size, dropout=config.dropout)
+        self.last_module = self._build_adaptation_head(
+            in_dim, embed_size, dropout=config.dropout
+        )
         self._freeze_layers(config.freeze)
 
     @staticmethod

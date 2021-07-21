@@ -5,21 +5,21 @@ import torch
 import torch.nn as nn
 
 from inv_cooking.config import (
+    EncoderAttentionType,
     ImageEncoderConfig,
     IngredientPredictorConfig,
-    RecipeGeneratorConfig,
     PretrainedConfig,
-    EncoderAttentionType,
+    RecipeGeneratorConfig,
 )
 from inv_cooking.models.image_encoder import create_image_encoder
 from inv_cooking.models.ingredients_predictor import (
     create_ingredient_predictor,
     mask_from_eos,
 )
-from inv_cooking.models.recipe_generator import RecipeGenerator
 from inv_cooking.models.modules.ingredient_embeddings import IngredientEmbeddings
 from inv_cooking.models.modules.transformer_encoder import EncoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
+from inv_cooking.models.recipe_generator import RecipeGenerator
 
 
 class Im2Recipe(nn.Module):
@@ -53,10 +53,20 @@ class Im2Recipe(nn.Module):
 
         # load pretrained model from checkpoint
         if pretrained_im2ingr_config.load_pretrained_from != "None":
-            pretrained_model = torch.load(pretrained_im2ingr_config.load_pretrained_from)
-            pretrained_image_encoder_dict = {k[len('model.image_encoder.'):]: v for k, v in pretrained_model['state_dict'].items() if 'image_encoder' in k}
+            pretrained_model = torch.load(
+                pretrained_im2ingr_config.load_pretrained_from
+            )
+            pretrained_image_encoder_dict = {
+                k[len("model.image_encoder.") :]: v
+                for k, v in pretrained_model["state_dict"].items()
+                if "image_encoder" in k
+            }
             self.image_encoder.load_state_dict(pretrained_image_encoder_dict)
-            pretrained_ingr_predictor_dict = {k[len('model.ingr_predictor.'):]: v for k, v in pretrained_model['state_dict'].items() if 'ingr_predictor' in k}
+            pretrained_ingr_predictor_dict = {
+                k[len("model.ingr_predictor.") :]: v
+                for k, v in pretrained_model["state_dict"].items()
+                if "ingr_predictor" in k
+            }
             self.ingr_predictor.load_state_dict(pretrained_ingr_predictor_dict)
 
         # freeze pretrained model
@@ -66,14 +76,20 @@ class Im2Recipe(nn.Module):
 
         if ingr_pred_config.embed_size != recipe_gen_config.embed_size:
             self.img_features_transform = nn.Sequential(
-                nn.Conv2d(ingr_pred_config.embed_size, recipe_gen_config.embed_size, kernel_size=1, padding=0, bias=False),
+                nn.Conv2d(
+                    ingr_pred_config.embed_size,
+                    recipe_gen_config.embed_size,
+                    kernel_size=1,
+                    padding=0,
+                    bias=False,
+                ),
                 nn.Dropout(recipe_gen_config.dropout),
                 nn.BatchNorm2d(recipe_gen_config.embed_size, momentum=0.01),
                 nn.ReLU(),
             )
         else:
             self.img_features_transform = None
-        
+
         self.ingr_encoder = IngredientEmbeddings(
             recipe_gen_config.embed_size,
             voc_size=ingr_vocab_size,
@@ -91,15 +107,24 @@ class Im2Recipe(nn.Module):
                 learned=False,
                 activation=recipe_gen_config.activation,
             )
-            
+
         # recipe generator
-        if self.encoder_attn in [EncoderAttentionType.concat, EncoderAttentionType.concat_tf]:
+        if self.encoder_attn in [
+            EncoderAttentionType.concat,
+            EncoderAttentionType.concat_tf,
+        ]:
             num_cross_attn = 1
-        elif self.encoder_attn in [EncoderAttentionType.seq_img_first, EncoderAttentionType.seq_ingr_first]:
+        elif self.encoder_attn in [
+            EncoderAttentionType.seq_img_first,
+            EncoderAttentionType.seq_ingr_first,
+        ]:
             num_cross_attn = 2
 
         self.recipe_gen = RecipeGenerator(
-            recipe_gen_config, instr_vocab_size, max_recipe_len, num_cross_attn,
+            recipe_gen_config,
+            instr_vocab_size,
+            max_recipe_len,
+            num_cross_attn,
         )
 
     def forward(
@@ -137,22 +162,24 @@ class Im2Recipe(nn.Module):
             ingr_mask = mask_from_eos(
                 ingr_predictions, eos_value=self.ingr_eos_value, mult_before=False
             )
-            ingr_mask = (1- ingr_mask).bool()
+            ingr_mask = (1 - ingr_mask).bool()
         else:
             # encode ingredients (using ground truth ingredients)
             ingr_features = self.ingr_encoder(target_ingredients)
             ingr_mask = mask_from_eos(
                 target_ingredients, eos_value=self.ingr_eos_value, mult_before=False
             )
-            ingr_mask = (1- ingr_mask).bool()
+            ingr_mask = (1 - ingr_mask).bool()
 
         # transform image features and create mask
         if self.img_features_transform is not None:
             img_features = self.img_features_transform(img_features)
-        img_features = img_features.reshape(img_features.size(0), img_features.size(1), -1)
-        img_mask = torch.zeros(
-            img_features.shape[0], img_features.shape[2]
-            ).type_as(ingr_mask)
+        img_features = img_features.reshape(
+            img_features.size(0), img_features.size(1), -1
+        )
+        img_mask = torch.zeros(img_features.shape[0], img_features.shape[2]).type_as(
+            ingr_mask
+        )
 
         # prepare encoder conditioning for cross attention in recipe tf
         if self.encoder_attn == EncoderAttentionType.concat:
@@ -167,7 +194,7 @@ class Im2Recipe(nn.Module):
         elif self.encoder_attn == EncoderAttentionType.concat_tf:
             features = self.transformer_encoder(
                 features=torch.cat((img_features, ingr_features), 2),
-                masks=torch.cat((img_mask, ingr_mask), 1)
+                masks=torch.cat((img_mask, ingr_mask), 1),
             )
             masks = None
 

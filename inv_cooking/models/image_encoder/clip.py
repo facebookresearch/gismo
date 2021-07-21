@@ -14,7 +14,7 @@ class ClipBasedEncoder(nn.Module):
             import clip
         except:
             raise self._clip_no_intalled_error()
-        self.model_name = config.model[len(self.PREFIX):]
+        self.model_name = config.model[len(self.PREFIX) :]
         self.downscale = nn.Upsample(size=(224, 224))
         self.clip_encoder, _ = clip.load(self.model_name, device="cpu", jit=False)
         output_size = self._get_output_size(self.clip_encoder)
@@ -35,7 +35,8 @@ class ClipBasedEncoder(nn.Module):
     @staticmethod
     def _clip_no_intalled_error():
         return ValueError(
-            f"You need to have CLIP installed: follow instructions at https://github.com/openai/CLIP")
+            f"You need to have CLIP installed: follow instructions at https://github.com/openai/CLIP"
+        )
 
     def forward(self, image: torch.Tensor):
         """

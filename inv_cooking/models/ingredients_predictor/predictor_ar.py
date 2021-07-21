@@ -175,7 +175,10 @@ class AutoRegressiveIngredientsPredictor(IngredientsPredictor):
         # output label_logits is only used to compute losses in case of self.perminv (no teacher forcing)
         # predictions output is used for all auto-regressive models
         predictions, label_logits = self.decoder.sample(
-            img_features, None, first_token_value=0, replacement=False,
+            img_features,
+            None,
+            first_token_value=0,
+            replacement=False,
         )
 
         if compute_predictions:

@@ -5,7 +5,6 @@ from inv_cooking.training.tests.utils import _BaseTest
 
 
 class TestImageToRecipe(_BaseTest):
-
     @torch.no_grad()
     def test_im2recipe(self):
         module = ImageToRecipe(
@@ -13,8 +12,8 @@ class TestImageToRecipe(_BaseTest):
             ingr_pred_config=self.default_ar_ingredient_predictor_config(),
             recipe_gen_config=self.default_recipe_generator_config(),
             optim_config=self.default_optimization_config(),
-            pretrained_im2ingr_config = self.default_pretrained_config(),
-            ingr_teachforce_config= self.default_ingr_teachforce_config(),
+            pretrained_im2ingr_config=self.default_pretrained_config(),
+            ingr_teachforce_config=self.default_ingr_teachforce_config(),
             max_num_ingredients=self.MAX_NUM_INGREDIENTS,
             max_recipe_len=self.MAX_NUM_INSTRUCTIONS * self.MAX_INSTRUCTION_LENGTH,
             ingr_vocab_size=self.INGR_VOCAB_SIZE,
@@ -25,7 +24,9 @@ class TestImageToRecipe(_BaseTest):
         batch_size = 5
         image = torch.randn(size=(batch_size, 3, 224, 224))
         ingredients = torch.randint(
-            low=0, high=self.INGR_VOCAB_SIZE, size=(batch_size, self.MAX_NUM_INGREDIENTS + 1)
+            low=0,
+            high=self.INGR_VOCAB_SIZE,
+            size=(batch_size, self.MAX_NUM_INGREDIENTS + 1),
         )
         recipe = torch.randint(
             low=0, high=self.RECIPE_VOCAB_SIZE, size=(batch_size, self.MAX_RECIPE_LEN)
@@ -100,4 +101,6 @@ class TestImageToRecipe(_BaseTest):
         assert losses["recipe_loss"].shape == torch.Size([5])
         assert losses["n_samples"] == 5
         assert losses["ingr_gt"].shape == torch.Size([5, self.MAX_NUM_INGREDIENTS + 1])
-        assert losses["ingr_pred"].shape == torch.Size([5, self.MAX_NUM_INGREDIENTS + 1])
+        assert losses["ingr_pred"].shape == torch.Size(
+            [5, self.MAX_NUM_INGREDIENTS + 1]
+        )

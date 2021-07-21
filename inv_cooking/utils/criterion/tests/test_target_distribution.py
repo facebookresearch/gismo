@@ -1,10 +1,19 @@
 import torch
 
-from inv_cooking.utils.criterion.target_distribution import (TargetDistributionCriterion, _to_target_distribution)
+from inv_cooking.utils.criterion.target_distribution import (
+    TargetDistributionCriterion,
+    _to_target_distribution,
+)
 
 
 def test_target_distribution_construction():
-    targets = torch.LongTensor([[1, 0, 0, 0], [1, 0, 1, 0], [0, 0, 0, 0],]).cuda()
+    targets = torch.LongTensor(
+        [
+            [1, 0, 0, 0],
+            [1, 0, 1, 0],
+            [0, 0, 0, 0],
+        ]
+    ).cuda()
     distribution = _to_target_distribution(targets, epsilon=1e-8)
     expected = torch.tensor(
         [
@@ -17,8 +26,18 @@ def test_target_distribution_construction():
 
 
 def test_target_distribution_loss():
-    logits = torch.FloatTensor([[12, 15, -10, 3], [17, -50, 30, -10],])
-    targets = torch.LongTensor([[1, 0, 0, 0], [1, 0, 1, 0],])
+    logits = torch.FloatTensor(
+        [
+            [12, 15, -10, 3],
+            [17, -50, 30, -10],
+        ]
+    )
+    targets = torch.LongTensor(
+        [
+            [1, 0, 0, 0],
+            [1, 0, 1, 0],
+        ]
+    )
 
     td = TargetDistributionCriterion(reduction="none")
     out = td(logits, targets)
@@ -31,7 +50,12 @@ def test_target_distribution_loss():
 
 def test_target_distribution_loss_relative_comparison():
     targets = torch.LongTensor(
-        [[0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 1, 0], [1, 1, 1, 1],]
+        [
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [1, 0, 1, 0],
+            [1, 1, 1, 1],
+        ]
     )
     logits_good = torch.FloatTensor(
         [
@@ -49,6 +73,3 @@ def test_target_distribution_loss_relative_comparison():
     assert (loss_good <= loss_bad).sum() == targets.size(0)
     print(loss_good)
     print(loss_bad)
-
-
-

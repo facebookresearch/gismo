@@ -61,7 +61,9 @@ class FeedForwardIngredientsPredictor(IngredientsPredictor):
         label_losses = {
             IngredientPredictorCriterion.bce: nn.BCEWithLogitsLoss(reduction="mean"),
             IngredientPredictorCriterion.iou: SoftIoUCriterion(reduction="mean"),
-            IngredientPredictorCriterion.td: TargetDistributionCriterion(reduction="mean"),
+            IngredientPredictorCriterion.td: TargetDistributionCriterion(
+                reduction="mean"
+            ),
         }
         label_loss = label_losses[config.criterion]
 

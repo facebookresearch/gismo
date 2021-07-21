@@ -31,7 +31,9 @@ class DistributedCompositeAverage(pl.metrics.Metric):
     Metric to compute the average of a set of values, distributed among several workers
     """
 
-    def __init__(self, weights: Dict[str, float], total: str, dist_sync_on_step: bool = False):
+    def __init__(
+        self, weights: Dict[str, float], total: str, dist_sync_on_step: bool = False
+    ):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
         self.weights = {key: weight for key, weight in weights.items() if weight > 0.0}
         self.total = total

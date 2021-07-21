@@ -117,6 +117,8 @@ class IngredientToRecipe(_BaseModule):
                 pretrained=False,
             ),
             OptimizationGroup(
-                model=self.model.recipe_gen, name="recipe generator", pretrained=False,
+                model=self.model.recipe_gen,
+                name="recipe generator",
+                pretrained=False,
             ),
         ]
