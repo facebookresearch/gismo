@@ -1,14 +1,35 @@
-epochs: 100
-task: "subs"
-name: "gcn"
-lr: 0.01
-w_decay: 0.0005
-hidden: 100
-emb_d: 200
-dropout: 0.5
-nlayers: 2
-val_itr: 1
-nr: 10
-ntrials: 1
-train_batch_size: 1000
-val_test_batch_size: 500
+defaults:
+  epochs: 1000
+  task: "subs"
+  name: "gcn"
+  lr: 0.0001
+  w_decay: 0.0005
+  hidden: 100
+  emb_d: 200
+  dropout: 0.5
+  nlayers: 2
+  val_itr: 100
+  nr: 10
+  ntrials: 1
+  train_batch_size: 1000
+  val_test_batch_size: 500
+  override hydra/launcher: submitit_slurm
+
+hydra:
+  job_logging:
+    root:
+      handlers: []
+  run:
+    dir: /checkpoint/baharef/inversecooking2.0/gcn/${setup.id}/${now:%Y-%m-%d_%H-%M-%S}
+
+  launcher:
+    cpus_per_task: 8
+    gpus_per_node: 1
+    tasks_per_node: 1
+    mem_gb: 120
+    nodes: 1
+    # name: ${setup.id}
+    submitit_folder: /private/home/baharef/inversecooking2.0/baselines/gcn/outputs/%j
+    partition: learnlab # learnlab prioritylab, devlab
+    signal_delay_s: 120
+

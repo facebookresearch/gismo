@@ -114,12 +114,12 @@ class SubsData(data.Dataset):
         self.node_name2id = node_name2id
         self.node_id2count = node_id2count
         self.ingredients_cnt = ingredients_cnt
-        # remove eos from vocabulary list if not needed
-        self.ingr_pad_value = self.get_ingr_vocab_size() - 1
-        self.ingr_eos_value = self.ingr_vocab("<end>")
-
         # load dataset
+
+        # if split == 'train':
         self.dataset_list = json.load(open(self.substitutions_dir, 'r'))
+        # else:  
+        #     self.dataset_list = json.load(open(self.substitutions_dir, 'r'))[:2000]
         self.dataset = self.context_free_examples(self.dataset_list, self.ingr_vocab)
 
         print("Number of datapoints in", self.split, self.dataset.shape[0])
@@ -169,19 +169,6 @@ class SubsData(data.Dataset):
             batch = batch.cuda()
         return batch.long()
 
-
-        return data
-        # pos_batch= torch.stack(data)
-        # neg_batch = SubsData.neg_examples(pos_batch)
-        # pos_labels = torch.zeros(len(pos_batch), 1)
-        # neg_labels = torch.ones(len(neg_batch), 1)
-        # pos_batch = torch.cat((pos_batch, pos_labels), 1)
-        # neg_batch = torch.cat((neg_batch, neg_labels), 1)
-        # ret = torch.cat((pos_batch, neg_batch), 0)
-        # if torch.cuda.is_available():
-        #     ret = ret.cuda()
-        # return ret.long()
-
     @staticmethod
     def collate_fn_val_test(data):
         batch = torch.zeros(len(data)*data[0].shape[0], data[0].shape[1])
@@ -191,32 +178,11 @@ class SubsData(data.Dataset):
             batch = batch.cuda()
         return batch.long()
 
-    # @staticmethod
-    # def neg_examples(self, examples, nr, ingredients_cnt):
-    #     neg_batch = torch.zeros(len(examples)*nr, 2)
-    #     for i in range(len(examples)):
-    #         random_entities = torch.tensor(random.sample(ingredients_cnt, nr))
-    #         neg_batch[i*nr:(i+1)*nr] = torch.cat((examples[i,0].repeat(nr).view(nr, 1), random_entities.view(nr, 1)),1)
-    #     return neg_batch
-
     def neg_examples(self, example, nr, ingredients_cnt):
         neg_batch = torch.zeros(nr, 2)
         random_entities = torch.tensor(random.sample(ingredients_cnt, nr))
-        # print(example[0, 0].repeat(nr).view(nr, 1).shape)
-        # print(random_entities.view(nr, 1).shape)
         neg_batch = torch.cat((example[0, 0].repeat(nr).view(nr, 1), random_entities.view(nr, 1)),1)
         return neg_batch
 
-    def get_ingr_vocab(self):
-        return [
-            min(w, key=len) if not isinstance(w, str) else w
-            for w in self.ingr_vocab.idx2word.values()
-        ]  # includes '<pad>' and eventually '<end>'
-
-    def get_ingr_vocab_size(self):
-        return len(self.get_ingr_vocab())
-
-
 if __name__ == "__main__":
-    nnodes, node_id2count, node_count2id, node_id2name, node_name2id = load_nodes('/private/home/baharef/inversecooking2.0/data/flavorgraph')
-    ingr_vocab = pickle.load(open(os.path.join('/private/home/baharef/inversecooking2.0/new/', "final_recipe1m_vocab_ingrs.pkl"),"rb",))
+    graph, train_dataset, val_dataset, test_dataset, len_ingredients_cnt = load_data(2,'/private/home/baharef/inversecooking2.0/data/flavorgraph')

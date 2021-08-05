@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from layers import GCNConv
+from baselines.gcn.layers import GCNConv
 import torch.nn.functional as F
 
 class GCN(nn.Module):
