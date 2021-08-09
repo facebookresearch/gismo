@@ -18,52 +18,49 @@ def load_split_data(split):
     examples = json.load(open('../new/' + split + '_comments_subs.txt', 'r'))
     return examples
 
-def load_food2vec_dict(food2vec_subs, vocabs):
+def load_dict(subs, vocabs):
     subs_dict = {}
-    for subs in food2vec_subs:
-        subs[0] = subs[0].replace(' ', '_')
-        subs[1] = subs[1].replace(' ', '_')
-        subs = vocabs.word2idx[subs[0]], vocabs.word2idx[subs[1]]
-        if subs[0] not in subs_dict:
-            subs_dict[subs[0]] = []
-        if subs[1] not in subs_dict[subs[0]]:
-            subs_dict[subs[0]].append(subs[1])
-    if subs[0] == 'butter':
-    # for key in subs_dict:
-        print('butter', subs_dict['butter'])
+    if 'mozzarella' in subs:
+        print("Mozarella")
+    exit()
+    for ing in food2vec_subs:
+        # print(ing)
+        print(ing, food2vec_subs[ing])
+        ing_id = vocabs.word2idx[ing]
+        # subs_list = []
+        # for ing_subs in food2vec_subs[ing]:
+        #     vocabs.word2idx[ing_subs]
+        #     try:
+        #         subs_list.append(vocabs.word2idx[ing_subs.replace(' ', '_')])
+        #     except:
+        #         pass
+        # subs_dict[ing_id] = subs_list
+    exit()
     return subs_dict
 
 def load_vocab():
     vocab_ing = pickle.load(open('../new/final_recipe1m_vocab_ingrs.pkl', 'rb'))
     return vocab_ing
 
-def test_food2vec(split='test', k=5, mode=0):
+def test_model(model_name, split='test', mode=0):
     vocabs = load_vocab()
     examples = load_split_data(split)
     examples_cf = context_free_examples(examples, mode, vocabs)
-    food2vec_subs = json.load(open('/private/home/baharef/temp/Exploiting-Food-Embeddings-for-Ingredient-Substitution/food2vec/data/substitute_pairs_food2vec_text_Bahare_k'+ str(k) +'.json', 'r'))
-    food2vec_subs_dict = load_food2vec_dict(food2vec_subs, vocabs)
+    subs = json.load(open('/private/home/baharef/temp/Exploiting-Food-Embeddings-for-Ingredient-Substitution/' + model_name + '_embeddings/data/substitute_pairs_' + model_name + '.json', 'r'))
 
-    food2vec_subs_dict = pickle.load(open('temp.pkl', 'rb'))
-    print(food2vec_subs_dict[vocabs.word2idx['salt']][:10])
-    exit()
     print("dictionary loaded!")
+    if 'mozzarella' in subs:
+        print("1")
+    
+    subs_dict = load_dict(subs, vocabs)
+    exit()
     accuracy = 0
     mrr = 0
     hits = {1:0, 3:0, 10:0}
-    for example in examples_cf:
-        
-        
-        print(food2vec_subs_dict[example[0]])
-        print(example)
-        exit()
+    for example in examples_cf:        
         try:
-            temp = food2vec_subs_dict[example[0]].reverse()
-            rank = temp.index(example[1]) + 1
-            print("Here")
-            print(vocabs.idx2word[example[1]])
-            print(vocabs.idx2word[food2vec_subs_dict[example[0]][0]])
-            exit()
+            subs = subs_dict[example[0]]
+            rank = subs.index(example[1]) + 1
         except Exception as e:
             rank = random.randint(0, 6633) + 1
         mrr += (1/rank)
@@ -80,13 +77,10 @@ def test_food2vec(split='test', k=5, mode=0):
     return mrr, hits
 
 if __name__ == "__main__":
-    for k in [6612]:
-        for mode in [0]:
-            print('results with k ' + str(k) + ' and mode ' + str(mode))
-            mrr, hit = test_food2vec(split='test', k=k, mode=mode)
-            print(mrr)
-            print("Accuracy on test:", hit)
-            # print("Accuracy on val:", test_food2vec(split='val', k=k, mode=mode)*100)
-            # print("Accuracy on train:", test_food2vec(split='train', k=k, mode=mode)*100)
+    model_name = 'foodbert'
+    mrr, hit = test_model(model_name, split='test', mode=0)
+    print(mrr)
+    print("Accuracy on test:", hit)
     
+
     
