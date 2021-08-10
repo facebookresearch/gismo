@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from baselines.gcn.data_loader import SubsData, load_data
 from baselines.gcn.models import GCN
 from torch.utils.data import DataLoader
+from state_loader import save_model, load_saved_models, create_output_dir
 
 class Trainer:
     def __init__(self):
@@ -20,10 +21,6 @@ class Trainer:
         # embeddings = model()
         x = torch.index_select(embeddings, 0, indices[:, 0])
         y = torch.index_select(embeddings, 0, indices[:, 1])
-        # dist = torch.sum((x - y) ** 2, 1)/embeddings.shape[1]
-        # dist = torch.sigmoid(dist)
-
-        # dist = torch.cdist(x, y, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary')
         dist = torch.norm(x - y, 2, dim=1)
         return dist
 
@@ -38,8 +35,8 @@ class Trainer:
         counter = 0
         # model.eval()
         for batch in dataloader:
-            if counter % 1000 == 0:
-                print(counter)
+            # if counter % 1000 == 0:
+                # print(counter)
             scores = self.get_model_output(embeddings, batch).view(batch.shape[0]//n_ingrs, -1)
             ranks = self.get_rank(scores)
             mrr += torch.sum(1.0/ranks)
@@ -47,7 +44,7 @@ class Trainer:
                 hits[key] += torch.sum(ranks <= key)
             counter += len(ranks)
         counter = float(counter)
-        mrr = float(mrr)
+        mrr = float(mrr) * 100
         mrr /= counter
         for key in hits:
             hits[key] = float(hits[key])
@@ -56,13 +53,29 @@ class Trainer:
                 
 
     def train_classification_gcn(self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg):
-        model = GCN(in_channels=cfg.emb_d, hidden_channels=cfg.hidden, num_layers=cfg.nlayers, dropout=cfg.dropout, adj=adj)
-        optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
+        if torch.cuda.is_available():
+            device = torch.device('cuda:0')
+        else:
+            device = torch.device('cpu')
+        model = GCN(in_channels=cfg.emb_d, hidden_channels=cfg.hidden, num_layers=cfg.nlayers, dropout=cfg.dropout, adj=adj, device=device).to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
+        base_dir = '/checkpoint/baharef/gcn/'
+        output_dir = create_output_dir(base_dir, cfg)
+
         best_val_mrr = 0
         best_model = None
-        if torch.cuda.is_available():
-            model = model.cuda()
-        for epoch in range(1, cfg.epochs + 1):
+
+        model, opt, best_model = load_saved_models(output_dir, model, opt)
+        
+        if best_model:
+            best_val_mrr = best_model.mrr
+            best_model = best_model.to(device)
+            best_model.eval()
+
+        model = model.to(device)
+        model.epoch = model.epoch.to(device)
+        
+        for epoch in range(model.epoch.cpu().item()+1, cfg.epochs + 1):
             model.train()
             epoch_loss = 0.0
             for train_batch in train_dataloader:
@@ -70,11 +83,13 @@ class Trainer:
                 indices = train_batch[:,:-1]
                 labels = train_batch[:, -1]
                 loss = self.get_loss(embeddings, indices, labels)
-                optimizer.zero_grad()
+                opt.zero_grad()
                 loss.backward()
-                optimizer.step()
+                opt.step()
                 epoch_loss += loss.cpu().item()
             print(epoch, epoch_loss)
+            model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
+            save_model(model, opt, output_dir, is_best_model=False)
             if epoch % cfg.val_itr == 0:
                 model.eval()
                 embeddings = model()
@@ -84,6 +99,9 @@ class Trainer:
                     best_val_mrr = val_mrr
                     best_model = copy.deepcopy(model)
                     print("Best val mrr updated to", best_val_mrr)
+                    best_model.mrr.data = torch.from_numpy(np.array([best_val_mrr])).to(device)
+                    best_model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
+                    save_model(best_model, opt, output_dir, is_best_model=True)
 
         best_model.eval()
         best_embeddings = best_model()
@@ -111,3 +129,4 @@ class Trainer:
             test_hits_arr.append(test_hits)
 
         print(val_mrr_arr, test_mrr_arr, test_hits)
+

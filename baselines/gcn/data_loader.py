@@ -94,9 +94,9 @@ def load_graph(dir_):
  
 def load_data(nr, dir_):
     graph, node_name2id, node_id2count, ingredients_cnt = load_graph(dir_)
-    train_dataset = SubsData('/private/home/baharef/inversecooking2.0/new', 'train', node_name2id, node_id2count, ingredients_cnt, nr)
-    val_dataset = SubsData('/private/home/baharef/inversecooking2.0/new', 'val', node_name2id, node_id2count, ingredients_cnt, nr)
-    test_dataset = SubsData('/private/home/baharef/inversecooking2.0/new', 'test', node_name2id, node_id2count, ingredients_cnt, nr)
+    train_dataset = SubsData('/private/home/baharef/inversecooking2.0/new/old/', 'train', node_name2id, node_id2count, ingredients_cnt, nr)
+    val_dataset = SubsData('/private/home/baharef/inversecooking2.0/new/old/', 'val', node_name2id, node_id2count, ingredients_cnt, nr)
+    test_dataset = SubsData('/private/home/baharef/inversecooking2.0/new/old', 'test', node_name2id, node_id2count, ingredients_cnt, nr)
     
     return graph, train_dataset, val_dataset, test_dataset, len(ingredients_cnt)
 
@@ -116,10 +116,10 @@ class SubsData(data.Dataset):
         self.ingredients_cnt = ingredients_cnt
         # load dataset
 
-        # if split == 'train':
-        self.dataset_list = json.load(open(self.substitutions_dir, 'r'))
-        # else:  
-        #     self.dataset_list = json.load(open(self.substitutions_dir, 'r'))[:2000]
+        if split == 'train':
+            self.dataset_list = json.load(open(self.substitutions_dir, 'r'))
+        else:  
+            self.dataset_list = json.load(open(self.substitutions_dir, 'r'))[:10000]
         self.dataset = self.context_free_examples(self.dataset_list, self.ingr_vocab)
 
         print("Number of datapoints in", self.split, self.dataset.shape[0])
