@@ -116,10 +116,7 @@ class SubsData(data.Dataset):
         self.ingredients_cnt = ingredients_cnt
         # load dataset
 
-        if split == 'train':
-            self.dataset_list = json.load(open(self.substitutions_dir, 'r'))
-        else:  
-            self.dataset_list = json.load(open(self.substitutions_dir, 'r'))[:10000]
+        self.dataset_list = json.load(open(self.substitutions_dir, 'r'))
         self.dataset = self.context_free_examples(self.dataset_list, self.ingr_vocab)
 
         print("Number of datapoints in", self.split, self.dataset.shape[0])

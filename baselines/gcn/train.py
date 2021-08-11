@@ -10,7 +10,8 @@ def main(cfg) -> None:
     """
     print(cfg)
     trainer = Trainer()
-    trainer.train_knn_gcn(cfg)
+    print("Trainer Initiated")
+    trainer.train_recommender_gcn(cfg)
 
 
 if __name__ == "__main__":

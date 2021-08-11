@@ -15,27 +15,18 @@ def context_free_examples(examples, mode, vocabs):
     return output
 
 def load_split_data(split):
-    examples = json.load(open('../new/' + split + '_comments_subs.txt', 'r'))
+    examples = json.load(open('../new/old/' + split + '_comments_subs.txt', 'r'))
     return examples
 
 def load_dict(subs, vocabs):
     subs_dict = {}
-    if 'mozzarella' in subs:
-        print("Mozarella")
-    exit()
-    for ing in food2vec_subs:
-        # print(ing)
-        print(ing, food2vec_subs[ing])
+
+    for ing in subs:
         ing_id = vocabs.word2idx[ing]
-        # subs_list = []
-        # for ing_subs in food2vec_subs[ing]:
-        #     vocabs.word2idx[ing_subs]
-        #     try:
-        #         subs_list.append(vocabs.word2idx[ing_subs.replace(' ', '_')])
-        #     except:
-        #         pass
-        # subs_dict[ing_id] = subs_list
-    exit()
+        subs_list = []
+        for ing_subs in subs[ing]:
+            subs_list.append(vocabs.word2idx[ing_subs.replace(' ', '_')])
+        subs_dict[ing_id] = subs_list
     return subs_dict
 
 def load_vocab():
@@ -49,11 +40,8 @@ def test_model(model_name, split='test', mode=0):
     subs = json.load(open('/private/home/baharef/temp/Exploiting-Food-Embeddings-for-Ingredient-Substitution/' + model_name + '_embeddings/data/substitute_pairs_' + model_name + '.json', 'r'))
 
     print("dictionary loaded!")
-    if 'mozzarella' in subs:
-        print("1")
     
     subs_dict = load_dict(subs, vocabs)
-    exit()
     accuracy = 0
     mrr = 0
     hits = {1:0, 3:0, 10:0}

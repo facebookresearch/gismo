@@ -68,7 +68,7 @@ def save_model(model, opt, output_dir, is_best_model=False):
     else:
         model_name = 'last_model.chkpnt'
         opt_name = 'last_opt.chkpnt'
-        print("### Saving the model and optimizer from epoch {} ###".format(model.epoch.cpu().item()))
+        # print("### Saving the model and optimizer from epoch {} ###".format(model.epoch.cpu().item()))
 
         torch.save({"checkpoint": model.state_dict(), "epoch": model.epoch}, os.path.join(output_dir, model_name))
         torch.save(opt.state_dict(), os.path.join(output_dir, opt_name))

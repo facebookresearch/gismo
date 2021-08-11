@@ -94,7 +94,7 @@ class Trainer:
                 model.eval()
                 embeddings = model()
                 val_mrr, val_hits = self.get_loss_test(embeddings, val_dataloader, n_ingrs)
-                print(val_mrr, val_hits)
+                print("vall metrics:", val_mrr, val_hits)
                 if val_mrr > best_val_mrr:
                     best_val_mrr = val_mrr
                     best_model = copy.deepcopy(model)
@@ -109,7 +109,7 @@ class Trainer:
 
         return val_mrr, test_mrr, test_hits
 
-    def train_knn_gcn(self, cfg):
+    def train_recommender_gcn(self, cfg):
         graph, train_dataset, val_dataset, test_dataset, n_ingrs = load_data(cfg.nr, dir_ = '/private/home/baharef/inversecooking2.0/data/flavorgraph')
         train_dataloader = DataLoader(train_dataset, batch_size=cfg.train_batch_size, shuffle=True, sampler=None,
                                         batch_sampler=None, num_workers=0, collate_fn=SubsData.collate_fn)
