@@ -18,7 +18,6 @@ class Trainer:
         return loss
 
     def get_model_output(self, embeddings, indices):
-        # embeddings = model()
         x = torch.index_select(embeddings, 0, indices[:, 0])
         y = torch.index_select(embeddings, 0, indices[:, 1])
         dist = torch.norm(x - y, 2, dim=1)
@@ -26,17 +25,14 @@ class Trainer:
 
     def get_rank(self, scores):
         mask = scores[:, 0].repeat(scores.shape[1]).view(scores.shape[1], -1).T
-        ranks = torch.sum(scores < mask, 1) + 1
+        ranks = torch.sum(scores < mask, 1)
         return ranks
 
     def get_loss_test(self, embeddings, dataloader, n_ingrs):
         mrr = 0.0
         hits = {1:0, 3:0, 10:0}
         counter = 0
-        # model.eval()
         for batch in dataloader:
-            # if counter % 1000 == 0:
-                # print(counter)
             scores = self.get_model_output(embeddings, batch).view(batch.shape[0]//n_ingrs, -1)
             ranks = self.get_rank(scores)
             mrr += torch.sum(1.0/ranks)
@@ -53,13 +49,10 @@ class Trainer:
                 
 
     def train_classification_gcn(self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg):
-        if torch.cuda.is_available():
-            device = torch.device('cuda:0')
-        else:
-            device = torch.device('cpu')
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         model = GCN(in_channels=cfg.emb_d, hidden_channels=cfg.hidden, num_layers=cfg.nlayers, dropout=cfg.dropout, adj=adj, device=device).to(device)
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
-        base_dir = '/checkpoint/baharef/gcn/'
+        base_dir = '/checkpoint/baharef/gcn/aug-13/checkpoints/'
         output_dir = create_output_dir(base_dir, cfg)
 
         best_val_mrr = 0
@@ -103,14 +96,15 @@ class Trainer:
                     best_model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
                     save_model(best_model, opt, output_dir, is_best_model=True)
 
+        print("Training finished!")
         best_model.eval()
         best_embeddings = best_model()
         test_mrr, test_hits = self.get_loss_test(best_embeddings, test_dataloader, n_ingrs)
-
-        return val_mrr, test_mrr, test_hits
+        print(test_mrr, test_hits)
+        return best_val_mrr, test_mrr, test_hits
 
     def train_recommender_gcn(self, cfg):
-        graph, train_dataset, val_dataset, test_dataset, n_ingrs = load_data(cfg.nr, dir_ = '/private/home/baharef/inversecooking2.0/data/flavorgraph')
+        graph, train_dataset, val_dataset, test_dataset, n_ingrs, _, _, _= load_data(cfg.nr, dir_ = '/private/home/baharef/inversecooking2.0/data/flavorgraph')
         train_dataloader = DataLoader(train_dataset, batch_size=cfg.train_batch_size, shuffle=True, sampler=None,
                                         batch_sampler=None, num_workers=0, collate_fn=SubsData.collate_fn)
 

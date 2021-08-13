@@ -38,6 +38,13 @@ def load_edges(dir_, node_id2count, node_count2id, node_id2name):
             destinations.append(node2_cnt)
             weights.append(score)
             types.append(edge_type)
+
+            # make it symmetric
+            sources.append(node2_cnt)
+            destinations.append(node1_cnt)
+            weights.append(score)
+            types.append(edge_type)
+
     sources = torch.tensor(sources)
     destinations = torch.tensor(destinations)
     weights = torch.tensor(weights)
@@ -81,24 +88,24 @@ def load_nodes(dir_):
     print("#nodes:", nnodes)
     print("#ingredient nodes:", len(ingredients_cnt))
     print("#compound nodes:", len(compounds_cnt))
-    return node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt
+    return node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt, node_id2name
 
 def node_count2name(count, node_count2id, node_id2name):
     return node_id2name[node_count2id[count]]
 
 def load_graph(dir_):
-    node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt = load_nodes(dir_)
+    node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt, node_id2name = load_nodes(dir_)
     graph = load_edges(dir_, node_id2count, node_count2id, node_id2name)
-    return graph, node_name2id, node_id2count, ingredients_cnt
+    return graph, node_name2id, node_id2count, ingredients_cnt, node_count2id, node_id2name
 
  
 def load_data(nr, dir_):
-    graph, node_name2id, node_id2count, ingredients_cnt = load_graph(dir_)
+    graph, node_name2id, node_id2count, ingredients_cnt, node_count2id, node_id2name = load_graph(dir_)
     train_dataset = SubsData('/private/home/baharef/inversecooking2.0/new/old/', 'train', node_name2id, node_id2count, ingredients_cnt, nr)
     val_dataset = SubsData('/private/home/baharef/inversecooking2.0/new/old/', 'val', node_name2id, node_id2count, ingredients_cnt, nr)
     test_dataset = SubsData('/private/home/baharef/inversecooking2.0/new/old', 'test', node_name2id, node_id2count, ingredients_cnt, nr)
     
-    return graph, train_dataset, val_dataset, test_dataset, len(ingredients_cnt)
+    return graph, train_dataset, val_dataset, test_dataset, len(ingredients_cnt), node_count2id, node_id2name, node_id2count
 
 
 class SubsData(data.Dataset):
@@ -149,10 +156,10 @@ class SubsData(data.Dataset):
 
         elif self.split == 'val' or self.split == 'test':
             pos_example = self.dataset[index, :]
-            neg_examples_0 = self.dataset[index, :][0].repeat(len(self.ingredients_cnt)-1).view(-1, 1)
             all_indices = self.ingredients_cnt.copy()
             all_indices.remove(pos_example[1])
             neg_examples_1 = torch.tensor(all_indices).view(-1, 1)
+            neg_examples_0 = self.dataset[index, :][0].repeat(len(all_indices)).view(-1, 1)
             neg_examples = torch.cat((neg_examples_0, neg_examples_1), 1)
             return torch.cat((pos_example.view(1, 2), neg_examples), 0)
 

@@ -1,3 +1,4 @@
+from re import X
 import torch
 from torch import nn
 from baselines.gcn.layers import GCNConv
@@ -22,8 +23,9 @@ class GCN(nn.Module):
         self.mrr = torch.nn.Parameter(torch.tensor(0, dtype=torch.float64), requires_grad=False).to(device)
 
     def forward(self):
+        x = self.ndata.weight
         for i, conv in enumerate(self.layers[:-1]):
-            x = conv(self.ndata.weight, self.adj)
+            x = conv(x, self.adj)
             x = F.relu(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.layers[-1](x, self.adj)
