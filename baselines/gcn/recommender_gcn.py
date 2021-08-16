@@ -12,29 +12,35 @@ class Trainer:
     def __init__(self):
         super(Trainer, self).__init__()
 
-    def get_loss(self, embeddings, indices, labels):
-        dist = self.get_model_output(embeddings, indices)
-        loss = F.mse_loss(dist, labels.float(), reduction='mean')
+    def get_loss(self, embeddings, indices, margin, cos_layer):
+        cos_layer.train()
+        sims = self.get_model_output(embeddings, indices, cos_layer)
+        sims = sims.view(-1, 2)
+        sims = torch.relu(sims[:, 1] - sims[:, 0] + margin)
+        # loss = F.mse_loss(dist, labels.float(), reduction='mean')
+        loss = torch.sum(sims)
         return loss
 
-    def get_model_output(self, embeddings, indices):
+    def get_model_output(self, embeddings, indices, cos_layer):
         x = torch.index_select(embeddings, 0, indices[:, 0])
-        y = torch.index_select(embeddings, 0, indices[:, 1])
-        dist = torch.norm(x - y, 2, dim=1)
-        return dist
+        y = torch.index_select(embeddings, 0, indices[:, 1])        
+        sims = cos_layer(x, y)
+        return sims
 
     def get_rank(self, scores):
         mask = scores[:, 0].repeat(scores.shape[1]).view(scores.shape[1], -1).T
-        ranks = torch.sum(scores < mask, 1)
+        ranks = torch.sum(scores > mask, 1)
+        ranks[ranks<1] = 1
         return ranks
 
-    def get_loss_test(self, embeddings, dataloader, n_ingrs):
+    def get_loss_test(self, embeddings, dataloader, n_ingrs, cos_layer):
+        cos_layer.eval()
         mrr = 0.0
         hits = {1:0, 3:0, 10:0}
         counter = 0
         for batch in dataloader:
-            scores = self.get_model_output(embeddings, batch).view(batch.shape[0]//n_ingrs, -1)
-            ranks = self.get_rank(scores)
+            sims = self.get_model_output(embeddings, batch, cos_layer).view(batch.shape[0]//n_ingrs, -1)
+            ranks = self.get_rank(sims)
             mrr += torch.sum(1.0/ranks)
             for key in hits:
                 hits[key] += torch.sum(ranks <= key)
@@ -52,7 +58,9 @@ class Trainer:
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         model = GCN(in_channels=cfg.emb_d, hidden_channels=cfg.hidden, num_layers=cfg.nlayers, dropout=cfg.dropout, adj=adj, device=device).to(device)
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
-        base_dir = '/checkpoint/baharef/gcn/aug-13/checkpoints/'
+        cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+        
+        base_dir = '/checkpoint/baharef/gcn/aug-16/margin/checkpoints/'
         output_dir = create_output_dir(base_dir, cfg)
 
         best_val_mrr = 0
@@ -74,8 +82,8 @@ class Trainer:
             for train_batch in train_dataloader:
                 embeddings = model()
                 indices = train_batch[:,:-1]
-                labels = train_batch[:, -1]
-                loss = self.get_loss(embeddings, indices, labels)
+                # labels = train_batch[:, -1]
+                loss = self.get_loss(embeddings, indices, cfg.margin, cos_layer)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
@@ -86,7 +94,7 @@ class Trainer:
             if epoch % cfg.val_itr == 0:
                 model.eval()
                 embeddings = model()
-                val_mrr, val_hits = self.get_loss_test(embeddings, val_dataloader, n_ingrs)
+                val_mrr, val_hits = self.get_loss_test(embeddings, val_dataloader, n_ingrs, cos_layer)
                 print("vall metrics:", val_mrr, val_hits)
                 if val_mrr > best_val_mrr:
                     best_val_mrr = val_mrr
@@ -99,7 +107,7 @@ class Trainer:
         print("Training finished!")
         best_model.eval()
         best_embeddings = best_model()
-        test_mrr, test_hits = self.get_loss_test(best_embeddings, test_dataloader, n_ingrs)
+        test_mrr, test_hits = self.get_loss_test(best_embeddings, test_dataloader, n_ingrs, cos_layer)
         print(test_mrr, test_hits)
         return best_val_mrr, test_mrr, test_hits
 
