@@ -60,7 +60,7 @@ class Trainer:
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
         cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
         
-        base_dir = '/checkpoint/baharef/gcn/aug-16/margin/checkpoints/'
+        base_dir = '/checkpoint/baharef/gcn/aug-17/margin/checkpoints/'
         output_dir = create_output_dir(base_dir, cfg)
 
         best_val_mrr = 0

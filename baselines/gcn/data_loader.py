@@ -7,11 +7,13 @@ import torch
 import json
 import pickle
 import random
+import dgl.ops as ops
+import dgl.function as fn
 import torch.utils.data as data
 from inv_cooking.datasets.vocabulary import Vocabulary
 from typing import Tuple
 
-def load_edges(dir_, node_id2count, node_count2id, node_id2name):
+def load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes):
     sources, destinations, weights, types = [], [], [], []
 
     with open(os.path.join(dir_, 'edges_191120.csv'), 'r') as edges_file:
@@ -45,19 +47,37 @@ def load_edges(dir_, node_id2count, node_count2id, node_id2name):
             weights.append(score)
             types.append(edge_type)
 
+    # add self-loop        
+    for node in range(nnodes):
+        sources.append(node)
+        destinations.append(node)
+        weights.append(1)
+        types.append(4)
+
     sources = torch.tensor(sources)
     destinations = torch.tensor(destinations)
     weights = torch.tensor(weights)
     types = torch.tensor(types)
+
     if torch.cuda.is_available():
         sources = sources.cuda()
         destinations = destinations.cuda()
         weights = weights.cuda()
         types = types.cuda()
+
     graph = dgl.graph((sources, destinations))
     graph.edata['w'] = weights
     graph.edata['t'] = types
-    
+
+    # symmetric normalization
+    in_degree = ops.copy_e_sum(graph, graph.edata['w'])
+    in_norm = torch.pow(in_degree, -0.5)
+    out_norm = torch.pow(in_degree, -0.5).unsqueeze(-1)
+    graph.ndata['in_norm'] = in_norm
+    graph.ndata['out_norm'] = out_norm
+    graph.apply_edges(fn.u_mul_v('in_norm', 'out_norm', 'n'))
+    graph.edata['w'] = graph.edata['w'] * graph.edata['n'].squeeze()
+
     return graph
 
 def load_nodes(dir_):
@@ -88,14 +108,14 @@ def load_nodes(dir_):
     print("#nodes:", nnodes)
     print("#ingredient nodes:", len(ingredients_cnt))
     print("#compound nodes:", len(compounds_cnt))
-    return node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt, node_id2name
+    return node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt, node_id2name, nnodes
 
 def node_count2name(count, node_count2id, node_id2name):
     return node_id2name[node_count2id[count]]
 
 def load_graph(dir_):
-    node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt, node_id2name = load_nodes(dir_)
-    graph = load_edges(dir_, node_id2count, node_count2id, node_id2name)
+    node_id2count, node_count2id, node_id2name, node_name2id, ingredients_cnt, node_id2name, nnodes = load_nodes(dir_)
+    graph = load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes)
     return graph, node_name2id, node_id2count, ingredients_cnt, node_count2id, node_id2name
 
  
@@ -189,4 +209,4 @@ class SubsData(data.Dataset):
         return neg_batch
 
 if __name__ == "__main__":
-    graph, train_dataset, val_dataset, test_dataset, len_ingredients_cnt = load_data(2,'/private/home/baharef/inversecooking2.0/data/flavorgraph')
+    graph, train_dataset, val_dataset, test_dataset, x, node_count2id, node_id2name, node_id2count = load_data(2,'/private/home/baharef/inversecooking2.0/data/flavorgraph')

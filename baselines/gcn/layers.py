@@ -9,5 +9,5 @@ class GCNConv(nn.Module):
     def forward(self, x, g):
         with g.local_scope():
             g.ndata['h'] = self.linear(x)
-            g.update_all(fn.u_mul_e('h', 'w', 'm'), fn.mean(msg='m', out='h'))
+            g.update_all(fn.u_mul_e('h', 'w', 'm'), fn.sum(msg='m', out='h'))
             return g.ndata['h']
