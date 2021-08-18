@@ -224,6 +224,7 @@ def match_flavorgraph(counter_ingrs, ingr_clusters, ingrs_flavorgraph, recipe1m_
                 found_flavor.append(items[0])
 
     # load the hand-crafted mapping from recipe1m ingredients to flavorgraph ingredients
+
     mapping = pickle.load(open(os.path.join(recipe1m_path, "merge_dict.pkl"), "rb"))
     for key in mapping:
         flavor_ing = mapping[key]
