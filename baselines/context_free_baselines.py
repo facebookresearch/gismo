@@ -37,8 +37,8 @@ def test_model(model_name, split='test', mode=0):
     vocabs = load_vocab()
     examples = load_split_data(split)
     examples_cf = context_free_examples(examples, mode, vocabs)
-    subs = json.load(open('/private/home/baharef/temp/Exploiting-Food-Embeddings-for-Ingredient-Substitution/' + model_name + '_embeddings/data/substitute_pairs_' + model_name + '.json', 'r'))
-
+    # subs = json.load(open('/private/home/baharef/Exploiting-Food-Embeddings-for-Ingredient-Substitution/' + model_name + '/data/substitute_pairs_food2vec_text_without_filtering6612.json', 'r'))
+    subs = json.load(open('/private/home/baharef/Exploiting-Food-Embeddings-for-Ingredient-Substitution/foodbert_embeddings/data/substitute_pairs_foodbert_without_filtering.json', 'r'))
     print("dictionary loaded!")
     
     subs_dict = load_dict(subs, vocabs)
@@ -65,7 +65,7 @@ def test_model(model_name, split='test', mode=0):
     return mrr, hits
 
 if __name__ == "__main__":
-    model_name = 'foodbert'
+    model_name = 'food2vec'
     mrr, hit = test_model(model_name, split='test', mode=0)
     print(mrr)
     print("Accuracy on test:", hit)

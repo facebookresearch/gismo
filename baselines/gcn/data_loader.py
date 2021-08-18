@@ -13,7 +13,7 @@ import torch.utils.data as data
 from inv_cooking.datasets.vocabulary import Vocabulary
 from typing import Tuple
 
-def load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes):
+def load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes, normalize=True):
     sources, destinations, weights, types = [], [], [], []
 
     with open(os.path.join(dir_, 'edges_191120.csv'), 'r') as edges_file:
@@ -70,13 +70,14 @@ def load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes):
     graph.edata['t'] = types
 
     # symmetric normalization
-    in_degree = ops.copy_e_sum(graph, graph.edata['w'])
-    in_norm = torch.pow(in_degree, -0.5)
-    out_norm = torch.pow(in_degree, -0.5).unsqueeze(-1)
-    graph.ndata['in_norm'] = in_norm
-    graph.ndata['out_norm'] = out_norm
-    graph.apply_edges(fn.u_mul_v('in_norm', 'out_norm', 'n'))
-    graph.edata['w'] = graph.edata['w'] * graph.edata['n'].squeeze()
+    if normalize:
+        in_degree = ops.copy_e_sum(graph, graph.edata['w'])
+        in_norm = torch.pow(in_degree, -0.5)
+        out_norm = torch.pow(in_degree, -0.5).unsqueeze(-1)
+        graph.ndata['in_norm'] = in_norm
+        graph.ndata['out_norm'] = out_norm
+        graph.apply_edges(fn.u_mul_v('in_norm', 'out_norm', 'n'))
+        graph.edata['w'] = graph.edata['w'] * graph.edata['n'].squeeze()
 
     return graph
 
