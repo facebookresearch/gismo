@@ -1,6 +1,7 @@
 import dgl.function as fn
 import torch.nn as nn
 
+
 class GCNConv(nn.Module):
     def __init__(self, input_size, output_size):
         super(GCNConv, self).__init__()
@@ -8,6 +9,6 @@ class GCNConv(nn.Module):
 
     def forward(self, x, g):
         with g.local_scope():
-            g.ndata['h'] = self.linear(x)
-            g.update_all(fn.u_mul_e('h', 'w', 'm'), fn.sum(msg='m', out='h'))
-            return g.ndata['h']
+            g.ndata["h"] = self.linear(x)
+            g.update_all(fn.u_mul_e("h", "w", "m"), fn.sum(msg="m", out="h"))
+            return g.ndata["h"]

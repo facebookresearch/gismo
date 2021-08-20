@@ -1,8 +1,9 @@
-from re import X
 import torch
-from torch import nn
-from baselines.gcn.layers import GCNConv
 import torch.nn.functional as F
+from torch import nn
+
+from baselines.gcn.layers import GCNConv
+
 
 class GCN(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device):
@@ -18,9 +19,13 @@ class GCN(nn.Module):
         self.adj = adj
         print(self.adj)
         self.adj.requires_grad = False
-        
-        self.epoch = torch.nn.Parameter(torch.tensor(0, dtype=torch.int32), requires_grad=False).to(device)
-        self.mrr = torch.nn.Parameter(torch.tensor(0, dtype=torch.float64), requires_grad=False).to(device)
+
+        self.epoch = torch.nn.Parameter(
+            torch.tensor(0, dtype=torch.int32), requires_grad=False
+        ).to(device)
+        self.mrr = torch.nn.Parameter(
+            torch.tensor(0, dtype=torch.float64), requires_grad=False
+        ).to(device)
 
     def forward(self):
         x = self.ndata.weight
@@ -30,4 +35,3 @@ class GCN(nn.Module):
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.layers[-1](x, self.adj)
         return x
-

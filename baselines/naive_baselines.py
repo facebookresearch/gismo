@@ -1,32 +1,40 @@
-import numpy as np
 import json
 import pickle
 import random
-from utils import *
+
+import numpy as np
 from metrics import Metrics
+
 
 def context_free_examples(examples, vocabs, mode=0):
     output = []
     for example in examples:
-        subs = example['subs']
+        subs = example["subs"]
         subs = vocabs.word2idx[subs[0]], vocabs.word2idx[subs[1]]
         if mode == 0:
             output.append(subs)
         elif mode == 1:
-            if subs  not in output:
+            if subs not in output:
                 output.append(subs)
     return output
 
+
 def load_split_data(split):
-    examples = json.load(open('../data/substitutions/' + split + '_comments_subs.txt', 'r'))
+    examples = json.load(
+        open("../data/substitutions/" + split + "_comments_subs.txt", "r")
+    )
     return examples
 
+
 def load_vocab():
-    vocab_ing = pickle.load(open('../preprocessed_data/final_recipe1m_vocab_ingrs.pkl', 'rb'))
+    vocab_ing = pickle.load(
+        open("../preprocessed_data/final_recipe1m_vocab_ingrs.pkl", "rb")
+    )
     pad_id = vocab_ing.word2idx["<pad>"]
     all_ids = list(vocab_ing.idx2word.keys())
     all_ids.remove(pad_id)
     return vocab_ing, all_ids
+
 
 def create_lookup_table(examples):
     train_table = {}
@@ -36,6 +44,7 @@ def create_lookup_table(examples):
             train_table[ing1] = []
         train_table[ing1].append(ing2)
     return train_table
+
 
 def create_lookup_table_ingredient_frequency(examples, vocabs):
     train_table = {}
@@ -48,10 +57,19 @@ def create_lookup_table_ingredient_frequency(examples, vocabs):
         train_table[ing1][ing2] += 1
 
     for ing in train_table:
-        sorted_list = list(dict(sorted(train_table[ing].items(), key =lambda kv:(kv[1], kv[0]), reverse=True)).keys())
+        sorted_list = list(
+            dict(
+                sorted(
+                    train_table[ing].items(),
+                    key=lambda kv: (kv[1], kv[0]),
+                    reverse=True,
+                )
+            ).keys()
+        )
         train_table[ing] = sorted_list
 
     return train_table
+
 
 def create_lookup_table_mode(examples):
     frequencies = {}
@@ -65,7 +83,7 @@ def create_lookup_table_mode(examples):
     for word in frequencies:
         if frequencies[word] > max_val:
             max_val = frequencies[word]
-            max_key = word  
+            max_key = word
     return max_key
 
 
@@ -77,8 +95,16 @@ def create_lookup_table_frequency(examples):
             frequencies[ing2] = 0
         frequencies[ing2] += 1
 
-    frequency_list = list({k: v for k, v in sorted(frequencies.items(), key=lambda item: item[1], reverse=True)}.keys())
+    frequency_list = list(
+        {
+            k: v
+            for k, v in sorted(
+                frequencies.items(), key=lambda item: item[1], reverse=True
+            )
+        }.keys()
+    )
     return frequency_list
+
 
 def test_lookup_table(test_examples, train_examples):
     metric = Metrics()
@@ -140,6 +166,7 @@ def test_random(test_examples):
         metric.update(rank)
     return metric.normalize()
 
+
 def test_mode(test_examples, train_examples):
     metric = Metrics()
     vocabs, all_ids = load_vocab()
@@ -177,6 +204,7 @@ def test_frequency(test_examples, train_examples):
         metric.update(rank)
     return metric.normalize()
 
+
 def find_hard_examples(test_examples, train_examples):
     vocabs, all_ids = load_vocab()
 
@@ -204,12 +232,13 @@ def find_hard_examples(test_examples, train_examples):
         ing1, ing2 = example
         if ing1 in train_table_frequent and ing2 in train_table_frequent[ing1]:
             counter += 1
-    print(counter/len(test_examples_cf))
-    
+    print(counter / len(test_examples_cf))
+
+
 if __name__ == "__main__":
 
-    train_examples = load_split_data('train')
-    test_examples = load_split_data('test')
+    train_examples = load_split_data("train")
+    test_examples = load_split_data("test")
 
     mrrs = []
     hits1 = []
@@ -220,7 +249,9 @@ if __name__ == "__main__":
         # mrr, hit1, hit3, hit10 = test_random(test_examples)
         # mrr, hit1, hit3, hit10 = test_mode(test_examples, train_examples)
         # mrr, hit1, hit3, hit10 =  test_frequency(test_examples, train_examples)
-        mrr, hit1, hit3, hit10 = test_lookup_table_frequency(test_examples, train_examples)
+        mrr, hit1, hit3, hit10 = test_lookup_table_frequency(
+            test_examples, train_examples
+        )
         mrrs.append(mrr)
         hits1.append(hit1)
         hits3.append(hit3)
