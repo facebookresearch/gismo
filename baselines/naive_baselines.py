@@ -4,7 +4,7 @@ import random
 
 import numpy as np
 from metrics import Metrics
-
+import utils
 
 def context_free_examples(examples, vocabs, mode=0):
     output = []
@@ -27,9 +27,10 @@ def load_split_data(split):
 
 
 def load_vocab():
-    vocab_ing = pickle.load(
-        open("../preprocessed_data/final_recipe1m_vocab_ingrs.pkl", "rb")
-    )
+    vocab_ing, _ = utils.get_vocabs()
+    # vocab_ing = pickle.load(
+    #     open("../preprocessed_data/final_recipe1m_vocab_ingrs.pkl", "rb")
+    # )
     pad_id = vocab_ing.word2idx["<pad>"]
     all_ids = list(vocab_ing.idx2word.keys())
     all_ids.remove(pad_id)
@@ -106,9 +107,8 @@ def create_lookup_table_frequency(examples):
     return frequency_list
 
 
-def test_lookup_table(test_examples, train_examples):
+def test_lookup_table(test_examples, train_examples, vocabs, all_ids):
     metric = Metrics()
-    vocabs, all_ids = load_vocab()
     train_examples_cf = context_free_examples(train_examples, vocabs)
     lookup_table = create_lookup_table(train_examples_cf)
     test_examples_cf = context_free_examples(test_examples, vocabs)
@@ -130,9 +130,8 @@ def test_lookup_table(test_examples, train_examples):
     return metric.normalize()
 
 
-def test_lookup_table_frequency(test_examples, train_examples):
+def test_lookup_table_frequency(test_examples, train_examples, vocabs, all_ids):
     metric = Metrics()
-    vocabs, all_ids = load_vocab()
     train_examples_cf = context_free_examples(train_examples, vocabs)
     lookup_table = create_lookup_table_ingredient_frequency(train_examples_cf, vocabs)
     test_examples_cf = context_free_examples(test_examples, vocabs)
@@ -153,9 +152,8 @@ def test_lookup_table_frequency(test_examples, train_examples):
     return metric.normalize()
 
 
-def test_random(test_examples):
+def test_random(test_examples, vocabs, all_ids):
     metric = Metrics()
-    vocabs, all_ids = load_vocab()
     test_examples_cf = context_free_examples(test_examples, vocabs)
     for example in test_examples_cf:
         ing1, ing2 = example
@@ -167,9 +165,8 @@ def test_random(test_examples):
     return metric.normalize()
 
 
-def test_mode(test_examples, train_examples):
+def test_mode(test_examples, train_examples, vocabs, all_ids):
     metric = Metrics()
-    vocabs, all_ids = load_vocab()
     train_examples_cf = context_free_examples(train_examples, vocabs)
     max_key = create_lookup_table_mode(train_examples_cf)
     test_examples_cf = context_free_examples(test_examples, vocabs)
@@ -185,9 +182,8 @@ def test_mode(test_examples, train_examples):
     return metric.normalize()
 
 
-def test_frequency(test_examples, train_examples):
+def test_frequency(test_examples, train_examples, vocabs, all_ids):
     metric = Metrics()
-    vocabs, all_ids = load_vocab()
     train_examples_cf = context_free_examples(train_examples, vocabs)
     freq_list = create_lookup_table_frequency(train_examples_cf)
     test_examples_cf = context_free_examples(test_examples, vocabs)
@@ -239,18 +235,19 @@ if __name__ == "__main__":
 
     train_examples = load_split_data("train")
     test_examples = load_split_data("test")
+    vocabs, all_ids = load_vocab()
 
     mrrs = []
     hits1 = []
     hits3 = []
     hits10 = []
     for trial in range(5):
-        # mrr, hit1, hit3, hit10 = test_lookup_table(test_examples, train_examples)
-        # mrr, hit1, hit3, hit10 = test_random(test_examples)
-        # mrr, hit1, hit3, hit10 = test_mode(test_examples, train_examples)
-        # mrr, hit1, hit3, hit10 =  test_frequency(test_examples, train_examples)
+        # mrr, hit1, hit3, hit10 = test_lookup_table(test_examples, train_examples, vocabs, all_ids)
+        # mrr, hit1, hit3, hit10 = test_random(test_examples, vocabs, all_ids)
+        # mrr, hit1, hit3, hit10 = test_mode(test_examples, train_examples, vocabs, all_ids)
+        # mrr, hit1, hit3, hit10 =  test_frequency(test_examples, train_examples, vocabs, all_ids)
         mrr, hit1, hit3, hit10 = test_lookup_table_frequency(
-            test_examples, train_examples
+            test_examples, train_examples, vocabs, all_ids
         )
         mrrs.append(mrr)
         hits1.append(hit1)

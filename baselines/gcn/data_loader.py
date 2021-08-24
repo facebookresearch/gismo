@@ -10,9 +10,6 @@ import dgl.ops as ops
 import torch
 import torch.utils.data as data
 
-from inv_cooking.datasets.vocabulary import Vocabulary
-
-
 def load_edges(
     dir_, node_id2count, node_count2id, node_id2name, nnodes, normalize=True
 ):
@@ -157,29 +154,33 @@ def load_data(nr, dir_):
         node_count2id,
         node_id2name,
     ) = load_graph(dir_)
+    ingr_vocabs = pickle.load(open('/private/home/baharef/inversecooking2.0/data/substitutions/vocab_ingrs.pkl', 'rb'))
     train_dataset = SubsData(
-        "/private/home/baharef/inversecooking2.0/new/old/",
+        "/private/home/baharef/inversecooking2.0/data/substitutions/",
         "train",
         node_name2id,
         node_id2count,
         ingredients_cnt,
         nr,
+        ingr_vocabs
     )
     val_dataset = SubsData(
-        "/private/home/baharef/inversecooking2.0/new/old/",
+        "/private/home/baharef/inversecooking2.0/data/substitutions/",
         "val",
         node_name2id,
         node_id2count,
         ingredients_cnt,
         nr,
+        ingr_vocabs
     )
     test_dataset = SubsData(
-        "/private/home/baharef/inversecooking2.0/new/old",
+        "/private/home/baharef/inversecooking2.0/data/substitutions/",
         "test",
         node_name2id,
         node_id2count,
         ingredients_cnt,
         nr,
+        ingr_vocabs
     )
 
     return (
@@ -203,29 +204,20 @@ class SubsData(data.Dataset):
         node_id2count: dict,
         ingredients_cnt: list,
         nr: int,
-        pre_processed_dir="/private/home/baharef/inversecooking2.0/new",
+        vocab
     ):
         self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.txt")
         self.split = split
-        self.ingr_vocab = Vocabulary()
         self.dataset = []
         self.nr = nr
-        self.pre_processed_dir = pre_processed_dir
         # load ingredient voc
-        self.ingr_vocab = pickle.load(
-            open(
-                os.path.join(self.pre_processed_dir, "final_recipe1m_vocab_ingrs.pkl"),
-                "rb",
-            )
-        )
+        self.ingr_vocab = vocab
         self.node_name2id = node_name2id
         self.node_id2count = node_id2count
         self.ingredients_cnt = ingredients_cnt
         # load dataset
-
         self.dataset_list = json.load(open(self.substitutions_dir, "r"))
         self.dataset = self.context_free_examples(self.dataset_list, self.ingr_vocab)
-
         print("Number of datapoints in", self.split, self.dataset.shape[0])
 
     def context_free_examples(self, examples, vocabs):

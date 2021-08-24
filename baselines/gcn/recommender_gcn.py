@@ -13,19 +13,27 @@ class Trainer:
     def __init__(self):
         super(Trainer, self).__init__()
 
-    def get_loss(self, embeddings, indices, margin, cos_layer):
+    def get_loss(self, embeddings, indices, nr, margin, cos_layer):
         cos_layer.train()
         sims = self.get_model_output(embeddings, indices, cos_layer)
-        sims = sims.view(-1, 2)
-        sims = torch.relu(sims[:, 1] - sims[:, 0] + margin)
-        # loss = F.mse_loss(dist, labels.float(), reduction='mean')
-        loss = torch.sum(sims)
-        return loss
+        sims = sims.view(-1, nr+1)
+        return sims
+        # margin-based loss
+        # sims = sims.view(-1, 2)
+        # sims = torch.relu(sims[:, 1] - sims[:, 0] + margin)
+        # loss = torch.sum(sims)
+        # return loss
 
     def get_model_output(self, embeddings, indices, cos_layer):
         x = torch.index_select(embeddings, 0, indices[:, 0])
         y = torch.index_select(embeddings, 0, indices[:, 1])
-        sims = cos_layer(x, y)
+
+        # compute cosine similarities
+        # sims = cos_layer(x, y)
+
+        # compute dot-product similarities
+        sims = torch.bmm(x.unsqueeze(1), y.unsqueeze(2))
+
         return sims
 
     def get_rank(self, scores):
@@ -68,10 +76,10 @@ class Trainer:
             adj=adj,
             device=device,
         ).to(device)
-        opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
+        opt = torch.optim.Adam(model.parameters(), lr=cfg.lr)
         cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
-        base_dir = "/checkpoint/baharef/gcn/aug-17/margin/checkpoints/"
+        base_dir = "/checkpoint/baharef/gcn/aug-24/checkpoints/"
         output_dir = create_output_dir(base_dir, cfg)
 
         best_val_mrr = 0
@@ -87,14 +95,17 @@ class Trainer:
         model = model.to(device)
         model.epoch = model.epoch.to(device)
 
+        loss_layer = torch.nn.CrossEntropyLoss()
+
         for epoch in range(model.epoch.cpu().item() + 1, cfg.epochs + 1):
             model.train()
             epoch_loss = 0.0
             for train_batch in train_dataloader:
                 embeddings = model()
                 indices = train_batch[:, :-1]
-                # labels = train_batch[:, -1]
-                loss = self.get_loss(embeddings, indices, cfg.margin, cos_layer)
+                sims = self.get_loss(embeddings, indices, cfg.nr, cfg.margin, cos_layer)
+                targets = torch.zeros(sims.shape[0]).long().to(device)
+                loss = loss_layer(sims, targets) + cfg.w_decay * torch.norm(embeddings)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
