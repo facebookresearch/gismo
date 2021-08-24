@@ -1,6 +1,6 @@
-import re
 import os
 import pickle
+import re
 from typing import Any, Dict, List
 
 
@@ -231,7 +231,7 @@ def match_flavorgraph(counter_ingrs, ingr_clusters, ingrs_flavorgraph, recipe1m_
         if len(flavor_ing) > 0:
             if flavor_ing in found_flavor:
                 ingr_clusters[flavor_ing].append(key)
-    
+
     final_clusters = {k: ingr_clusters[k] for k in found_flavor}
     final_counters = {k: counter_ingrs[k] for k in found_flavor}
     return final_clusters, final_counters
