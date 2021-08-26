@@ -202,7 +202,7 @@ def build_vocab_recipe1m(
         }
         cluster_ingrs, counter_ingrs = remove_plurals_flavorgraph(counter_ingrs)
         cluster_ingrs, counter_ingrs = match_flavorgraph(
-            counter_ingrs, cluster_ingrs, list(all_flavorgraph_ingrs)
+            counter_ingrs, cluster_ingrs, list(all_flavorgraph_ingrs), recipe1m_path
         )
 
         # If the ingredient frequency is less than 'threshold', then the ingredient is discarded.

@@ -1,3 +1,5 @@
+import os
+import pickle
 import re
 from typing import Any, Dict, List
 
@@ -166,7 +168,7 @@ def remove_plurals_flavorgraph(counter_ingrs):
     return ingr_clusters, counter_ingrs
 
 
-def match_flavorgraph(counter_ingrs, ingr_clusters, ingrs_flavorgraph):
+def match_flavorgraph(counter_ingrs, ingr_clusters, ingrs_flavorgraph, recipe1m_path):
     deleted_keys = []
 
     # difference betwenn ingredient clusters and ingrs in flavorgraph
@@ -220,6 +222,14 @@ def match_flavorgraph(counter_ingrs, ingr_clusters, ingrs_flavorgraph):
         for items in ingr_clusters.items():
             if flavor_ingr in items[1]:
                 found_flavor.append(items[0])
+
+    # load the hand-crafted mapping from recipe1m ingredients to flavorgraph ingredients
+    mapping = pickle.load(open(os.path.join(recipe1m_path, "merge_dict.pkl"), "rb"))
+    for key in mapping:
+        flavor_ing = mapping[key]
+        if len(flavor_ing) > 0:
+            if flavor_ing in found_flavor:
+                ingr_clusters[flavor_ing].append(key)
 
     final_clusters = {k: ingr_clusters[k] for k in found_flavor}
     final_counters = {k: counter_ingrs[k] for k in found_flavor}
