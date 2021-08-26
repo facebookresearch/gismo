@@ -1,4 +1,5 @@
 import csv
+from inv_cooking.datasets.vocabulary import Vocabulary
 import json
 import os
 import pickle
@@ -90,7 +91,7 @@ def load_nodes(dir_):
     compounds_cnt = []
     node_id2count = {}
     node_count2id = {}
-    counter = 0
+    counter = 1 #start with 1 to reserve 0 for padding
     with open(os.path.join(dir_, "nodes_191120.csv"), "r") as nodes_file:
         csv_reader = csv.DictReader(nodes_file)
         for row in csv_reader:
@@ -146,7 +147,7 @@ def load_graph(dir_):
     )
 
 
-def load_data(nr, dir_):
+def load_data(nr, max_context, dir_):
     (
         graph,
         node_name2id,
@@ -169,6 +170,7 @@ def load_data(nr, dir_):
         ingredients_cnt,
         nr,
         ingr_vocabs,
+        max_context
     )
     val_dataset = SubsData(
         "/private/home/baharef/inversecooking2.0/data/substitutions/",
@@ -178,6 +180,7 @@ def load_data(nr, dir_):
         ingredients_cnt,
         nr,
         ingr_vocabs,
+        max_context
     )
     test_dataset = SubsData(
         "/private/home/baharef/inversecooking2.0/data/substitutions/",
@@ -187,6 +190,7 @@ def load_data(nr, dir_):
         ingredients_cnt,
         nr,
         ingr_vocabs,
+        max_context
     )
 
     return (
@@ -210,12 +214,14 @@ class SubsData(data.Dataset):
         node_id2count: dict,
         ingredients_cnt: list,
         nr: int,
-        vocab,
+        vocab: Vocabulary,
+        max_context: int
     ):
         self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.txt")
         self.split = split
         self.dataset = []
         self.nr = nr
+        self.max_context = max_context
         # load ingredient voc
         self.ingr_vocab = vocab
         self.node_name2id = node_name2id
@@ -223,15 +229,22 @@ class SubsData(data.Dataset):
         self.ingredients_cnt = ingredients_cnt
         # load dataset
         self.dataset_list = json.load(open(self.substitutions_dir, "r"))
-        self.dataset = self.context_free_examples(self.dataset_list, self.ingr_vocab)
+        self.dataset = self.context_full_examples(self.dataset_list, self.ingr_vocab, self.max_context)
         print("Number of datapoints in", self.split, self.dataset.shape[0])
 
-    def context_free_examples(self, examples, vocabs):
-        output = torch.zeros(len(examples), 2)
+    def context_full_examples(self, examples, vocabs, max_context):
+
+        output = torch.full((len(examples), max_context+2), 0)
         for ind, example in enumerate(examples):
             subs = example["subs"]
+            context = example["ingredients"]
+            comment = example["text"]
             r_name1 = vocabs.idx2word[vocabs.word2idx[subs[0]]][0]
             r_name2 = vocabs.idx2word[vocabs.word2idx[subs[1]]][0]
+
+            context_ids = torch.empty(len(context))
+            for ind_, ing in enumerate(context):
+                context_ids[ind_] = self.node_id2count[self.node_name2id[vocabs.idx2word[vocabs.word2idx[ing[0]]][0]]]
 
             subs = torch.tensor(
                 [
@@ -239,7 +252,9 @@ class SubsData(data.Dataset):
                     self.node_id2count[self.node_name2id[r_name2]],
                 ]
             )
-            output[ind, :] = subs
+            output[ind, :2] = subs
+            output[ind, 2:len(context)+2] = context_ids
+
         return output
 
     def __len__(self):
@@ -247,7 +262,7 @@ class SubsData(data.Dataset):
 
     def __getitem__(self, index: int):
         if self.split == "train":
-            pos_example = self.dataset[index, :].view(1, 2)
+            pos_example = self.dataset[index, :].view(1, -1)
             neg_examples = self.neg_examples(pos_example, self.nr, self.ingredients_cnt)
             pos_labels = torch.zeros(1, 1)
             neg_labels = torch.ones(len(neg_examples), 1)
@@ -265,8 +280,8 @@ class SubsData(data.Dataset):
             neg_examples_0 = (
                 self.dataset[index, :][0].repeat(len(all_indices)).view(-1, 1)
             )
-            neg_examples = torch.cat((neg_examples_0, neg_examples_1), 1)
-            return torch.cat((pos_example.view(1, 2), neg_examples), 0)
+            neg_examples = torch.cat((neg_examples_0, neg_examples_1, pos_example[2:].repeat(len(all_indices), 1)), 1)
+            return torch.cat((pos_example.view(1, -1), neg_examples), 0)
 
     @staticmethod
     def collate_fn(data):
@@ -293,7 +308,8 @@ class SubsData(data.Dataset):
         neg_batch = torch.cat(
             (example[0, 0].repeat(nr).view(nr, 1), random_entities.view(nr, 1)), 1
         )
-        return neg_batch
+        output = torch.cat((neg_batch, example[0, 2:].repeat(nr, 1)), 1)
+        return output
 
 
 if __name__ == "__main__":
@@ -306,4 +322,5 @@ if __name__ == "__main__":
         node_count2id,
         node_id2name,
         node_id2count,
-    ) = load_data(2, "/private/home/baharef/inversecooking2.0/data/flavorgraph")
+    ) = load_data(2, 43, "/private/home/baharef/inversecooking2.0/data/flavorgraph")
+    

@@ -1,10 +1,10 @@
 import json
-import pickle
 import random
 
 import numpy as np
-from metrics import Metrics
 import utils
+from metrics import Metrics
+
 
 def context_free_examples(examples, vocabs, mode=0):
     output = []
@@ -149,6 +149,7 @@ def test_lookup_table_frequency(test_examples, train_examples, vocabs, all_ids):
         all_subs = subs + rest_ids
         rank = all_subs.index(ing2) + 1
         metric.update(rank)
+
     return metric.normalize()
 
 

@@ -15,9 +15,8 @@
 
 
 import hydra
-
-
 from recommender_gcn import Trainer
+
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg) -> None:

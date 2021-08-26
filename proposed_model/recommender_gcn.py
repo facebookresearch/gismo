@@ -5,8 +5,8 @@ import torch
 from state_loader import create_output_dir, load_saved_models, save_model
 from torch.utils.data import DataLoader
 
-from baselines.gcn.data_loader import SubsData, load_data
-from baselines.gcn.models import GCN, MLP
+from data_loader import SubsData, load_data
+from models import GCN
 
 
 class Trainer:
@@ -24,10 +24,29 @@ class Trainer:
         # loss = torch.sum(sims)
         # return loss
 
+    # def embed_context(self, embeddings, x = torch.randn(3, 4)
+        
     def get_model_output(self, embeddings, indices, cos_layer):
-        x = torch.index_select(embeddings, 0, indices[:, 0])
-        y = torch.index_select(embeddings, 0, indices[:, 1])
-
+        # print(indices)
+        # x = torch.index_select(embeddings, 0, indices[:, 0])
+        # y = torch.index_select(embeddings, 0, indices[:, 1])
+        x = embeddings[indices[:, 0]]
+        y = embeddings[indices[:, 1]]
+        print(indices.shape)
+        embs = embeddings[indices]
+        print(embs)
+        exit()
+        # x = embeddings.weight[indices[:, 0]]
+        # y = embeddings.weight[indices[:, 1]]
+        # print(indices)
+        # print(indices.shape)
+        # print(embeddings)
+        # print(embeddings.weight[indices].shape)
+        # exit()
+        # context = indices[indices>0]
+        # context_emb = embed_context(self, embeddings, context)
+        # print(context)
+        # exit()
         # compute cosine similarities
         # sims = cos_layer(x, y)
 
@@ -69,7 +88,7 @@ class Trainer:
         self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg
     ):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        model = globals()[cfg.name](
+        model = GCN(
             in_channels=cfg.emb_d,
             hidden_channels=cfg.hidden,
             num_layers=cfg.nlayers,
@@ -77,11 +96,10 @@ class Trainer:
             adj=adj,
             device=device,
         ).to(device)
-        
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr)
         cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
-        base_dir = "/checkpoint/baharef/gcn/aug-25/checkpoints/"
+        base_dir = "/checkpoint/baharef/gcn/aug-24/checkpoints/"
         output_dir = create_output_dir(base_dir, cfg)
 
         best_val_mrr = 0
@@ -107,7 +125,8 @@ class Trainer:
                 indices = train_batch[:, :-1]
                 sims = self.get_loss(embeddings, indices, cfg.nr, cfg.margin, cos_layer)
                 targets = torch.zeros(sims.shape[0]).long().to(device)
-                loss = loss_layer(sims, targets) + cfg.w_decay * torch.norm(embeddings)
+                loss = loss_layer(sims, targets)
+                #  + cfg.w_decay * torch.norm(embeddings.weight)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
@@ -145,7 +164,7 @@ class Trainer:
 
     def train_recommender_gcn(self, cfg):
         graph, train_dataset, val_dataset, test_dataset, ingrs, _, _, _ = load_data(
-            cfg.nr, dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph"
+            cfg.nr, cfg.max_context, dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph"
         )
         n_ingrs = len(ingrs)
         train_dataloader = DataLoader(

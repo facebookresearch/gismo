@@ -1,5 +1,5 @@
 task: "subs"
-name: "MLP"
+name: "gcn"
 epochs: 1000
 lr: 0.01
 w_decay: 0.0005
@@ -13,4 +13,5 @@ ntrials: 1
 train_batch_size: 1000
 val_test_batch_size: 500
 margin: 0.7
+max_context: 43
 restartable: True
