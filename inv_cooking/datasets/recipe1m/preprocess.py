@@ -10,6 +10,7 @@ import os
 import pickle
 import re
 from collections import Counter
+from pathlib import Path
 
 import nltk
 import pandas as pd
@@ -345,6 +346,31 @@ def save_vocabulary(folder: str, file: str, vocab: Vocabulary):
 
 
 def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
+
+    train_split_path = Path(os.path.join(config.save_path, "final_recipe1m_train.pkl"))
+    val_split_path = Path(os.path.join(config.save_path, "final_recipe1m_val.pkl"))
+    test_split_path = Path(os.path.join(config.save_path, "final_recipe1m_test.pkl"))
+    vocab_ingrs_path = Path(
+        os.path.join(config.save_path, "final_recipe1m_vocab_ingrs.pkl")
+    )
+
+    if (
+        train_split_path.exists()
+        and val_split_path.exists()
+        and test_split_path.exists()
+        and vocab_ingrs_path.exists()
+    ):
+        dataset = {}
+        with train_split_path.open("rb") as handle:
+            dataset["train"] = pickle.load(handle)
+        with val_split_path.open("rb") as handle:
+            dataset["val"] = pickle.load(handle)
+        with test_split_path.open("rb") as handle:
+            dataset["test"] = pickle.load(handle)
+        with vocab_ingrs_path.open("rb") as handle:
+            vocab_ingrs = pickle.load(handle)
+        return vocab_ingrs, dataset
+
     if not os.path.exists(config.save_path):
         os.mkdir(config.save_path)
 
@@ -371,3 +397,5 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
         split_file_name = os.path.join(config.save_path, split_file_name)
         with open(split_file_name, "wb") as f:
             pickle.dump(dataset[split], f)
+
+    return vocab_ingrs, dataset
