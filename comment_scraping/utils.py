@@ -29,6 +29,7 @@ def load_data():
     test_dataloader = data_module.test_dataloader()
     return train_dataloader, val_dataloader, test_dataloader, data_module
 
+
 def ids_to_words(list_ing, vocab):
     res = []
     for ing in list_ing:
@@ -36,6 +37,7 @@ def ids_to_words(list_ing, vocab):
         if ing_word not in ["<end>", "<pad>"]:
             res.append(ing_word)
     return res
+
 
 def get_vocabs(data_module):
     vocab_ing = data_module.dataset_train.ingr_vocab
