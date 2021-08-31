@@ -60,11 +60,13 @@ def load_edges(
     weights = torch.tensor(weights)
     types = torch.tensor(types)
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     if torch.cuda.is_available():
-        sources = sources.cuda()
-        destinations = destinations.cuda()
-        weights = weights.cuda()
-        types = types.cuda()
+        sources = sources.to(device)
+        destinations = destinations.to(device)
+        weights = weights.to(device)
+        types = types.to(device)
 
     graph = dgl.graph((sources, destinations))
     graph.edata["w"] = weights
@@ -237,7 +239,7 @@ class SubsData(data.Dataset):
         output = torch.full((len(examples), max_context+2), 0)
         for ind, example in enumerate(examples):
             subs = example["subs"]
-            context = example["ingredients"]
+            context = example["ingredients"][:max_context]
             comment = example["text"]
             r_name1 = vocabs.idx2word[vocabs.word2idx[subs[0]]][0]
             r_name2 = vocabs.idx2word[vocabs.word2idx[subs[1]]][0]

@@ -15,7 +15,7 @@ def create_output_dir(base_dir, conf):
     params += "_dropout-" + str(conf.dropout)
     params += "_nlayers_" + str(conf.nlayers)
     params += "_nr_" + str(conf.nr)
-    params += "_margin_" + str(conf.margin)
+    # params += "_margin_" + str(conf.margin)
 
     output_dir = os.path.join(base_dir, params)
 
