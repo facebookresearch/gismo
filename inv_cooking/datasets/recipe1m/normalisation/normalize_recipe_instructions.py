@@ -1,4 +1,9 @@
 """
+    This repo is copied from:
+    https://github.com/ChantalMP/Exploiting-Food-Embeddings-for-Ingredient-Substitution/tree/master/normalisation
+"""
+
+"""
 Used to generate cleaned_recipe1m.json from recipe1m.json by cleaning the instructions
 This includes lemmatization, merging multi word ingredients with underscore etc.
 """

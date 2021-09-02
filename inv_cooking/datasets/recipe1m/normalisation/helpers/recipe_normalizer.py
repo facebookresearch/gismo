@@ -1,3 +1,8 @@
+"""
+    This repo is copied from:
+    https://github.com/ChantalMP/Exploiting-Food-Embeddings-for-Ingredient-Substitution/tree/master/normalisation
+"""
+
 from typing import List
 
 import spacy
