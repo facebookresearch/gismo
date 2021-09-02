@@ -1,11 +1,11 @@
-name: "GCN"
-setup: "context-full"
+name: "MLP"
+setup: "context-free"
 epochs: 1000
 val_itr: 100
 ntrials: 1
 train_batch_size: 1000
 val_test_batch_size: 100
-max_context: 20
+max_context: 43
 margin: 0.7
 lr: 0.01
 w_decay: 0.0005

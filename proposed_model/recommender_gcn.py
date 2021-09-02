@@ -1,57 +1,65 @@
-import os
 import copy
-import time
+import os
+
 import numpy as np
 import torch
+from data_loader import SubsData, load_data
 from state_loader import create_output_dir, load_saved_models, save_model
 from torch.utils.data import DataLoader
-
-from data_loader import SubsData, load_data
-from models import GCN, MLP
 
 
 class Trainer:
     def __init__(self):
         super(Trainer, self).__init__()
 
-    def get_loss(self, embeddings, indices, nr, context, cos_layer):
-        # cos_layer.train()
-        sims = self.get_model_output(embeddings, indices, context, nr, cos_layer)
+    def get_loss(self, model, indices, nr, context, name):
+        sims = self.get_model_output(model, indices, context, nr, name)
         sims = sims.view(-1, nr + 1)
         return sims
 
     def embed_context(self, embeddings, indices, nr):
-        embeddings_indices = embeddings[0:-1:nr+1]
+        embeddings_indices = embeddings[0 : -1 : nr + 1]
         context_emb = torch.sum(embeddings_indices, dim=1)
-        mask = indices[0:-1:nr+1] > 0
+        mask = indices[0 : -1 : nr + 1] > 0
         norm = torch.sum(mask, 1).view(-1, 1)
-        context_emb = context_emb/norm
-        return context_emb.repeat(1, nr+1).view(embeddings.shape[0], embeddings.shape[2])
-    
+        context_emb = context_emb / norm
+        return context_emb.repeat(1, nr + 1).view(
+            embeddings.shape[0], embeddings.shape[2]
+        )
+
     def embed_context_slow(self, embeddings, indices, nr):
         context_emb = torch.sum(embeddings, dim=1)
         mask = indices > 0
         norm = torch.sum(mask, 1).view(-1, 1)
-        return context_emb/norm
+        return context_emb / norm
 
+    def get_model_output(self, model, indices, context, nr, name, embeddings=None):
+        if name == "GCN":
+            if embeddings is None:
+                embeddings = model()
+            if context:
+                embs = torch.index_select(
+                    embeddings, dim=0, index=indices.reshape(-1)
+                ).view(indices.shape[0], indices.shape[1], -1)
+                context_emb = self.embed_context(embs[:, 2:], indices[:, 2:], nr)
+                ing1 = embs[:, 0] + context_emb
+                ing2 = embs[:, 1] + context_emb
 
-    def get_model_output(self, embeddings, indices, context, nr, cos_layer):
-        if context:
-            embs = embeddings[indices]
-            context_emb = self.embed_context(embs[:, 2:], indices[:, 2:], nr)
-            ing1 = embs[:, 0] + context_emb
-            ing2 = embs[:, 1] + context_emb
-        else:
-            embs = embeddings[indices[:,:2]]
-            ing1 = embs[:, 0]
-            ing2 = embs[:, 1]
-
-        # compute cosine similarities
-        # sims = cos_layer(ing1, ing2)
-
-        # compute dot-product similarities
-        sims = torch.bmm(ing1.unsqueeze(1), ing2.unsqueeze(2))
-
+            else:
+                embs = embeddings[indices[:, :2]]
+                ing1 = embs[:, 0]
+                ing2 = embs[:, 1]
+            # compute cosine similarities
+            # sims = cos_layer(ing1, ing2)
+            sims = torch.bmm(ing1.unsqueeze(1), ing2.unsqueeze(2))
+        elif name == "MLP":
+            sims = model(indices, context)
+        elif name == "MLP_CAT":
+            if context:
+                sims = model(indices, context)
+            else:
+                print("The model MLP_CAT is not defined in the context-free setup")
+                exit()
         return sims
 
     def get_rank(self, scores):
@@ -60,16 +68,21 @@ class Trainer:
         ranks[ranks < 1] = 1
         return ranks
 
-    def get_loss_test(self, embeddings, dataloader, n_ingrs, context, cos_layer):
-        cos_layer.eval()
+    def get_loss_test(self, model, dataloader, n_ingrs, context, name):
+
+        if name == "GCN":
+            embeddings = model()
+        else:
+            embeddings = None
+
         mrr = 0.0
         hits = {1: 0, 3: 0, 10: 0}
         counter = 0
 
         for batch in dataloader:
-            sims = self.get_model_output(embeddings, batch, context, n_ingrs-1, cos_layer).view(
-                batch.shape[0] // n_ingrs, -1
-            )
+            sims = self.get_model_output(
+                model, batch, context, n_ingrs - 1, name, embeddings
+            ).view(-1, n_ingrs - 1 + 1)
             ranks = self.get_rank(sims)
             mrr += torch.sum(1.0 / ranks)
             for key in hits:
@@ -97,11 +110,13 @@ class Trainer:
             device=device,
         ).to(device)
 
-        opt = torch.optim.Adam(model.parameters(), lr=cfg.lr)
-        cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+        opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
+        # cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
-        base_dir = os.path.join("/checkpoint/baharef", cfg.setup , cfg.name, "aug-30/checkpoints/")
-        context = 1 if cfg.setup == "context-full" else 0
+        base_dir = os.path.join(
+            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-1/checkpoints/"
+        )
+        context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
 
         best_val_mrr = 0
@@ -120,38 +135,35 @@ class Trainer:
         loss_layer = torch.nn.CrossEntropyLoss()
 
         for epoch in range(model.epoch.cpu().item() + 1, cfg.epochs + 1):
-            start_time = time.time()
             model.train()
             epoch_loss = 0.0
             for train_batch in train_dataloader:
-                embeddings = model()
                 indices = train_batch[:, :-1]
-                sims = self.get_loss(embeddings, indices, cfg.nr, context, cos_layer)
+                sims = self.get_loss(model, indices, cfg.nr, context, cfg.name)
                 targets = torch.zeros(sims.shape[0]).long().to(device)
-                loss = loss_layer(sims, targets) + cfg.w_decay * torch.norm(embeddings)
+                loss = loss_layer(sims, targets)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
                 epoch_loss += loss.cpu().item()
+
             print(epoch, epoch_loss)
-            print(time.time()-start_time)
             model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
             save_model(model, opt, output_dir, is_best_model=False)
             if epoch % cfg.val_itr == 0:
                 with torch.no_grad():
                     model.eval()
-                    embeddings = model()
                     val_mrr, val_hits = self.get_loss_test(
-                        embeddings, val_dataloader, n_ingrs, context, cos_layer
+                        model, val_dataloader, n_ingrs, context, cfg.name
                     )
                     print("vall metrics:", val_mrr, val_hits)
                     if val_mrr > best_val_mrr:
                         best_val_mrr = val_mrr
                         best_model = copy.deepcopy(model)
                         print("Best val mrr updated to", best_val_mrr)
-                        best_model.mrr.data = torch.from_numpy(np.array([best_val_mrr])).to(
-                            device
-                        )
+                        best_model.mrr.data = torch.from_numpy(
+                            np.array([best_val_mrr])
+                        ).to(device)
                         best_model.epoch.data = torch.from_numpy(np.array([epoch])).to(
                             device
                         )
@@ -161,16 +173,17 @@ class Trainer:
 
         with torch.no_grad():
             best_model.eval()
-            best_embeddings = best_model()
             test_mrr, test_hits = self.get_loss_test(
-                best_embeddings, test_dataloader, n_ingrs, context, cos_layer
+                best_model, test_dataloader, n_ingrs, context, cfg.name
             )
         print(test_mrr, test_hits)
         return best_val_mrr, test_mrr, test_hits
 
     def train_recommender_gcn(self, cfg):
         graph, train_dataset, val_dataset, test_dataset, ingrs, _, _, _ = load_data(
-            cfg.nr, cfg.max_context, dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph"
+            cfg.nr,
+            cfg.max_context,
+            dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
         )
         n_ingrs = len(ingrs)
         train_dataloader = DataLoader(
@@ -185,7 +198,7 @@ class Trainer:
 
         val_dataloader = DataLoader(
             val_dataset,
-            batch_size=cfg.val_test_batch_size,
+            batch_size=int(cfg.val_test_batch_size),
             shuffle=True,
             sampler=None,
             batch_sampler=None,
@@ -194,7 +207,7 @@ class Trainer:
         )
         test_dataloader = DataLoader(
             test_dataset,
-            batch_size=cfg.val_test_batch_size,
+            batch_size=int(cfg.val_test_batch_size),
             shuffle=True,
             sampler=None,
             batch_sampler=None,

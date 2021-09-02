@@ -1,5 +1,4 @@
 import csv
-from inv_cooking.datasets.vocabulary import Vocabulary
 import json
 import os
 import pickle
@@ -10,6 +9,8 @@ import dgl.function as fn
 import dgl.ops as ops
 import torch
 import torch.utils.data as data
+
+from inv_cooking.datasets.vocabulary import Vocabulary
 
 
 def load_edges(
@@ -93,7 +94,7 @@ def load_nodes(dir_):
     compounds_cnt = []
     node_id2count = {}
     node_count2id = {}
-    counter = 1 #start with 1 to reserve 0 for padding
+    counter = 1  # start with 1 to reserve 0 for padding
     with open(os.path.join(dir_, "nodes_191120.csv"), "r") as nodes_file:
         csv_reader = csv.DictReader(nodes_file)
         for row in csv_reader:
@@ -172,7 +173,7 @@ def load_data(nr, max_context, dir_):
         ingredients_cnt,
         nr,
         ingr_vocabs,
-        max_context
+        max_context,
     )
     val_dataset = SubsData(
         "/private/home/baharef/inversecooking2.0/data/substitutions/",
@@ -182,7 +183,7 @@ def load_data(nr, max_context, dir_):
         ingredients_cnt,
         nr,
         ingr_vocabs,
-        max_context
+        max_context,
     )
     test_dataset = SubsData(
         "/private/home/baharef/inversecooking2.0/data/substitutions/",
@@ -192,7 +193,7 @@ def load_data(nr, max_context, dir_):
         ingredients_cnt,
         nr,
         ingr_vocabs,
-        max_context
+        max_context,
     )
 
     return (
@@ -217,7 +218,7 @@ class SubsData(data.Dataset):
         ingredients_cnt: list,
         nr: int,
         vocab: Vocabulary,
-        max_context: int
+        max_context: int,
     ):
         self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.txt")
         self.split = split
@@ -231,22 +232,26 @@ class SubsData(data.Dataset):
         self.ingredients_cnt = ingredients_cnt
         # load dataset
         self.dataset_list = json.load(open(self.substitutions_dir, "r"))
-        self.dataset = self.context_full_examples(self.dataset_list, self.ingr_vocab, self.max_context)
+        self.dataset = self.context_full_examples(
+            self.dataset_list, self.ingr_vocab, self.max_context
+        )
         print("Number of datapoints in", self.split, self.dataset.shape[0])
 
     def context_full_examples(self, examples, vocabs, max_context):
 
-        output = torch.full((len(examples), max_context+2), 0)
+        output = torch.full((len(examples), max_context + 2), 0)
         for ind, example in enumerate(examples):
             subs = example["subs"]
             context = example["ingredients"][:max_context]
-            comment = example["text"]
+            example["text"]
             r_name1 = vocabs.idx2word[vocabs.word2idx[subs[0]]][0]
             r_name2 = vocabs.idx2word[vocabs.word2idx[subs[1]]][0]
 
             context_ids = torch.empty(len(context))
             for ind_, ing in enumerate(context):
-                context_ids[ind_] = self.node_id2count[self.node_name2id[vocabs.idx2word[vocabs.word2idx[ing[0]]][0]]]
+                context_ids[ind_] = self.node_id2count[
+                    self.node_name2id[vocabs.idx2word[vocabs.word2idx[ing[0]]][0]]
+                ]
 
             subs = torch.tensor(
                 [
@@ -255,7 +260,7 @@ class SubsData(data.Dataset):
                 ]
             )
             output[ind, :2] = subs
-            output[ind, 2:len(context)+2] = context_ids
+            output[ind, 2 : len(context) + 2] = context_ids
 
         return output
 
@@ -282,7 +287,14 @@ class SubsData(data.Dataset):
             neg_examples_0 = (
                 self.dataset[index, :][0].repeat(len(all_indices)).view(-1, 1)
             )
-            neg_examples = torch.cat((neg_examples_0, neg_examples_1, pos_example[2:].repeat(len(all_indices), 1)), 1)
+            neg_examples = torch.cat(
+                (
+                    neg_examples_0,
+                    neg_examples_1,
+                    pos_example[2:].repeat(len(all_indices), 1),
+                ),
+                1,
+            )
             return torch.cat((pos_example.view(1, -1), neg_examples), 0)
 
     @staticmethod
@@ -325,4 +337,3 @@ if __name__ == "__main__":
         node_id2name,
         node_id2count,
     ) = load_data(2, 43, "/private/home/baharef/inversecooking2.0/data/flavorgraph")
-    
