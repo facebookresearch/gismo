@@ -39,6 +39,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         if stage == "fit":
             self.dataset_train = self._get_dataset("train")
             self.dataset_val = self._get_dataset("val")
+            self.dataset_test = self._get_dataset("test")
             self.title_vocab_size = self.dataset_train.get_title_vocab_size()
             self.ingr_vocab_size = self.dataset_train.get_ingr_vocab_size()
             self.instr_vocab_size = self.dataset_train.get_instr_vocab_size()

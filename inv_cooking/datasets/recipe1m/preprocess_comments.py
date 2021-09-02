@@ -10,14 +10,14 @@ import numpy as np
 import spacy
 from tqdm import tqdm
 
-from inv_cooking.datasets.recipe1m.substitution_dataset_generator import (
-    create_substitutions_datasets,
-)
 from inv_cooking.datasets.recipe1m.normalisation.helpers.recipe_normalizer import (
     RecipeNormalizer,
 )
 from inv_cooking.datasets.recipe1m.normalisation.normalize_recipe_instructions import (
     normalize_instruction,
+)
+from inv_cooking.datasets.recipe1m.substitution_dataset_generator import (
+    create_substitutions_datasets,
 )
 
 
@@ -74,6 +74,7 @@ def normalize_reviews(all_sentences, all_sentences_ids, flavorgraph_ingredients)
             normalized_ids.append(all_sentences_ids[ind])
             normalized_reviews_dict[normalized_review] = all_sentences_ids[ind]
     return normalized_reviews, normalized_ids
+
 
 # find the shortest distance of ingredients to substitution key terms
 def find_distance_to_substitution(text, ingredient_words, substitution_terms):
