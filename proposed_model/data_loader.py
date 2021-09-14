@@ -14,7 +14,7 @@ from inv_cooking.datasets.vocabulary import Vocabulary
 
 
 def load_edges(
-    dir_, node_id2count, node_count2id, node_id2name, nnodes, normalize=True
+    dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, normalize=True
 ):
     sources, destinations, weights, types = [], [], [], []
 
@@ -38,6 +38,7 @@ def load_edges(
             elif "ingr-dcomp" in row["edge_type"]:
                 edge_type = 3
                 score = 1
+
             sources.append(node1_cnt)
             destinations.append(node2_cnt)
             weights.append(score)
@@ -50,12 +51,14 @@ def load_edges(
             types.append(edge_type)
 
     # add self-loop
-    for node in range(nnodes):
-        sources.append(node)
-        destinations.append(node)
-        weights.append(1)
-        types.append(4)
-
+    if add_self_loop:
+        for node in range(nnodes):
+            sources.append(node+1)
+            destinations.append(node+1)
+            weights.append(1)
+            types.append(4)
+        print("self-loop is added to all nodes.")
+        
     sources = torch.tensor(sources)
     destinations = torch.tensor(destinations)
     weights = torch.tensor(weights)
@@ -129,7 +132,7 @@ def node_count2name(count, node_count2id, node_id2name):
     return node_id2name[node_count2id[count]]
 
 
-def load_graph(dir_):
+def load_graph(add_self_loop, dir_):
     (
         node_id2count,
         node_count2id,
@@ -139,7 +142,7 @@ def load_graph(dir_):
         node_id2name,
         nnodes,
     ) = load_nodes(dir_)
-    graph = load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes)
+    graph = load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop)
     return (
         graph,
         node_name2id,
@@ -150,7 +153,7 @@ def load_graph(dir_):
     )
 
 
-def load_data(nr, max_context, dir_):
+def load_data(nr, max_context, add_self_loop, dir_):
     (
         graph,
         node_name2id,
@@ -158,7 +161,7 @@ def load_data(nr, max_context, dir_):
         ingredients_cnt,
         node_count2id,
         node_id2name,
-    ) = load_graph(dir_)
+    ) = load_graph(add_self_loop, dir_)
     ingr_vocabs = pickle.load(
         open(
             "/private/home/baharef/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
