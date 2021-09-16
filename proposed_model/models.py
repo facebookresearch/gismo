@@ -114,7 +114,7 @@ class SAGE(nn.Module):
 
 
 class GIN(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, node_count2id, node_id2name, mode="food_bert"):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="food_bert"):
         super(GIN, self).__init__()
 
         if mode == "random":
@@ -129,9 +129,6 @@ class GIN(nn.Module):
         elif mode == "food_bert":
             self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/node2vec/food_bert_emb.pkl', 'rb')).to(device)
           
-
-            
-
         lin1 = torch.nn.Linear(in_channels, hidden_channels)
         lin2 = torch.nn.Linear(hidden_channels, hidden_channels)
         self.layers = nn.ModuleList()
@@ -161,6 +158,60 @@ class GIN(nn.Module):
 
         x[0] = torch.zeros(x.shape[1])
         return x
+
+
+class GIN_MLP(nn.Module):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="food_bert"):
+        super(GIN_MLP, self).__init__()
+
+        if mode == "food_bert":
+            self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/node2vec/food_bert_emb.pkl', 'rb')).to(device)
+          
+        lin1 = torch.nn.Linear(in_channels, hidden_channels)
+        lin2 = torch.nn.Linear(hidden_channels, hidden_channels)
+        self.gin_layers = nn.ModuleList()
+        self.gin_layers.append(dglnn.GINConv(lin1, aggregator_type='mean', learn_eps=True))
+        for _ in range(num_layers - 1):
+            self.gin_layers.append(dglnn.GINConv(lin2, aggregator_type='mean', learn_eps=True))
+
+        self.dropout = dropout
+        self.adj = adj
+        self.adj.requires_grad = False
+
+        self.mlp_layers = nn.ModuleList()
+        self.mlp_layers.append(torch.nn.Linear(hidden_channels * 2, hidden_channels//2))
+        for _ in range(num_layers - 1):
+            self.mlp_layers.append(torch.nn.Linear(hidden_channels//2, hidden_channels//2))
+        self.mlp_layers.append(torch.nn.Linear(hidden_channels//2, 1))
+
+        self.epoch = torch.nn.Parameter(
+            torch.tensor(0, dtype=torch.int32), requires_grad=False
+        ).to(device)
+        self.mrr = torch.nn.Parameter(
+            torch.tensor(0, dtype=torch.float64), requires_grad=False
+        ).to(device)
+
+    def forward(self, indices, context=0):
+        x = self.ndata
+
+        for i, conv in enumerate(self.gin_layers[:-1]):
+            x = conv(self.adj, x, self.adj.edata["w"])
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.gin_layers[-1](self.adj, x, self.adj.edata["w"])
+
+        x[0] = torch.zeros(x.shape[1], dtype=torch.float).cuda()
+
+        ing1 = x[indices[:, 0]]
+        ing2 = x[indices[:, 1]]
+        y = torch.cat((ing1, ing2), 1)
+        for i, layer in enumerate(self.mlp_layers[:-1]):
+            y = layer(y)
+            y = F.relu(y)
+            y = F.dropout(y, p=self.dropout, training=self.training)
+        y = self.mlp_layers[-1](y)
+
+        return y
 
 class MLP(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="food_bert"):
@@ -205,7 +256,6 @@ class MLP(nn.Module):
     def forward(self, indices, context=0):
         # ing1 = self.ndata(indices[:, 0])
         # ing2 = self.ndata(indices[:, 1])
-        print(self.ndata)
         ing1 = self.ndata[indices[:, 0]]
         ing2 = self.ndata[indices[:, 1]]
 
@@ -272,7 +322,7 @@ class MLP_ATT(nn.Module):
 
 
         self.transformer_layers = nn.ModuleList()
-        self.transformer_layers.append(nn.TransformerEncoderLayer(d_model=in_channels, nhead=5, batch_first=True))
+        self.transformer_layers.append(nn.TransformerEncoderLayer(d_model=in_channels, nhead=5, dim_feedforward=2*in_channels , batch_first=True))
         # self.transformer_layers.append(nn.TransformerEncoderLayer(d_model=in_channels, nhead=5, batch_first=True))
 
         self.layers = nn.ModuleList()
@@ -299,7 +349,6 @@ class MLP_ATT(nn.Module):
         norm = torch.sum(mask, 1).view(-1, 1)
         mask = mask.unsqueeze(2).repeat(1, 1, x.shape[2])
         x = torch.sum(x * mask, dim=1)/norm
-
         return x
 
     def embed_context_fast(self, embeddings, indices, nr):
@@ -307,9 +356,6 @@ class MLP_ATT(nn.Module):
         mask = (indices > 0).long()[0 : -1 : nr + 1]
         for i, layer in enumerate(self.transformer_layers):
             x = layer(x, src_key_padding_mask=mask)
-            # x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-
         norm = torch.sum(mask, 1).view(-1, 1)
         mask = mask.unsqueeze(2).repeat(1, 1, x.shape[2])
         x = torch.sum(x * mask, dim=1)/norm
@@ -319,7 +365,6 @@ class MLP_ATT(nn.Module):
         )
 
     def forward(self, indices, nr, mode="fast"):
-
         if mode == "slow":
             ing1 = self.ndata(indices[:, 0])
             ing2 = self.ndata(indices[:, 1])

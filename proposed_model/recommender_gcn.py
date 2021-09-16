@@ -37,6 +37,7 @@ class Trainer:
         if name == "GCN" or name == "SAGE" or name == "GIN" or name == "GAT":
             if embeddings is None:
                 embeddings = model()
+
             if context:
                 embs = torch.index_select(
                     embeddings, dim=0, index=indices.reshape(-1)
@@ -44,7 +45,6 @@ class Trainer:
                 context_emb = self.embed_context(embs[:, 2:], indices[:, 2:], nr)
                 ing1 = embs[:, 0] + context_emb
                 ing2 = embs[:, 1] + context_emb
-
             else:
                 embs = embeddings[indices[:, :2]]
                 ing1 = embs[:, 0]
@@ -52,6 +52,8 @@ class Trainer:
             # compute cosine similarities
             # sims = cos_layer(ing1, ing2)
             sims = torch.bmm(ing1.unsqueeze(1), ing2.unsqueeze(2))
+        elif name == "GIN_MLP":
+            sims = model(indices, context)
         elif name == "MLP":
             sims = model(indices, context)
         elif name == "MLP_CAT":
@@ -62,7 +64,7 @@ class Trainer:
                 exit()
         elif name == "MLP_ATT":
             if context:
-                sims = model(indices, context, nr)
+                sims = model(indices, nr)
             else:
                 print("The model MLP_ATT is not defined in the context-free setup")
                 exit()
@@ -76,7 +78,7 @@ class Trainer:
         return ranks, predicted_index
 
     def get_loss_test(self, model, dataloader, n_ingrs, context, name):
-        # rank_file = open("/private/home/baharef/inversecooking2.0/proposed_model/GIN_rankings.txt", "w")
+        rank_file = open("/private/home/baharef/inversecooking2.0/proposed_model/GIN_MLP_foodbert_rankings.txt", "w")
         if name == "GCN":
             embeddings = model()
         else:
@@ -96,8 +98,8 @@ class Trainer:
                 hits[key] += torch.sum(ranks <= key)
             counter += len(ranks)
 
-            # for ind in range(ranks.shape[0]):
-            #     rank_file.write(str(batch[ind*n_ingrs][0].cpu().item()) + " " + str(batch[ind*n_ingrs][1].cpu().item()) + " " + str(ranks[ind].cpu().item()) + " " + str(batch[ind*n_ingrs+predicted_index[ind].cpu().item()][1].cpu().item()) + "\n")
+            for ind in range(ranks.shape[0]):
+                rank_file.write(str(batch[ind*n_ingrs][0].cpu().item()) + " " + str(batch[ind*n_ingrs][1].cpu().item()) + " " + str(ranks[ind].cpu().item()) + " " + str(batch[ind*n_ingrs+predicted_index[ind].cpu().item()][1].cpu().item()) + "\n")
 
         counter = float(counter)
         mrr = float(mrr) * 100
@@ -119,8 +121,6 @@ class Trainer:
             dropout=cfg.dropout,
             adj=adj,
             device=device,
-            node_count2id=node_count2id,
-            node_id2name=node_id2name,
         ).to(device)
 
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
