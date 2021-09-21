@@ -3,18 +3,19 @@ import json
 import os
 import pickle
 import random
-
+import numpy as np
 import dgl
 import dgl.function as fn
 import dgl.ops as ops
 import torch
 import torch.utils.data as data
+import networkx as nx
 
 from inv_cooking.datasets.vocabulary import Vocabulary
 
 
 def load_edges(
-    dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, normalize=True
+    dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, normalize=True, two_hops=False
 ):
     sources, destinations, weights, types = [], [], [], []
 
@@ -76,6 +77,12 @@ def load_edges(
     graph.edata["w"] = weights
     graph.edata["t"] = types
 
+
+
+    # transfer to two hops graph
+    if two_hops:
+        graph = convert_two_hops(graph).to(device)
+        print(graph)
     # symmetric normalization
     if normalize:
         in_degree = ops.copy_e_sum(graph, graph.edata["w"])
@@ -85,7 +92,8 @@ def load_edges(
         graph.ndata["out_norm"] = out_norm
         graph.apply_edges(fn.u_mul_v("in_norm", "out_norm", "n"))
         graph.edata["w"] = graph.edata["w"] * graph.edata["n"].squeeze()
-
+    print(graph)
+    exit()
     return graph
 
 
@@ -127,6 +135,52 @@ def load_nodes(dir_):
         nnodes,
     )
 
+def convert_two_hops(graph):
+    nx_g = dgl.to_networkx(graph.cpu(), edge_attrs=['w'])
+    np_g_weighted = nx.convert_matrix.to_numpy_array(nx_g, weight='weight')
+    np_g_two_hops = np.matmul(np_g_weighted, np_g_weighted)
+    dgl_g_two_hops = numpy_to_graph(np_g_two_hops)
+    dgl_g_two_hops.edata['w'] = dgl_g_two_hops.edata['weight']
+    return dgl_g_two_hops
+
+def numpy_to_graph(A, type_graph='dgl', node_features=None):
+    '''Convert numpy arrays to graph
+
+    Parameters
+    ----------
+    A : mxm array
+        Adjacency matrix
+    type_graph : str
+        'dgl' or 'nx'
+    node_features : dict
+        Optional, dictionary with key=feature name, value=list of size m
+        Allows user to specify node features
+
+    Returns
+
+    -------
+    Graph of 'type_graph' specification
+    '''
+    
+    G = nx.from_numpy_array(A)
+    
+    if node_features != None:
+        for n in G.nodes():
+            for k,v in node_features.items():
+                G.nodes[n][k] = v[n]
+    
+    if type_graph == 'nx':
+        return G
+    
+    G = G.to_directed()
+    
+    if node_features != None:
+        node_attrs = list(node_features.keys())
+    else:
+        node_attrs = []
+        
+    g = dgl.from_networkx(G, node_attrs=node_attrs, edge_attrs=['weight'])
+    return g
 
 def node_count2name(count, node_count2id, node_id2name):
     return node_id2name[node_count2id[count]]
@@ -233,6 +287,7 @@ class SubsData(data.Dataset):
         self.node_name2id = node_name2id
         self.node_id2count = node_id2count
         self.ingredients_cnt = ingredients_cnt
+        self.set_ingredients_cnt = set(ingredients_cnt)
         # load dataset
         self.dataset_list = json.load(open(self.substitutions_dir, "r"))
         self.dataset = self.context_full_examples(
@@ -241,7 +296,6 @@ class SubsData(data.Dataset):
         print("Number of datapoints in", self.split, self.dataset.shape[0])
 
     def context_full_examples(self, examples, vocabs, max_context):
-
         output = torch.full((len(examples), max_context + 2), 0)
         for ind, example in enumerate(examples):
             subs = example["subs"]
@@ -273,7 +327,7 @@ class SubsData(data.Dataset):
     def __getitem__(self, index: int):
         if self.split == "train":
             pos_example = self.dataset[index, :].view(1, -1)
-            neg_examples = self.neg_examples(pos_example, self.nr, self.ingredients_cnt)
+            neg_examples = self.neg_examples(pos_example, self.nr, self.set_ingredients_cnt)
             pos_labels = torch.zeros(1, 1)
             neg_labels = torch.ones(len(neg_examples), 1)
             pos_batch = torch.cat((pos_example, pos_labels), 1)
@@ -321,7 +375,39 @@ class SubsData(data.Dataset):
 
     def neg_examples(self, example, nr, ingredients_cnt):
         neg_batch = torch.zeros(nr, 2)
-        random_entities = torch.tensor(random.sample(ingredients_cnt, nr))
+
+        # # random sample
+        # random_entities = torch.tensor(random.sample(ingredients_cnt, nr))
+
+        # random sample - context
+        # ingredients_cnt_wo_context = ingredients_cnt.copy()
+        # context = example[example > 0][2:]
+        # for cont in context:
+        #     if cont in ingredients_cnt_wo_context:
+        #         ingredients_cnt_wo_context.remove(cont)
+        # random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
+
+        # context = example[example > 0][2:]
+        # ingredients_cnt_wo_context = [x for x in ingredients_cnt if x not in context]
+        # random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
+
+        context = set(example.view(-1).cpu().numpy())
+        ingredients_cnt_wo_context = self.set_ingredients_cnt - context
+        random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
+
+        # random_entities = random.sample(ingredients_cnt, nr+self.max_context)
+        # random_entities = torch.tensor(list(set(random_entities) - set(example[example > 0][2:]))[:nr])
+
+        # random_indices = torch.randint(low=0, high=len(ingredients_cnt), size=(nr+self.max_context,))
+        
+        # context = example[example > 0][2:]
+        # mask = torch.zeros(6654)
+        # mask[ingredients_cnt] = 1
+        # mask[context] = 0
+        # ingredients_cnt_wo_context = list(torch.nonzero(mask).view(-1).numpy())
+        # random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
+
+
         neg_batch = torch.cat(
             (example[0, 0].repeat(nr).view(nr, 1), random_entities.view(nr, 1)), 1
         )
@@ -339,4 +425,4 @@ if __name__ == "__main__":
         node_count2id,
         node_id2name,
         node_id2count,
-    ) = load_data(2, 43, "/private/home/baharef/inversecooking2.0/data/flavorgraph")
+    ) = load_data(2, 43, False, "/private/home/baharef/inversecooking2.0/data/flavorgraph")

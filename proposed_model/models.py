@@ -161,10 +161,12 @@ class GIN(nn.Module):
 
 
 class GIN_MLP(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="food_bert"):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="random"):
         super(GIN_MLP, self).__init__()
 
-        if mode == "food_bert":
+        if mode == "random":
+            self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
+        elif mode == "food_bert":
             self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/node2vec/food_bert_emb.pkl', 'rb')).to(device)
           
         lin1 = torch.nn.Linear(in_channels, hidden_channels)
@@ -179,10 +181,19 @@ class GIN_MLP(nn.Module):
         self.adj.requires_grad = False
 
         self.mlp_layers = nn.ModuleList()
-        self.mlp_layers.append(torch.nn.Linear(hidden_channels * 2, hidden_channels//2))
+        self.mlp_layers.append(torch.nn.Linear(hidden_channels * 2, hidden_channels))
         for _ in range(num_layers - 1):
-            self.mlp_layers.append(torch.nn.Linear(hidden_channels//2, hidden_channels//2))
+            self.mlp_layers.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
         self.mlp_layers.append(torch.nn.Linear(hidden_channels//2, 1))
+        
+
+
+        self.mlp_layers_context = nn.ModuleList()
+        self.mlp_layers_context.append(torch.nn.Linear(hidden_channels * 3, hidden_channels))
+        for _ in range(num_layers - 1):
+            self.mlp_layers_context.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
+        self.mlp_layers_context.append(torch.nn.Linear(hidden_channels//2, 1))
+
 
         self.epoch = torch.nn.Parameter(
             torch.tensor(0, dtype=torch.int32), requires_grad=False
@@ -191,9 +202,16 @@ class GIN_MLP(nn.Module):
             torch.tensor(0, dtype=torch.float64), requires_grad=False
         ).to(device)
 
-    def forward(self, indices, context=0):
-        x = self.ndata
+    def embed_context(self, indices, x):
+        # embeddings1 = x[indices]
+        embeddings = torch.index_select(x, 0, indices.reshape(-1)).reshape(indices.shape[0], indices.shape[1], x.shape[1])
+        context_emb = torch.sum(embeddings, dim=1)
+        mask = indices > 0
+        norm = torch.sum(mask, 1).view(-1, 1)
+        return context_emb / norm
 
+    def forward(self, indices, context):
+        x = self.ndata.weight
         for i, conv in enumerate(self.gin_layers[:-1]):
             x = conv(self.adj, x, self.adj.edata["w"])
             x = F.relu(x)
@@ -204,12 +222,20 @@ class GIN_MLP(nn.Module):
 
         ing1 = x[indices[:, 0]]
         ing2 = x[indices[:, 1]]
-        y = torch.cat((ing1, ing2), 1)
-        for i, layer in enumerate(self.mlp_layers[:-1]):
+
+        if context:
+            context_emb = self.embed_context(indices[:, 2:], x)
+            y = torch.cat((ing1, ing2, context_emb), 1)
+            layers = self.mlp_layers_context
+        else:
+            y = torch.cat((ing1, ing2), 1)
+            layers = self.mlp_layers
+
+        for i, layer in enumerate(layers[:-1]):
             y = layer(y)
             y = F.relu(y)
             y = F.dropout(y, p=self.dropout, training=self.training)
-        y = self.mlp_layers[-1](y)
+        y = layers[-1](y)
 
         return y
 

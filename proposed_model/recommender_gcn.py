@@ -1,5 +1,6 @@
 import copy
 import os
+import time 
 
 import numpy as np
 import torch
@@ -78,7 +79,7 @@ class Trainer:
         return ranks, predicted_index
 
     def get_loss_test(self, model, dataloader, n_ingrs, context, name):
-        rank_file = open("/private/home/baharef/inversecooking2.0/proposed_model/GIN_MLP_foodbert_rankings.txt", "w")
+        # rank_file = open("/private/home/baharef/inversecooking2.0/proposed_model/GIN_MLP_foodbert_rankings.txt", "w")
         if name == "GCN":
             embeddings = model()
         else:
@@ -98,8 +99,8 @@ class Trainer:
                 hits[key] += torch.sum(ranks <= key)
             counter += len(ranks)
 
-            for ind in range(ranks.shape[0]):
-                rank_file.write(str(batch[ind*n_ingrs][0].cpu().item()) + " " + str(batch[ind*n_ingrs][1].cpu().item()) + " " + str(ranks[ind].cpu().item()) + " " + str(batch[ind*n_ingrs+predicted_index[ind].cpu().item()][1].cpu().item()) + "\n")
+            # for ind in range(ranks.shape[0]):
+            #     rank_file.write(str(batch[ind*n_ingrs][0].cpu().item()) + " " + str(batch[ind*n_ingrs][1].cpu().item()) + " " + str(ranks[ind].cpu().item()) + " " + str(batch[ind*n_ingrs+predicted_index[ind].cpu().item()][1].cpu().item()) + "\n")
 
         counter = float(counter)
         mrr = float(mrr) * 100
@@ -127,7 +128,7 @@ class Trainer:
         # cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-15/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-21/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
@@ -150,6 +151,7 @@ class Trainer:
         for epoch in range(model.epoch.cpu().item() + 1, cfg.epochs + 1):
             model.train()
             epoch_loss = 0.0
+            start_time = time.time()
             for train_batch in train_dataloader:
                 indices = train_batch[:, :-1]
                 sims = self.get_loss(model, indices, cfg.nr, context, cfg.name)
@@ -159,7 +161,7 @@ class Trainer:
                 loss.backward()
                 opt.step()
                 epoch_loss += loss.cpu().item()
-
+            print(time.time()-start_time)
             print(epoch, epoch_loss)
             # print("eps", model.layers[0].eps.cpu().item())
             model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
