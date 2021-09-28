@@ -28,6 +28,12 @@ im2recipe:
     val: True
     test: False
 
+search_example_im2recipe:
+  comment: 'example of hyper-parameter search for im2recipe'
+  parent: im2recipe
+  optimization:
+    seed: SEARCH[11,12]
+
 im2recipe_invcooking1.0:
   comment: 'inverse cooking 1.0 model'
   parent: im2recipe
@@ -45,13 +51,16 @@ im2recipe_invcooking1.0_concat_gelu:
     load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v0.ckpt
     # load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
 
-im2recipe_vit:
+im2recipe_vit32:
   comment: 'evaluation of the performance of vision transformers'
   parent: im2recipe
-  image_encoder: vit_small_encoder
-
-search_example_im2recipe:
-  comment: 'example of hyper-parameter search for im2recipe'
-  parent: im2recipe
-  optimization:
-    seed: SEARCH[11,12]
+  image_encoder:
+     model: vit
+     pretrained: True
+     dropout: 0.1
+     patch_size: 32
+     n_cls_tokens: 1
+     freeze: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/46838934/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1-cpu.ckpt
