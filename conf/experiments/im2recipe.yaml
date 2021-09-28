@@ -32,16 +32,18 @@ im2recipe_invcooking1.0:
   comment: 'inverse cooking 1.0 model'
   parent: im2recipe
   pretrained_im2ingr:
-    freeze: True 
-    load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
+    freeze: True
+    load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v0.ckpt
+    # load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
 
 im2recipe_invcooking1.0_concat_gelu:
   comment: 'inverse cooking 1.0 model'
   parent: im2recipe
   recipe_gen: recipe_gen_tf_gelu
   pretrained_im2ingr:
-    freeze: True 
-    load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
+    freeze: True
+    load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v0.ckpt
+    # load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
 
 im2recipe_vit:
   comment: 'evaluation of the performance of vision transformers'
