@@ -1,7 +1,5 @@
-import os
 import pickle
 import random
-from pathlib import Path
 
 
 # remove the possible duplicates in the dataset
@@ -161,12 +159,15 @@ def create_substitutions(union, id2ing, vocab_ing, file):
 
 
 def create_substitutions_datasets(
-    train_dataset, val_dataset, test_dataset, recipe1m_path, vocab_ings, dataset
+    train_dataset,
+    val_dataset,
+    test_dataset,
+    vocab_ings,
+    dataset,
+    train_dataset_path,
+    val_dataset_path,
+    test_dataset_path,
 ):
-
-    train_dataset_path = Path(os.path.join(recipe1m_path, "train_comments_subs.pkl"))
-    val_dataset_path = Path(os.path.join(recipe1m_path, "val_comments_subs.pkl"))
-    test_dataset_path = Path(os.path.join(recipe1m_path, "test_comments_subs.pkl"))
 
     train_dataset = remove_duplicates(train_dataset)
     val_dataset = remove_duplicates(val_dataset)

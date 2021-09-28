@@ -230,6 +230,18 @@ def load_split_per_dataset(dataset, train_ids, val_ids, test_ids):
 
 
 def run_comment_pre_processing(recipe1m_path, preprocessed_dir, vocab_ingrs, splits):
+
+    train_dataset_path = Path(os.path.join(preprocessed_dir, "train_comments_subs.pkl"))
+    val_dataset_path = Path(os.path.join(preprocessed_dir, "val_comments_subs.pkl"))
+    test_dataset_path = Path(os.path.join(preprocessed_dir, "test_comments_subs.pkl"))
+
+    if (
+        train_dataset_path.exists()
+        and val_dataset_path.exists()
+        and test_dataset_path.exists()
+    ):
+        return
+
     review_sentences_path = Path(
         os.path.join(preprocessed_dir, "review_sentences_context.json")
     )
@@ -324,5 +336,13 @@ def run_comment_pre_processing(recipe1m_path, preprocessed_dir, vocab_ingrs, spl
     )
 
     create_substitutions_datasets(
-        train_dataset, val_dataset, test_dataset, recipe1m_path, vocab_ingrs, splits
+        train_dataset,
+        val_dataset,
+        test_dataset,
+        recipe1m_path,
+        vocab_ingrs,
+        splits,
+        train_dataset_path,
+        val_dataset_path,
+        test_dataset_path,
     )
