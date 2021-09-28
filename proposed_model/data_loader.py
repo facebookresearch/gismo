@@ -15,7 +15,7 @@ from inv_cooking.datasets.vocabulary import Vocabulary
 
 
 def load_edges(
-    dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, normalize=True, two_hops=False
+    dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, two_hops, device, normalize=True,
 ):
     sources, destinations, weights, types = [], [], [], []
 
@@ -65,8 +65,6 @@ def load_edges(
     weights = torch.tensor(weights)
     types = torch.tensor(types)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     if torch.cuda.is_available():
         sources = sources.to(device)
         destinations = destinations.to(device)
@@ -77,12 +75,11 @@ def load_edges(
     graph.edata["w"] = weights
     graph.edata["t"] = types
 
-
-
     # transfer to two hops graph
     if two_hops:
+        print("Graph modified to a two-hops graph")
         graph = convert_two_hops(graph).to(device)
-        print(graph)
+
     # symmetric normalization
     if normalize:
         in_degree = ops.copy_e_sum(graph, graph.edata["w"])
@@ -92,8 +89,7 @@ def load_edges(
         graph.ndata["out_norm"] = out_norm
         graph.apply_edges(fn.u_mul_v("in_norm", "out_norm", "n"))
         graph.edata["w"] = graph.edata["w"] * graph.edata["n"].squeeze()
-    print(graph)
-    exit()
+
     return graph
 
 
@@ -186,7 +182,7 @@ def node_count2name(count, node_count2id, node_id2name):
     return node_id2name[node_count2id[count]]
 
 
-def load_graph(add_self_loop, dir_):
+def load_graph(add_self_loop, dir_, two_hops, device):
     (
         node_id2count,
         node_count2id,
@@ -196,7 +192,7 @@ def load_graph(add_self_loop, dir_):
         node_id2name,
         nnodes,
     ) = load_nodes(dir_)
-    graph = load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop)
+    graph = load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, two_hops, device)
     return (
         graph,
         node_name2id,
@@ -206,8 +202,11 @@ def load_graph(add_self_loop, dir_):
         node_id2name,
     )
 
+def compute_distances(graph):
+    nx_g = dgl.to_networkx(graph.cpu(), edge_attrs=['w'])
+    lengths = dict(nx.shortest_path_length(nx_g))
 
-def load_data(nr, max_context, add_self_loop, dir_):
+def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, device, dir_):
     (
         graph,
         node_name2id,
@@ -215,15 +214,19 @@ def load_data(nr, max_context, add_self_loop, dir_):
         ingredients_cnt,
         node_count2id,
         node_id2name,
-    ) = load_graph(add_self_loop, dir_)
+    ) = load_graph(add_self_loop, dir_, two_hops, device)
     ingr_vocabs = pickle.load(
         open(
             "/private/home/baharef/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
             "rb",
         )
     )
+
+    recipe_counter = 0
+    recipe_id2counter = {}
+    
     train_dataset = SubsData(
-        "/private/home/baharef/inversecooking2.0/data/substitutions/",
+        "/private/home/baharef/inversecooking2.0/preprocessed_data",
         "train",
         node_name2id,
         node_id2count,
@@ -231,9 +234,13 @@ def load_data(nr, max_context, add_self_loop, dir_):
         nr,
         ingr_vocabs,
         max_context,
+        recipe_counter,
+        recipe_id2counter,
+        neg_sampling
     )
+
     val_dataset = SubsData(
-        "/private/home/baharef/inversecooking2.0/data/substitutions/",
+        "/private/home/baharef/inversecooking2.0/preprocessed_data",
         "val",
         node_name2id,
         node_id2count,
@@ -241,9 +248,13 @@ def load_data(nr, max_context, add_self_loop, dir_):
         nr,
         ingr_vocabs,
         max_context,
+        train_dataset.recipe_counter,
+        train_dataset.recipe_id2counter,
+        neg_sampling
     )
+
     test_dataset = SubsData(
-        "/private/home/baharef/inversecooking2.0/data/substitutions/",
+        "/private/home/baharef/inversecooking2.0/preprocessed_data",
         "test",
         node_name2id,
         node_id2count,
@@ -251,7 +262,14 @@ def load_data(nr, max_context, add_self_loop, dir_):
         nr,
         ingr_vocabs,
         max_context,
+        val_dataset.recipe_counter,
+        val_dataset.recipe_id2counter,
+        neg_sampling
     )
+
+    # pickle.dump(recipe_id2counter, open("/private/home/baharef/inversecooking2.0/proposed_model/titles_neede.pkl", "wb"))
+    
+    I_two_hops = pickle.load(open("/private/home/baharef/inversecooking2.0/proposed_model/two_hops_tensor.pkl", "rb")).to(device)
 
     return (
         graph,
@@ -262,6 +280,8 @@ def load_data(nr, max_context, add_self_loop, dir_):
         node_count2id,
         node_id2name,
         node_id2count,
+        recipe_id2counter,
+        I_two_hops
     )
 
 
@@ -276,12 +296,16 @@ class SubsData(data.Dataset):
         nr: int,
         vocab: Vocabulary,
         max_context: int,
+        recipe_counter: int,
+        recipe_id2counter: dict,
+        neg_sampling: str,
     ):
-        self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.txt")
+        self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.pkl")
         self.split = split
         self.dataset = []
         self.nr = nr
         self.max_context = max_context
+        self.neg_sampling = neg_sampling
         # load ingredient voc
         self.ingr_vocab = vocab
         self.node_name2id = node_name2id
@@ -289,16 +313,27 @@ class SubsData(data.Dataset):
         self.ingredients_cnt = ingredients_cnt
         self.set_ingredients_cnt = set(ingredients_cnt)
         # load dataset
+        self.recipe_counter = recipe_counter
+        self.recipe_id2counter = recipe_id2counter
         self.dataset_list = json.load(open(self.substitutions_dir, "r"))
         self.dataset = self.context_full_examples(
             self.dataset_list, self.ingr_vocab, self.max_context
         )
+
         print("Number of datapoints in", self.split, self.dataset.shape[0])
 
     def context_full_examples(self, examples, vocabs, max_context):
-        output = torch.full((len(examples), max_context + 2), 0)
+        output = torch.full((len(examples), max_context + 3), 0)
         for ind, example in enumerate(examples):
             subs = example["subs"]
+            id_ = example["id"]
+
+            if id_ in self.recipe_id2counter:
+                id_counter = self.recipe_id2counter[id_]
+            else:
+                id_counter = self.recipe_counter
+                self.recipe_id2counter[id_] = self.recipe_counter
+                self.recipe_counter += 1
             context = example["ingredients"][:max_context]
             example["text"]
             r_name1 = vocabs.idx2word[vocabs.word2idx[subs[0]]][0]
@@ -316,8 +351,9 @@ class SubsData(data.Dataset):
                     self.node_id2count[self.node_name2id[r_name2]],
                 ]
             )
-            output[ind, :2] = subs
-            output[ind, 2 : len(context) + 2] = context_ids
+            output[ind, 0:2] = subs
+            output[ind, 2] = id_counter
+            output[ind, 3:len(context) + 3] = context_ids
 
         return output
 
@@ -376,38 +412,20 @@ class SubsData(data.Dataset):
     def neg_examples(self, example, nr, ingredients_cnt):
         neg_batch = torch.zeros(nr, 2)
 
-        # # random sample
-        # random_entities = torch.tensor(random.sample(ingredients_cnt, nr))
-
-        # random sample - context
-        # ingredients_cnt_wo_context = ingredients_cnt.copy()
-        # context = example[example > 0][2:]
-        # for cont in context:
-        #     if cont in ingredients_cnt_wo_context:
-        #         ingredients_cnt_wo_context.remove(cont)
-        # random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
-
-        # context = example[example > 0][2:]
-        # ingredients_cnt_wo_context = [x for x in ingredients_cnt if x not in context]
-        # random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
-
-        context = set(example.view(-1).cpu().numpy())
-        ingredients_cnt_wo_context = self.set_ingredients_cnt - context
-        random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
-
-        # random_entities = random.sample(ingredients_cnt, nr+self.max_context)
-        # random_entities = torch.tensor(list(set(random_entities) - set(example[example > 0][2:]))[:nr])
-
-        # random_indices = torch.randint(low=0, high=len(ingredients_cnt), size=(nr+self.max_context,))
-        
-        # context = example[example > 0][2:]
-        # mask = torch.zeros(6654)
-        # mask[ingredients_cnt] = 1
-        # mask[context] = 0
-        # ingredients_cnt_wo_context = list(torch.nonzero(mask).view(-1).numpy())
-        # random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
-
-
+        if self.neg_sampling == "regular":
+            random_entities = torch.tensor(random.sample(ingredients_cnt, nr))
+        elif self.neg_sampling == "smart":
+            context = set(example.view(-1).cpu().numpy())
+            ingredients_cnt_wo_context = self.set_ingredients_cnt - context
+            random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr))
+        elif self.neg_sampling == "smart2":
+            context = example[0, 3:]
+            context = context[context>0]
+            context_set = set(context.cpu().numpy())
+            ingredients_cnt_wo_context = self.set_ingredients_cnt - context_set
+            random_entities = torch.tensor(random.sample(ingredients_cnt_wo_context, nr-len(context)))
+            random_entities = torch.cat((context, random_entities))
+            
         neg_batch = torch.cat(
             (example[0, 0].repeat(nr).view(nr, 1), random_entities.view(nr, 1)), 1
         )

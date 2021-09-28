@@ -13,8 +13,8 @@ class Trainer:
     def __init__(self):
         super(Trainer, self).__init__()
 
-    def get_loss(self, model, indices, nr, context, name):
-        sims = self.get_model_output(model, indices, context, nr, name)
+    def get_loss(self, model, indices, nr, context, name, I_two_hops, lambda_):
+        sims = self.get_model_output(model, indices, context, nr, name, I_two_hops, lambda_)
         sims = sims.view(-1, nr + 1)
         return sims
 
@@ -34,7 +34,7 @@ class Trainer:
         norm = torch.sum(mask, 1).view(-1, 1)
         return context_emb / norm
 
-    def get_model_output(self, model, indices, context, nr, name, embeddings=None):
+    def get_model_output(self, model, indices, context, nr, name, I_two_hops, lambda_, embeddings=None):
         if name == "GCN" or name == "SAGE" or name == "GIN" or name == "GAT":
             if embeddings is None:
                 embeddings = model()
@@ -69,6 +69,8 @@ class Trainer:
             else:
                 print("The model MLP_ATT is not defined in the context-free setup")
                 exit()
+
+        sims += lambda_ * I_two_hops[indices[:, 0], indices[:, 1]].view(-1, 1)
         return sims
 
     def get_rank(self, scores):
@@ -78,8 +80,8 @@ class Trainer:
         ranks[ranks < 1] = 1
         return ranks, predicted_index
 
-    def get_loss_test(self, model, dataloader, n_ingrs, context, name):
-        # rank_file = open("/private/home/baharef/inversecooking2.0/proposed_model/GIN_MLP_foodbert_rankings.txt", "w")
+    def get_loss_test(self, model, dataloader, n_ingrs, context, name, rank_file_path, I_two_hops, lambda_):
+        rank_file = open(rank_file_path, "w")
         if name == "GCN":
             embeddings = model()
         else:
@@ -91,7 +93,7 @@ class Trainer:
 
         for batch in dataloader:
             sims = self.get_model_output(
-                model, batch, context, n_ingrs - 1, name, embeddings
+                model, batch, context, n_ingrs - 1, name, I_two_hops, lambda_, embeddings
             ).view(-1, n_ingrs)
             ranks, predicted_index = self.get_rank(sims)
             mrr += torch.sum(1.0 / ranks)
@@ -99,8 +101,8 @@ class Trainer:
                 hits[key] += torch.sum(ranks <= key)
             counter += len(ranks)
 
-            # for ind in range(ranks.shape[0]):
-            #     rank_file.write(str(batch[ind*n_ingrs][0].cpu().item()) + " " + str(batch[ind*n_ingrs][1].cpu().item()) + " " + str(ranks[ind].cpu().item()) + " " + str(batch[ind*n_ingrs+predicted_index[ind].cpu().item()][1].cpu().item()) + "\n")
+            for ind in range(ranks.shape[0]):
+                rank_file.write(str(batch[ind*n_ingrs][0].cpu().item()) + " " + str(batch[ind*n_ingrs][1].cpu().item()) + " " + str(ranks[ind].cpu().item()) + " " + str(batch[ind*n_ingrs+predicted_index[ind].cpu().item()][1].cpu().item()) + "\n")
 
         counter = float(counter)
         mrr = float(mrr) * 100
@@ -111,9 +113,8 @@ class Trainer:
         return mrr, hits
 
     def train_classification_gcn(
-        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name
+        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops
     ):
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         model = globals()[cfg.name](
             in_channels=cfg.emb_d,
@@ -122,16 +123,22 @@ class Trainer:
             dropout=cfg.dropout,
             adj=adj,
             device=device,
+            recipe_id2counter=recipe_id2counter,
+            with_titles=cfg.with_titles,
+            node_count2id=node_count2id,
+            init_emb=cfg.init_emb
         ).to(device)
 
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
         # cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-21/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-27/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
+        ranks_file_val = os.path.join(output_dir, "val_ranks.txt")
+        ranks_file_test = os.path.join(output_dir, "test_ranks.txt")
 
         best_val_mrr = 0
         best_model = None
@@ -154,7 +161,7 @@ class Trainer:
             start_time = time.time()
             for train_batch in train_dataloader:
                 indices = train_batch[:, :-1]
-                sims = self.get_loss(model, indices, cfg.nr, context, cfg.name)
+                sims = self.get_loss(model, indices, cfg.nr, context, cfg.name, I_two_hops, cfg.lambda_)
                 targets = torch.zeros(sims.shape[0]).long().to(device)
                 loss = loss_layer(sims, targets)
                 opt.zero_grad()
@@ -170,7 +177,7 @@ class Trainer:
                 with torch.no_grad():
                     model.eval()
                     val_mrr, val_hits = self.get_loss_test(
-                        model, val_dataloader, n_ingrs, context, cfg.name
+                        model, val_dataloader, n_ingrs, context, cfg.name, ranks_file_val, I_two_hops, cfg.lambda_
                     )
                     print("vall metrics:", val_mrr, val_hits)
                     if val_mrr > best_val_mrr:
@@ -190,17 +197,21 @@ class Trainer:
         with torch.no_grad():
             best_model.eval()
             test_mrr, test_hits = self.get_loss_test(
-                best_model, test_dataloader, n_ingrs, context, cfg.name
+                best_model, test_dataloader, n_ingrs, context, cfg.name, ranks_file_test, I_two_hops, cfg.lambda_
             )
         print(test_mrr, test_hits)
         return best_val_mrr, test_mrr, test_hits
 
     def train_recommender_gcn(self, cfg):
+        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
-        graph, train_dataset, val_dataset, test_dataset, ingrs, node_count2id, node_id2name, node_id2count = load_data(
+        graph, train_dataset, val_dataset, test_dataset, ingrs, node_count2id, node_id2name, node_id2count, recipe_id2counter, I_two_hops = load_data(
             cfg.nr,
             cfg.max_context,
             cfg.add_self_loop,
+            cfg.two_hops,
+            cfg.neg_sampling,
+            device,
             dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
         )
         n_ingrs = len(ingrs)
@@ -238,7 +249,7 @@ class Trainer:
         test_hits_arr = []
         for trial in range(cfg.ntrials):
             val_mrr, test_mrr, test_hits = self.train_classification_gcn(
-                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name
+                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops
             )
             val_mrr_arr.append(val_mrr)
             test_mrr_arr.append(test_mrr)

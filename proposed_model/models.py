@@ -4,6 +4,7 @@ from layers import GCNConv
 from torch import nn
 import dgl.nn as dglnn
 import pickle
+import numpy as np
 
 class GAT(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device):
@@ -114,7 +115,7 @@ class SAGE(nn.Module):
 
 
 class GIN(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="food_bert"):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, node_count2id, mode="flavorgraph"):
         super(GIN, self).__init__()
 
         if mode == "random":
@@ -128,7 +129,17 @@ class GIN(nn.Module):
                 self.ndata[ind] = torch.tensor(embs[str(ind)]).to(device)
         elif mode == "food_bert":
             self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/node2vec/food_bert_emb.pkl', 'rb')).to(device)
-          
+        elif mode == "flavorgraph":
+            self.ndata = torch.zeros(adj.num_nodes(), in_channels).to(device)
+            features_file = open("/private/home/baharef/inversecooking2.0/proposed_model/features/flavorgraph_emb.pkl", "rb")
+            flavorgraph_embs = pickle.load(features_file)
+            for count in node_count2id:
+                id = node_count2id[count]
+                try:
+                    self.ndata[count] = torch.tensor(flavorgraph_embs[str(id)])
+                except:
+                    pass
+                    
         lin1 = torch.nn.Linear(in_channels, hidden_channels)
         lin2 = torch.nn.Linear(hidden_channels, hidden_channels)
         self.layers = nn.ModuleList()
@@ -161,14 +172,26 @@ class GIN(nn.Module):
 
 
 class GIN_MLP(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="random"):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, node_count2id, init_emb):
         super(GIN_MLP, self).__init__()
 
-        if mode == "random":
+        if init_emb == "random":
             self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
-        elif mode == "food_bert":
+        elif init_emb == "food_bert":
             self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/node2vec/food_bert_emb.pkl', 'rb')).to(device)
-          
+        elif init_emb == "flavorgraph":
+            self.ndata = torch.zeros(adj.num_nodes(), in_channels).to(device)
+            features_file = open("/private/home/baharef/inversecooking2.0/proposed_model/features/flavorgraph_emb.pkl", "rb")
+            flavorgraph_embs = pickle.load(features_file)
+            for count in node_count2id:
+                id = node_count2id[count]
+                try:
+                    self.ndata[count] = torch.tensor(flavorgraph_embs[str(id)])
+                except:
+                    pass
+        self.init_emb = init_emb
+        self.with_titles = with_titles
+
         lin1 = torch.nn.Linear(in_channels, hidden_channels)
         lin2 = torch.nn.Linear(hidden_channels, hidden_channels)
         self.gin_layers = nn.ModuleList()
@@ -186,15 +209,27 @@ class GIN_MLP(nn.Module):
             self.mlp_layers.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
         self.mlp_layers.append(torch.nn.Linear(hidden_channels//2, 1))
         
-
-
-        self.mlp_layers_context = nn.ModuleList()
-        self.mlp_layers_context.append(torch.nn.Linear(hidden_channels * 3, hidden_channels))
-        for _ in range(num_layers - 1):
-            self.mlp_layers_context.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
-        self.mlp_layers_context.append(torch.nn.Linear(hidden_channels//2, 1))
-
-
+        if self.with_titles:
+            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_embeddings.pkl', 'rb'))
+            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_recipe_ids.pkl', 'rb'))
+            emb_dim = len(embs[0])
+            self.title_embeddings = torch.zeros((len(embs),emb_dim)).to(device)
+            for id_ in recipe_id2counter:
+                counter = recipe_id2counter[id_]
+                self.title_embeddings[counter] = embs[ids.index(id_)]
+            self.title_project_layer = torch.nn.Linear(emb_dim, hidden_channels)
+            self.mlp_layers_context = nn.ModuleList()
+            self.mlp_layers_context.append(torch.nn.Linear(hidden_channels * 4, hidden_channels))
+            for _ in range(num_layers - 1):
+                self.mlp_layers_context.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
+            self.mlp_layers_context.append(torch.nn.Linear(hidden_channels//2, 1))
+        else:
+            self.mlp_layers_context = nn.ModuleList()
+            self.mlp_layers_context.append(torch.nn.Linear(hidden_channels * 3, hidden_channels))
+            for _ in range(num_layers - 1):
+                self.mlp_layers_context.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
+            self.mlp_layers_context.append(torch.nn.Linear(hidden_channels//2, 1))
+        
         self.epoch = torch.nn.Parameter(
             torch.tensor(0, dtype=torch.int32), requires_grad=False
         ).to(device)
@@ -203,15 +238,20 @@ class GIN_MLP(nn.Module):
         ).to(device)
 
     def embed_context(self, indices, x):
-        # embeddings1 = x[indices]
         embeddings = torch.index_select(x, 0, indices.reshape(-1)).reshape(indices.shape[0], indices.shape[1], x.shape[1])
         context_emb = torch.sum(embeddings, dim=1)
         mask = indices > 0
         norm = torch.sum(mask, 1).view(-1, 1)
         return context_emb / norm
 
+    def embed_title(self, indices):
+        return self.title_project_layer(torch.index_select(self.title_embeddings, 0, indices.reshape(-1)))
+
     def forward(self, indices, context):
-        x = self.ndata.weight
+        if self.init_emb == "random":
+            x = self.ndata.weight
+        else:
+            x = self.ndata
         for i, conv in enumerate(self.gin_layers[:-1]):
             x = conv(self.adj, x, self.adj.edata["w"])
             x = F.relu(x)
@@ -224,8 +264,12 @@ class GIN_MLP(nn.Module):
         ing2 = x[indices[:, 1]]
 
         if context:
-            context_emb = self.embed_context(indices[:, 2:], x)
-            y = torch.cat((ing1, ing2, context_emb), 1)
+            context_emb = self.embed_context(indices[:, 3:], x)
+            if self.with_titles:
+                title_emb = self.embed_title(indices[:, 2])
+                y = torch.cat((ing1, ing2, context_emb, title_emb), 1)
+            else:
+                y = torch.cat((ing1, ing2, context_emb), 1)
             layers = self.mlp_layers_context
         else:
             y = torch.cat((ing1, ing2), 1)
@@ -240,28 +284,29 @@ class GIN_MLP(nn.Module):
         return y
 
 class MLP(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, mode="food_bert"):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, node_count2id, init_emb):
         super(MLP, self).__init__()
 
-        if mode == "random":
+        self.init_emb = init_emb
+        if self.init_emb == "random":
             self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
-        elif mode == "random_walk":
+        elif self.init_emb == "random_walk":
             from gensim.models import Word2Vec
             model = Word2Vec.load("/private/home/baharef/inversecooking2.0/proposed_model/node2vec/model_30_10.txt")
             embs = model.wv.load_word2vec_format("/private/home/baharef/inversecooking2.0/proposed_model/node2vec/embeddings_30_10.txt")
             self.ndata = torch.zeros(adj.num_nodes(), in_channels).to(device)
             for ind in range(adj.num_nodes()):
                 self.ndata[ind] = torch.tensor(embs[str(ind)]).to(device)
-        elif mode == "food_bert":
+        elif self.init_emb == "food_bert":
             self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/node2vec/food_bert_emb.pkl', 'rb')).to(device)
 
 
         self.layers = nn.ModuleList()
         self.layers.append(torch.nn.Linear(in_channels * 2, hidden_channels))
         for _ in range(num_layers - 1):
-            self.layers.append(torch.nn.Linear(hidden_channels, hidden_channels))
+            self.layers.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
 
-        self.layers.append(torch.nn.Linear(hidden_channels, 1))
+        self.layers.append(torch.nn.Linear(hidden_channels//2, 1))
 
         self.dropout = dropout
 
@@ -272,23 +317,25 @@ class MLP(nn.Module):
             torch.tensor(0, dtype=torch.float64), requires_grad=False
         ).to(device)
 
-    def embed_context(self, indices):
-        embeddings = self.ndata(indices)
-        context_emb = torch.sum(embeddings, dim=1)
-        mask = indices > 0
-        norm = torch.sum(mask, 1).view(-1, 1)
-        return context_emb / norm
+    # def embed_context(self, indices):
+    #     embeddings = self.ndata(indices)
+    #     context_emb = torch.sum(embeddings, dim=1)
+    #     mask = indices > 0
+    #     norm = torch.sum(mask, 1).view(-1, 1)
+    #     return context_emb / norm
 
     def forward(self, indices, context=0):
-        # ing1 = self.ndata(indices[:, 0])
-        # ing2 = self.ndata(indices[:, 1])
-        ing1 = self.ndata[indices[:, 0]]
-        ing2 = self.ndata[indices[:, 1]]
+        if self.init_emb == "random":
+            ing1 = self.ndata(indices[:, 0])
+            ing2 = self.ndata(indices[:, 1])
+        else:
+            ing1 = self.ndata[indices[:, 0]]
+            ing2 = self.ndata[indices[:, 1]]
 
-        if context:
-            context_emb = self.embed_context(indices[:, 2:])
-            ing1 = ing1 + context_emb
-            ing2 = ing2 + context_emb
+        # if context:
+        #     context_emb = self.embed_context(indices[:, 3:])
+        #     ing1 = ing1 + context_emb
+        #     ing2 = ing2 + context_emb
 
         x = torch.cat((ing1, ing2), 1)
         for i, layer in enumerate(self.layers[:-1]):
@@ -300,15 +347,15 @@ class MLP(nn.Module):
 
 
 class MLP_CAT(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, node_count2id, init_emb):
         super(MLP_CAT, self).__init__()
         self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
         self.layers = nn.ModuleList()
         self.layers.append(torch.nn.Linear(in_channels * 3, hidden_channels))
         for _ in range(num_layers - 1):
-            self.layers.append(torch.nn.Linear(hidden_channels, hidden_channels))
+            self.layers.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
 
-        self.layers.append(torch.nn.Linear(hidden_channels, 1))
+        self.layers.append(torch.nn.Linear(hidden_channels//2, 1))
         
         self.dropout = dropout
 
@@ -326,11 +373,11 @@ class MLP_CAT(nn.Module):
         norm = torch.sum(mask, 1).view(-1, 1)
         return context_emb / norm
 
-    def forward(self, indices, context):
+    def forward(self, indices):
         ing1 = self.ndata(indices[:, 0])
         ing2 = self.ndata(indices[:, 1])
 
-        context_emb = self.embed_context(indices[:, 2:])
+        context_emb = self.embed_context(indices[:, 3:])
 
         x = torch.cat((ing1, ing2, context_emb), 1)
         for i, layer in enumerate(self.layers[:-1]):
@@ -394,12 +441,12 @@ class MLP_ATT(nn.Module):
         if mode == "slow":
             ing1 = self.ndata(indices[:, 0])
             ing2 = self.ndata(indices[:, 1])
-            context_emb = self.embed_context(indices[:, 2:])
+            context_emb = self.embed_context(indices[:, 3:])
         else:
             embedding = self.ndata(indices)
             ing1 = embedding[:, 0]
             ing2 = embedding[:, 1]
-            context_emb = self.embed_context_fast(embedding[:, 2:], indices[:, 2:], nr)
+            context_emb = self.embed_context_fast(embedding[:, 3:], indices[:, 3:], nr)
 
         x = torch.cat((ing1, ing2, context_emb), 1)
         for i, layer in enumerate(self.layers[:-1]):
