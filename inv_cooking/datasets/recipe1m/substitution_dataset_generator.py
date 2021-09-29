@@ -156,6 +156,7 @@ def create_substitutions(union, id2ing, vocab_ing, file):
                     examples.append(example)
     pickle.dump(examples, input_file)
     print(len(examples))
+    return examples
 
 
 def create_substitutions_datasets(
@@ -177,6 +178,14 @@ def create_substitutions_datasets(
     val_id2ing = read_ingredients_ids(dataset["val"], vocab_ings)
     train_id2ing = read_ingredients_ids(dataset["train"], vocab_ings)
 
-    create_substitutions(train_dataset, train_id2ing, vocab_ings, train_dataset_path)
-    create_substitutions(val_dataset, val_id2ing, vocab_ings, val_dataset_path)
-    create_substitutions(test_dataset, test_id2ing, vocab_ings, test_dataset_path)
+    train_subs = create_substitutions(
+        train_dataset, train_id2ing, vocab_ings, train_dataset_path
+    )
+    val_subs = create_substitutions(
+        val_dataset, val_id2ing, vocab_ings, val_dataset_path
+    )
+    test_subs = create_substitutions(
+        test_dataset, test_id2ing, vocab_ings, test_dataset_path
+    )
+
+    return train_subs, val_subs, test_subs

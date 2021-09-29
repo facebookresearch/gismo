@@ -4,6 +4,7 @@ https://github.com/ChantalMP/Exploiting-Food-Embeddings-for-Ingredient-Substitut
 """
 import json
 import os
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -240,7 +241,14 @@ def run_comment_pre_processing(recipe1m_path, preprocessed_dir, vocab_ingrs, spl
         and val_dataset_path.exists()
         and test_dataset_path.exists()
     ):
-        return
+        with train_dataset_path.open("rb") as handle:
+            train_subs = pickle.load(handle)
+        with val_dataset_path.open("rb") as handle:
+            val_subs = pickle.load(handle)
+        with test_dataset_path.open("rb") as handle:
+            test_subs = pickle.load(handle)
+
+        return train_subs, val_subs, test_subs
 
     review_sentences_path = Path(
         os.path.join(preprocessed_dir, "review_sentences_context.json")
@@ -335,7 +343,7 @@ def run_comment_pre_processing(recipe1m_path, preprocessed_dir, vocab_ingrs, spl
         f"Length of train: {len(train_dataset)}, val: {len(val_dataset)} and test: {len(test_dataset)}"
     )
 
-    create_substitutions_datasets(
+    return create_substitutions_datasets(
         train_dataset,
         val_dataset,
         test_dataset,

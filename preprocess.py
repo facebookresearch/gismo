@@ -14,7 +14,7 @@ def main(cfg: RawConfig) -> None:
     `python preprocess.py dataset=recipe1m`
     """
     vocab_ingrs, dataset = run_dataset_pre_processing(cfg.dataset.path, cfg.dataset.pre_processing)
-    run_comment_pre_processing(cfg.dataset.path, cfg.dataset.pre_processing.save_path, vocab_ingrs, dataset)
+    train_subs, val_subs, test_subs = run_comment_pre_processing(cfg.dataset.path, cfg.dataset.pre_processing.save_path, vocab_ingrs, dataset)
 
 if __name__ == "__main__":
     main()
