@@ -230,7 +230,8 @@ def load_split_per_dataset(dataset, train_ids, val_ids, test_ids):
     return train_dataset, val_dataset, test_dataset
 
 
-def run_comment_pre_processing(recipe1m_path, preprocessed_dir, vocab_ingrs, splits):
+def run_comment_pre_processing(recipe1m_path: str, preprocessed_dir: str, vocab_ingrs, splits):
+    recipe1m_path = Path(recipe1m_path)
 
     train_dataset_path = Path(os.path.join(preprocessed_dir, "train_comments_subs.pkl"))
     val_dataset_path = Path(os.path.join(preprocessed_dir, "val_comments_subs.pkl"))
