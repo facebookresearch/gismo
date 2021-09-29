@@ -10,6 +10,8 @@ from inv_cooking.config import DatasetConfig
 
 from .dataset import LoadingOptions, Recipe1M
 from .preprocess import run_dataset_pre_processing
+from .preprocess_comments import run_comment_pre_processing
+from .preprocess_recipesubs import create_pre_processed_recipesubs_data
 
 
 class Recipe1MDataModule(pl.LightningDataModule):
@@ -31,9 +33,13 @@ class Recipe1MDataModule(pl.LightningDataModule):
     def prepare_data(self):
         if not os.path.isdir(self.dataset_config.pre_processing.save_path):
             print("Pre-processing Recipe1M dataset.")
-            run_dataset_pre_processing(
+            vocab_ingrs, dataset = run_dataset_pre_processing(
                 self.dataset_config.path, self.dataset_config.pre_processing
             )
+            train_subs, val_subs, test_subs = run_comment_pre_processing(
+                self.dataset_config.path, self.dataset_config.pre_processing.save_path, vocab_ingrs, dataset)
+            create_pre_processed_recipesubs_data(self.dataset_config.pre_processing.save_path, 
+                                                 dataset, {"train": train_subs, "val": val_subs, "test": test_subs})
 
     def setup(self, stage: Optional[str] = None):
         if stage == "fit":
