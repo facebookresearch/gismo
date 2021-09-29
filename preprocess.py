@@ -16,12 +16,8 @@ def main(cfg: RawConfig) -> None:
     `python preprocess.py dataset=recipe1m`
     """
     vocab_ingrs, dataset = run_dataset_pre_processing(cfg.dataset.path, cfg.dataset.pre_processing)
-    # the next 3 lines are pending some updates from Bahare before they can be removed
-    substitution_files = ["train_comments_subs.pkl", "val_comments_subs.pkl", "test_comments_subs.pkl"] 
-    substitution_files = [os.path.join(cfg.dataset.pre_processing.save_path, file) for file in substitution_files]
-    if not all([os.path.exists(file) for file in substitution_files]):
-        run_comment_pre_processing(cfg.dataset.path, cfg.dataset.pre_processing.save_path, vocab_ingrs, dataset)
-    create_pre_processed_recipesubs_data(cfg.dataset.pre_processing.save_path, dataset)
+    train_subs, val_subs, test_subs = run_comment_pre_processing(cfg.dataset.path, cfg.dataset.pre_processing.save_path, vocab_ingrs, dataset)
+    create_pre_processed_recipesubs_data(cfg.dataset.pre_processing.save_path, dataset, {"train": train_subs, "val": val_subs, "test": test_subs})
 
 if __name__ == "__main__":
     main()

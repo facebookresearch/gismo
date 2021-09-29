@@ -1,10 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 
 import os
-import json
 import pickle
 
-def create_pre_processed_recipesubs_data(pre_processed_dir: str, recipe_dataset: dict):
+def create_pre_processed_recipesubs_data(pre_processed_dir: str, recipe_dataset: dict, substitution_dataset: dict):
 
     dataset = {"train": [], "val": [], "test": []}
 
@@ -14,23 +13,16 @@ def create_pre_processed_recipesubs_data(pre_processed_dir: str, recipe_dataset:
         recipe_dataset_split = recipe_dataset[split]
 
         # load substitutions dataset
-        substitutions_dataset = pickle.load(
-            open(
-                os.path.join(
-                    pre_processed_dir, split + "_comments_subs.pkl"
-                ),
-                "rb",
-            )
-        )
+        substitution_dataset_split = substitution_dataset[split]
 
         # get all recipe ids
         recipe_ids = [recipe["id"] for recipe in recipe_dataset_split]
 
         # create recipesubs dataset  
-        for i, subs in enumerate(substitutions_dataset):
+        for i, subs in enumerate(substitution_dataset_split):
 
             if i % 500 == 0:
-                print(f"Processing {i} out of {len(substitutions_dataset)} samples.")
+                print(f"Processing {i} out of {len(substitution_dataset_split)} samples.")
 
             try:
                 found_id = recipe_ids.index(subs["id"])
@@ -51,7 +43,7 @@ def create_pre_processed_recipesubs_data(pre_processed_dir: str, recipe_dataset:
             dataset[split].append(new_entry)
 
         print(f"Recipe {split} has {len(recipe_dataset_split)} samples.")
-        print(f"Substitutions {split} has {len(substitutions_dataset)} samples.")
+        print(f"Substitutions {split} has {len(substitution_dataset_split)} samples.")
         print(f"Final {split} has {len(dataset[split])} samples.")
 
     # Save the dataset
