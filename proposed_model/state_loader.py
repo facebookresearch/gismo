@@ -19,7 +19,7 @@ def create_output_dir(base_dir, conf):
     params += "_with_titels_" + str(conf.with_titles)
     params += "_init_emb_" + str(conf.init_emb)
     params += "_lambda_" + str(conf.lambda_)
-    params += "_i_" + str(conf.i)
+    # params += "_i_" + str(conf.i)
 
     output_dir = os.path.join(base_dir, params)
 

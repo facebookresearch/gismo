@@ -203,7 +203,7 @@ class Trainer:
         return best_val_mrr, test_mrr, test_hits
 
     def train_recommender_gcn(self, cfg):
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         graph, train_dataset, val_dataset, test_dataset, ingrs, node_count2id, node_id2name, node_id2count, recipe_id2counter, I_two_hops = load_data(
             cfg.nr,
