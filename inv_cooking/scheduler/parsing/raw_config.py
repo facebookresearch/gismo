@@ -70,6 +70,7 @@ class RawConfig:
             config.optimization = experiment.optimization
             config.pretrained_im2ingr = experiment.pretrained_im2ingr
             config.ingr_teachforce = experiment.ingr_teachforce
+            config.with_substitutions = experiment.with_substitutions
             configs.append(config)
         return configs
 

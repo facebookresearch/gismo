@@ -115,6 +115,7 @@ def load_data_set(cfg):
 
 def _get_loading_options(cfg: Config) -> LoadingOptions:
     include_eos = requires_eos_token(cfg.ingr_predictor)
+    with_substitutions = cfg.with_substitutions
     if cfg.task == TaskType.im2ingr:
         return LoadingOptions(
             with_image=cfg.image_encoder.with_image_encoder,
@@ -128,6 +129,7 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
             with_ingredient=True,
             with_ingredient_eos=include_eos,
             with_recipe=True,
+            with_substitutions=with_substitutions,
         )
     elif cfg.task == TaskType.ingr2recipe:
         return LoadingOptions(

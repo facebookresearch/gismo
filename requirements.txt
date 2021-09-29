@@ -8,3 +8,4 @@ pytorch-lightning==1.0.8
 tensorboard==2.4.0
 timm==0.3.2
 submitit==1.1.5
+spacy==3.1.3

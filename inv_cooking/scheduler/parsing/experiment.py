@@ -59,6 +59,7 @@ class Experiment:
     optimization: OptimizationConfig = OptimizationConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()
     ingr_teachforce: IngredientTeacherForcingConfig = IngredientTeacherForcingConfig()
+    with_substitutions: bool = False
 
 
 def parse_experiments(db: Experiments, task: str, name: str) -> List[Experiment]:

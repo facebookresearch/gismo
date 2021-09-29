@@ -8,6 +8,7 @@ im2recipe:
     freeze: False 
     load_pretrained_from: None
   recipe_gen: recipe_gen_tf
+  with_substitutions: False
   optimization:
     seed: 1235
     lr: 0.001

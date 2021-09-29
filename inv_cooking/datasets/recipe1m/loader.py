@@ -97,7 +97,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
         if which_split == "val":
             splits_filename = os.path.join(
                 self.dataset_config.splits_path, which_split + ".txt"
-            )  ## PROBLEM IS HERE
+            )
             with open(splits_filename, "r") as f:
                 selected_indices = np.array([int(line.rstrip("\n")) for line in f])
         else:

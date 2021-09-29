@@ -21,6 +21,7 @@ class LoadingOptions:
     with_recipe: bool = False
     with_title: bool = False
     with_id: bool = False
+    with_substitutions: bool = False
 
     def need_load(self) -> bool:
         return (
@@ -28,6 +29,8 @@ class LoadingOptions:
             or self.with_ingredient
             or self.with_recipe
             or self.with_title
+            or self.with_id
+            or self.with_substitutions
         )
 
 
@@ -44,7 +47,7 @@ class Recipe1M(data.Dataset):
         selected_indices: np.ndarray = None,
     ):
         self.image_dir = os.path.join(data_dir, "images", split)
-        self.pre_processed_dir = preprocessed_folder  # os.path.join(data_dir, "preprocessed")  ## PROBLEM IS HERE
+        self.pre_processed_dir = preprocessed_folder
         self.split = split
         self.max_num_images = filtering.max_num_images
         self.max_num_labels = filtering.max_num_labels
@@ -108,11 +111,12 @@ class Recipe1M(data.Dataset):
             )
 
         # load dataset
+        dataset_filename = "final_recipe1msubs_" if self.loading.with_substitutions else "final_recipe1m_"
         if self.loading.need_load():
             self.dataset = pickle.load(
                 open(
                     os.path.join(
-                        self.pre_processed_dir, "final_recipe1m_" + split + ".pkl"
+                        self.pre_processed_dir, dataset_filename + split + ".pkl"
                     ),
                     "rb",
                 )
@@ -122,7 +126,7 @@ class Recipe1M(data.Dataset):
                 """Dataset loader asked to not return images, nor ingredients, nor titles, nor recipes. 
                                 Please set either return_images, return_ingr or return_recipe to True."""
             )
-
+        
         if use_lmdb:
             # open lmdb file
             self.image_file = lmdb.open(
@@ -141,7 +145,7 @@ class Recipe1M(data.Dataset):
                 continue
             ids.append(i)
 
-        if selected_indices is not None:
+        if selected_indices is not None and not self.loading.with_substitutions:
             selected_indices = [s for s in selected_indices if s < len(ids)]
             ids = np.array(ids)[selected_indices]
         self.dataset = [self.dataset[i] for i in ids]
@@ -159,8 +163,9 @@ class Recipe1M(data.Dataset):
         recipe = self._load_recipe(index) if self.loading.with_recipe else None
         title = self._load_title(index) if self.loading.with_title else None
         id = self._load_id(index) if self.loading.with_id else None
+        substitution = self._load_substitution(index) if self.loading.with_substitutions else None
 
-        return image, ret_ingr, title, recipe, id
+        return image, ret_ingr, title, recipe, id, substitution
 
     def load_ingredients(self, index: int):
         raw_ingredients = self.dataset[index]["ingredients"]
@@ -218,6 +223,10 @@ class Recipe1M(data.Dataset):
     def _load_id(self, index: int):
         id = self.dataset[index]["id"]
         return id
+    
+    def _load_substitution(self, index: int):
+        substitution = self.dataset[index]["substitution"]
+        return substitution
 
     def _load_title(self, index: int):
         tokens = self.dataset[index]["title"]
@@ -250,7 +259,7 @@ class Recipe1M(data.Dataset):
 
     @staticmethod
     def collate_fn(data):
-        img, ingr, title, recipe, id = zip(*data)
+        img, ingr, title, recipe, id, substitution = zip(*data)
         ret = {}
         # Merge images, ingredients and recipes in minibatch
         if img[0] is not None:
@@ -263,6 +272,8 @@ class Recipe1M(data.Dataset):
             ret["recipe"] = torch.tensor(recipe)
         if id is not None:
             ret["id"] = id
+        if substitution is not None:
+            ret["substitution"] = substitution
         return ret
 
     def get_ingr_vocab(self):

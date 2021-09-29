@@ -95,7 +95,10 @@ class ImageToRecipe(_BaseModule):
 
     def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
         out = self(
-            compute_losses=True, use_ingr_pred=not self.ingr_teachforce.train, **batch
+            image=batch["image"],
+            ingredients=batch["ingredients"],
+            recipe=batch["recipe"],
+            compute_losses=True, use_ingr_pred=not self.ingr_teachforce.train,
         )
         return out[0]
 
@@ -107,7 +110,9 @@ class ImageToRecipe(_BaseModule):
 
     def _evaluation_step(self, batch: Dict[str, torch.Tensor], use_ingr_pred: bool):
         out = self(
-            **batch,
+            image=batch["image"],
+            ingredients=batch["ingredients"],
+            recipe=batch["recipe"],
             use_ingr_pred=use_ingr_pred,
             compute_predictions=False,
             compute_losses=True,

@@ -18,7 +18,7 @@ class TaskType(Enum):
     im2title = 3
     ingrsubs = 4
 
-
+    
 @dataclass
 class CheckpointConfig:
     log_folder: str = MISSING
@@ -69,3 +69,4 @@ class Config:
     slurm: SlurmConfig = SlurmConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()
     ingr_teachforce: IngredientTeacherForcingConfig = IngredientTeacherForcingConfig()
+    with_substitutions: bool = MISSING
