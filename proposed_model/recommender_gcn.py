@@ -133,7 +133,7 @@ class Trainer:
         # cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-27/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-28/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
@@ -203,7 +203,7 @@ class Trainer:
         return best_val_mrr, test_mrr, test_hits
 
     def train_recommender_gcn(self, cfg):
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         graph, train_dataset, val_dataset, test_dataset, ingrs, node_count2id, node_id2name, node_id2count, recipe_id2counter, I_two_hops = load_data(
             cfg.nr,
