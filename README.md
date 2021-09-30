@@ -33,6 +33,13 @@ pip install -e ".[dev]"
 
 ```bash
 python -c "import nltk; nltk.download('punkt')"
+python3 -m spacy download en_core_web_lg
+```
+
+- Verify that the install worked
+
+```bash
+python -c "import spacy; spacy.load('en_core_web_lg')"
 ```
 
 <br>
