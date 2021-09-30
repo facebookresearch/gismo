@@ -1,7 +1,7 @@
 import os
 import pickle
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, List
 
 import lmdb
 import numpy as np
@@ -155,19 +155,35 @@ class Recipe1M(data.Dataset):
 
     def __getitem__(
         self, index: int
-    ) -> Tuple[Image.Image, "ingredients", "title", "recipe", "id"]:
+    ) -> Tuple[Image.Image, "ingredients", "title", "recipe", "id", "substituted_ingredients"]:
+        """
+        Return the relevant elements of the recipe (all optional):
+        - image of the finished recipe
+        - list of ingredients for the recipe (list of index in ingredient vocabulary)
+        - title of the recipe (list of index in title vocabulary)
+        - recipe instructions (list of index in instruction vocabulary)
+        - id of the recipe (integer)
+        - list of substituted ingredients (new ingredients proposed by a different model)
+        """
         image = self._load_image(index) if self.loading.with_image else None
-        ret_ingr = (
+        ingredients = (
             self.load_ingredients(index) if self.loading.with_ingredient else None
         )
         recipe = self._load_recipe(index) if self.loading.with_recipe else None
         title = self._load_title(index) if self.loading.with_title else None
         id = self._load_id(index) if self.loading.with_id else None
-        substitution = self._load_substitution(index) if self.loading.with_substitutions else None
 
-        return image, ret_ingr, title, recipe, id, substitution
+        # In case we are interested in ingredient substitutions, load the substitution
+        # and apply it to the list of ingredient to get a new list of ingredients and
+        # return both as outputs
+        subs_ingredients = None
+        if self.loading.with_substitutions:
+            old_ingr, new_ingr = self._load_substitution(index)
+            subs_ingredients = self._apply_ingredient_substitution(ingredients, new_ingr, old_ingr)
 
-    def load_ingredients(self, index: int):
+        return image, ingredients, title, recipe, id, subs_ingredients
+
+    def load_ingredients(self, index: int) -> List[int]:
         raw_ingredients = self.dataset[index]["ingredients"]
 
         # Map string ingredient to their vocabulary index
@@ -220,15 +236,21 @@ class Recipe1M(data.Dataset):
             image = self.transform(image)
         return image
 
-    def _load_id(self, index: int):
+    def _load_id(self, index: int) -> int:
         id = self.dataset[index]["id"]
         return id
-    
-    def _load_substitution(self, index: int):
-        substitution = self.dataset[index]["substitution"]
-        return substitution
 
-    def _load_title(self, index: int):
+    def _load_substitution(self, index: int) -> Tuple[int, int]:
+        old_ingredient, new_ingredient = self.dataset[index]["substitution"]
+        old_ingredient = self.ingr_vocab(old_ingredient)
+        new_ingredient = self.ingr_vocab(new_ingredient)
+        return old_ingredient, new_ingredient
+
+    @staticmethod
+    def _apply_ingredient_substitution(ingredients: List[int], old_ingr: int, new_ingr: int) -> List[int]:
+        return [(ingr if ingr != old_ingr else new_ingr) for ingr in ingredients]
+
+    def _load_title(self, index: int) -> List[int]:
         tokens = self.dataset[index]["title"]
         out = [self.title_vocab(token) for token in tokens]
         out.append(self.title_vocab("<end>"))
@@ -237,7 +259,7 @@ class Recipe1M(data.Dataset):
         out = out + [self.title_vocab("<pad>")] * pad_count
         return out
 
-    def _load_recipe(self, index: int):
+    def _load_recipe(self, index: int) -> List[int]:
         title = self.dataset[index]["title"]
         instructions = self.dataset[index]["tokenized"]
         tokens = []
