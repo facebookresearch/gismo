@@ -6,8 +6,8 @@ with_titles: False
 lambda_: 0.0
 init_emb: "random"
 two_hops: False
-epochs: 1000
-val_itr: 100
+epochs: 500
+val_itr: 50
 ntrials: 1
 train_batch_size: 1000
 val_test_batch_size: 50
@@ -20,3 +20,4 @@ dropout: 0.5
 nlayers: 2
 nr: 400
 add_self_loop: False
+data_augmentation: False
