@@ -179,7 +179,7 @@ class Recipe1M(data.Dataset):
         subs_ingredients = None
         if self.loading.with_substitutions:
             old_ingr, new_ingr = self._load_substitution(index)
-            subs_ingredients = self._apply_ingredient_substitution(ingredients, new_ingr, old_ingr)
+            subs_ingredients = self._apply_ingredient_substitution(ingredients, old_ingr, new_ingr)
 
         return image, ingredients, title, recipe, id, subs_ingredients
 
