@@ -292,10 +292,10 @@ class Recipe1M(data.Dataset):
             ret["title"] = torch.tensor(title)
         if recipe[0] is not None:
             ret["recipe"] = torch.tensor(recipe)
-        if id is not None:
+        if id[0] is not None:
             ret["id"] = id
-        if substitution is not None:
-            ret["substitution"] = substitution
+        if substitution[0] is not None:
+            ret["substitution"] = torch.tensor(substitution)
         return ret
 
     def get_ingr_vocab(self):
