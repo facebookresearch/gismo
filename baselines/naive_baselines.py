@@ -6,22 +6,28 @@ import utils
 from metrics import Metrics
 
 
-def context_free_examples(examples, vocabs, mode=0):
+def context_free_examples(examples, vocabs, mode=0, data_augmentation=0):
     output = []
     for example in examples:
         subs = example["subs"]
         subs = vocabs.word2idx[subs[0]], vocabs.word2idx[subs[1]]
         if mode == 0:
             output.append(subs)
+
+            if data_augmentation:
+                subs_inv = subs[::-1]
+                output.append(subs_inv)
         elif mode == 1:
             if subs not in output:
                 output.append(subs)
+        
+
     return output
 
 
 def load_split_data(split):
     examples = json.load(
-        open("../data/substitutions/" + split + "_comments_subs.txt", "r")
+        open("../preprocessed_data/" + split + "_comments_subs.pkl", "r")
     )
     return examples
 
@@ -130,9 +136,9 @@ def test_lookup_table(test_examples, train_examples, vocabs, all_ids):
     return metric.normalize()
 
 
-def test_lookup_table_frequency(test_examples, train_examples, vocabs, all_ids):
+def test_lookup_table_frequency(test_examples, train_examples, vocabs, all_ids, data_augmentation=0):
     metric = Metrics()
-    train_examples_cf = context_free_examples(train_examples, vocabs)
+    train_examples_cf = context_free_examples(train_examples, vocabs, data_augmentation=data_augmentation)
     lookup_table = create_lookup_table_ingredient_frequency(train_examples_cf, vocabs)
     test_examples_cf = context_free_examples(test_examples, vocabs)
 
@@ -234,8 +240,10 @@ def find_hard_examples(test_examples, train_examples):
 
 if __name__ == "__main__":
 
+    data_augmentation = 0
     train_examples = load_split_data("train")
     test_examples = load_split_data("test")
+    val_examples = load_split_data("val")
     vocabs, all_ids = load_vocab()
 
     mrrs = []
@@ -248,7 +256,7 @@ if __name__ == "__main__":
         # mrr, hit1, hit3, hit10 = test_mode(test_examples, train_examples, vocabs, all_ids)
         # mrr, hit1, hit3, hit10 =  test_frequency(test_examples, train_examples, vocabs, all_ids)
         mrr, hit1, hit3, hit10 = test_lookup_table_frequency(
-            test_examples, train_examples, vocabs, all_ids
+            val_examples, train_examples, vocabs, all_ids, data_augmentation=data_augmentation
         )
         mrrs.append(mrr)
         hits1.append(hit1)
