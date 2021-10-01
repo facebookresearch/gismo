@@ -1,4 +1,3 @@
-import pytorch_lightning as pl
 import torch
 from pytorch_lightning import seed_everything
 
@@ -7,17 +6,19 @@ from inv_cooking.utils.checkpointing import (
     list_available_checkpoints,
     select_best_checkpoint,
 )
+from inv_cooking.utils.visualisation.im2recipe import Im2RecipeVisualiser
 
-from .trainer import create_model, load_data_set
+from inv_cooking.training.trainer import create_model, load_data_set
 
 
-def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
+def run_visualisation(cfg: Config) -> None:
     seed_everything(cfg.optimization.seed)
+    assert cfg.eval_checkpoint_dir, "You need to provide a checkpoint to visualize"
 
     checkpoint_dir = cfg.eval_checkpoint_dir
     all_checkpoints = list_available_checkpoints(checkpoint_dir)
     if len(all_checkpoints) == 0:
-        raise ValueError(f"Checkpoint {checkpoint_dir} does not exist.")
+        raise ValueError(f"Checkpoint {checkpoint_dir} does not exist or does not contain any checkpoints.")
 
     # Creating the data module
     data_module = load_data_set(cfg)
@@ -37,19 +38,15 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
     model.on_load_checkpoint(checkpoint)  # callback of our models
     model.load_state_dict(checkpoint['state_dict'], strict=True)
 
-    # Create the training, initializing from the provided checkpoint
-    trainer = pl.Trainer(
-        gpus=gpus,
-        num_nodes=nodes,
-        accelerator=distributed_mode,
-        benchmark=True,  # increases speed for fixed image sizes
-        precision=32,
-        # resume_from_checkpoint=best_checkpoint,
-    )
+    # Dump the model and data_module, so that they can be used to play in a
+    # jupyter notebook later
+    result = {
+        "model": model,
+        "data_module": data_module,
+    }
+    torch.save(result, "/checkpoint/qduval/inversecooking2.0/model_and_module_subs.torch")
 
-    # Run the evaluation on the module
-    trainer.test(
-        model,
-        datamodule=data_module,
-        # ckpt_path = best_checkpoint,
-    )
+    # Take some example of data and print the corresponding recipes
+    visualizer = Im2RecipeVisualiser(model=model, data_module=data_module)
+    visualizer.visualize()
+

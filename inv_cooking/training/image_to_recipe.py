@@ -103,15 +103,29 @@ class ImageToRecipe(_BaseModule):
         return out[0]
 
     def validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        return self._evaluation_step(batch, use_ingr_pred=not self.ingr_teachforce.val)
+        return self._evaluation_step(
+            batch,
+            use_ingr_pred=not self.ingr_teachforce.val,
+            use_ingr_substitutions=False,
+        )
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        return self._evaluation_step(batch, use_ingr_pred=not self.ingr_teachforce.test)
+        return self._evaluation_step(
+            batch,
+            use_ingr_pred=not self.ingr_teachforce.test,
+            use_ingr_substitutions="substitution" in batch
+        )
 
-    def _evaluation_step(self, batch: Dict[str, torch.Tensor], use_ingr_pred: bool):
+    def _evaluation_step(
+        self,
+        batch: Dict[str, torch.Tensor],
+        use_ingr_pred: bool,
+        use_ingr_substitutions: bool,
+    ):
+        ingredients = batch["ingredients"] if not use_ingr_substitutions else batch["substitution"]
         out = self(
             image=batch["image"],
-            ingredients=batch["ingredients"],
+            ingredients=ingredients,
             recipe=batch["recipe"],
             use_ingr_pred=use_ingr_pred,
             compute_predictions=False,

@@ -1,9 +1,12 @@
+from enum import Enum, auto
+
 import submitit
 from omegaconf import OmegaConf
 
 from inv_cooking.config import Config
 from inv_cooking.scheduler.parsing import RawConfig
 from inv_cooking.training import run_eval, run_training
+from inv_cooking.training.visualise import run_visualisation
 from inv_cooking.utils.hydra import copy_source_code_to_cwd
 from inv_cooking.utils.slurm import get_job_id
 
@@ -11,7 +14,13 @@ from inv_cooking.utils.slurm import get_job_id
 OmegaConf.register_resolver("slurm_job_id", get_job_id)
 
 
-def schedule_jobs(cfg: RawConfig, training_mode: bool) -> None:
+class TrainingMode(Enum):
+    TRAIN = auto()
+    EVALUATE = auto()
+    VISUALIZE = auto()
+
+
+def schedule_jobs(cfg: RawConfig, training_mode: TrainingMode) -> None:
     # Because Hydra create a new running folder, we copy code and data to this
     # location (to have an isolated working copy). This should be done even in
     # case the process is spawn by Pytorch Lightning in the context of DDP
@@ -27,17 +36,19 @@ def schedule_jobs(cfg: RawConfig, training_mode: bool) -> None:
             _schedule_job_on_slurm(config, training_mode)
 
 
-def _schedule_job_locally(cfg: Config, training_mode: bool):
+def _schedule_job_locally(cfg: Config, training_mode: TrainingMode):
     nb_gpu = cfg.slurm.gpus_per_node
-    if training_mode:
+    if training_mode == TrainingMode.TRAIN:
         run_training(
             cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp", load_checkpoint=False
         )
-    else:
+    elif training_mode == TrainingMode.EVALUATE:
         run_eval(cfg, gpus=nb_gpu, nodes=1, distributed_mode="ddp")
+    elif training_mode == TrainingMode.VISUALIZE:
+        run_visualisation(cfg)
 
 
-def _schedule_job_on_slurm(cfg: Config, training_mode: bool):
+def _schedule_job_on_slurm(cfg: Config, training_mode: TrainingMode):
     nb_gpus = cfg.slurm.gpus_per_node
     executor = submitit.AutoExecutor(folder=cfg.checkpoint.log_folder)
     executor.update_parameters(
@@ -53,7 +64,7 @@ def _schedule_job_on_slurm(cfg: Config, training_mode: bool):
         mem_gb=cfg.slurm.mem_by_gpu * nb_gpus,
     )
 
-    if training_mode:
+    if training_mode == TrainingMode.TRAIN:
         trainer = ResumableTrainer(config=cfg, nb_gpu=nb_gpus, nb_node=cfg.slurm.nodes)
         job = executor.submit(
             trainer,

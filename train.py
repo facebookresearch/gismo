@@ -1,6 +1,7 @@
 import hydra
 
 from inv_cooking.scheduler import schedule_jobs, RawConfig
+from inv_cooking.scheduler.scheduler import TrainingMode
 
 
 @hydra.main(config_path="conf", config_name="config")
@@ -11,7 +12,7 @@ def main(cfg: RawConfig) -> None:
     Example usage:
     `python train.py task=im2recipe name=im2recipe slurm=dev`
     """
-    schedule_jobs(cfg, training_mode=True)
+    schedule_jobs(cfg, training_mode=TrainingMode.TRAIN)
 
 
 if __name__ == "__main__":

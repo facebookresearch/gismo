@@ -67,3 +67,12 @@ im2recipe_vit32:
     freeze: True
     load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47053824/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1.ckpt
     # load_pretrained_from: /checkpoint/qduval/inversecooking2.0/46838934/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1-cpu.ckpt
+
+eval_substitution_im2recipe_invcooking1:
+  comment: 'evaluating the im2recipe pipeline with substituted ingredients (to be used with eval.py)'
+  parent: im2recipe
+  with_substitutions: True
+  ingr_teachforce:
+    # The goal is to force the ingredients even in the test
+    # to replace the ingredients with the substitutions
+    test: True

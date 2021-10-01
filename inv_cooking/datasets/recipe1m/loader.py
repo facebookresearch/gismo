@@ -26,9 +26,9 @@ class Recipe1MDataModule(pl.LightningDataModule):
         self.dataset_config = dataset_config
         self.seed = seed
         self.loading_options = loading_options
-        self.checkpoint = (
-            checkpoint  ## TODO: check how checkpoint is performed in lightning
-        )
+
+        # TODO: check how checkpoint is performed in lightning
+        self.checkpoint = checkpoint
 
     def prepare_data(self):
         if not os.path.isdir(self.dataset_config.pre_processing.save_path):
@@ -57,7 +57,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             print(
                 f"Eval split: {self.dataset_config.eval_split} composed of {len(self.dataset_test)} samples."
             )
-            self.title_vocab_size = self.dataset_train.get_title_vocab_size()
+            self.title_vocab_size = self.dataset_test.get_title_vocab_size()
             self.ingr_vocab_size = self.dataset_test.get_ingr_vocab_size()
             self.instr_vocab_size = self.dataset_test.get_instr_vocab_size()
             self.ingr_eos_value = self.dataset_test.ingr_eos_value
