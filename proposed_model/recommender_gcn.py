@@ -28,12 +28,6 @@ class Trainer:
             embeddings.shape[0], embeddings.shape[2]
         )
 
-    def embed_context_slow(self, embeddings, indices, nr):
-        context_emb = torch.sum(embeddings, dim=1)
-        mask = indices > 0
-        norm = torch.sum(mask, 1).view(-1, 1)
-        return context_emb / norm
-
     def get_model_output(self, model, indices, context, nr, name, I_two_hops, lambda_, embeddings=None):
         if name == "GCN" or name == "SAGE" or name == "GIN" or name == "GAT":
             if embeddings is None:
@@ -50,8 +44,6 @@ class Trainer:
                 embs = embeddings[indices[:, :2]]
                 ing1 = embs[:, 0]
                 ing2 = embs[:, 1]
-            # compute cosine similarities
-            # sims = cos_layer(ing1, ing2)
             sims = torch.bmm(ing1.unsqueeze(1), ing2.unsqueeze(2))
         elif name == "GIN_MLP":
             sims = model(indices, context)
@@ -69,15 +61,14 @@ class Trainer:
             else:
                 print("The model MLP_ATT is not defined in the context-free setup")
                 exit()
-
         sims += lambda_ * I_two_hops[indices[:, 0], indices[:, 1]].view(-1, 1)
         return sims
 
     def get_rank(self, scores):
         mask = scores[:, 0].repeat(scores.shape[1]).view(scores.shape[1], -1).T
         predicted_index = torch.max(scores, dim=1).indices
-        ranks = torch.sum(scores >= mask, 1) - 1
-        ranks[ranks < 1] = 1
+        ranks = torch.sum(scores >= mask, 1)
+
         return ranks, predicted_index
 
     def get_loss_test(self, model, dataloader, n_ingrs, context, name, rank_file_path, I_two_hops, lambda_):
@@ -113,7 +104,7 @@ class Trainer:
         return mrr, hits
 
     def train_classification_gcn(
-        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops
+        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs
     ):
 
         model = globals()[cfg.name](
@@ -130,10 +121,9 @@ class Trainer:
         ).to(device)
 
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
-        # cos_layer = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-28/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-30/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
@@ -158,7 +148,6 @@ class Trainer:
         for epoch in range(model.epoch.cpu().item() + 1, cfg.epochs + 1):
             model.train()
             epoch_loss = 0.0
-            start_time = time.time()
             for train_batch in train_dataloader:
                 indices = train_batch[:, :-1]
                 sims = self.get_loss(model, indices, cfg.nr, context, cfg.name, I_two_hops, cfg.lambda_)
@@ -168,9 +157,7 @@ class Trainer:
                 loss.backward()
                 opt.step()
                 epoch_loss += loss.cpu().item()
-            print(time.time()-start_time)
             print(epoch, epoch_loss)
-            # print("eps", model.layers[0].eps.cpu().item())
             model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
             save_model(model, opt, output_dir, is_best_model=False)
             if epoch % cfg.val_itr == 0:
@@ -211,6 +198,7 @@ class Trainer:
             cfg.add_self_loop,
             cfg.two_hops,
             cfg.neg_sampling,
+            cfg.data_augmentation,
             device,
             dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
         )
@@ -228,7 +216,7 @@ class Trainer:
         val_dataloader = DataLoader(
             val_dataset,
             batch_size=int(cfg.val_test_batch_size),
-            shuffle=True,
+            shuffle=False,
             sampler=None,
             batch_sampler=None,
             num_workers=0,
@@ -237,7 +225,7 @@ class Trainer:
         test_dataloader = DataLoader(
             test_dataset,
             batch_size=int(cfg.val_test_batch_size),
-            shuffle=True,
+            shuffle=False,
             sampler=None,
             batch_sampler=None,
             num_workers=0,
@@ -249,7 +237,7 @@ class Trainer:
         test_hits_arr = []
         for trial in range(cfg.ntrials):
             val_mrr, test_mrr, test_hits = self.train_classification_gcn(
-                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops
+                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs
             )
             val_mrr_arr.append(val_mrr)
             test_mrr_arr.append(test_mrr)
