@@ -352,7 +352,6 @@ def run_comment_pre_processing(recipe1m_path: str, preprocessed_dir: str, vocab_
         train_dataset,
         val_dataset,
         test_dataset,
-        recipe1m_path,
         vocab_ingrs,
         splits,
         train_dataset_path,
