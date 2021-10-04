@@ -44,7 +44,7 @@ def run_visualisation(cfg: Config) -> None:
         "model": model,
         "data_module": data_module,
     }
-    torch.save(result, "/checkpoint/qduval/inversecooking2.0/model_and_module_subs.torch")
+    torch.save(result, "model_and_module.torch")
 
     # Take some example of data and print the corresponding recipes
     visualizer = Im2RecipeVisualiser(model=model, data_module=data_module)
