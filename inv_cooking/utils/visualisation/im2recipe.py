@@ -1,4 +1,6 @@
+import math
 from typing import Optional, Dict, Any
+from PIL import Image
 
 import torch
 
@@ -16,22 +18,42 @@ class Im2RecipeVisualiser:
         self.model = model
         self.data_module = data_module
 
-    def visualize(self):
+    def visualize(
+        self,
+        swap_images: bool = False,
+        gray_images: bool = False,
+        with_substitutions: bool = False,
+        batch_size: int = 0
+    ):
         """
         Function that combines the sampling of an input, passing through the model,
         and display of the result.
 
         Use the other functions individually for finer control.
         """
-        batch = self.sample_input()
-        batch, losses, ingr_predictions, recipe_predictions = self.sample_output(batch)
+        batch = self.sample_input(batch_size=batch_size)
+
+        # Investigation of the important of images:
+        # - roll images (each input gets the image of the next input)
+        # - replace images by gray images
+        if swap_images:
+            batch["image"] = batch["image"].roll(shifts=[1], dims=[0])
+        if gray_images:
+            images = batch["images"]
+            batch["image"] = torch.zeros(size=images.shape, dtype=images.dtype, device=images.device)
+
+        # Pass inputs to the model and display the outputs
+        batch, losses, ingr_predictions, recipe_predictions = self.sample_output(
+            batch,
+            with_substitutions=with_substitutions
+        )
         self.display_sample(batch, losses, ingr_predictions, recipe_predictions)
 
-    def sample_input(self):
+    def sample_input(self, batch_size: int = 0):
         """
         Sample a batch input from the data loader
         """
-        loader = self.data_module.test_dataloader()
+        loader = self.data_module.test_dataloader(batch_size=batch_size)
         return next(iter(loader))
 
     def sample_output(self, batch: Optional[dict] = None, with_substitutions: bool = False):
@@ -86,6 +108,34 @@ class Im2RecipeVisualiser:
 
             print("RECIPE (PRED):")
             self.display_recipe(recipe_predictions[i], instr_vocab)
+
+    @classmethod
+    def display_image(cls, image_tensor: torch.Tensor):
+        import matplotlib.pyplot as plt
+
+        if image_tensor.ndim == 3:
+            image = cls.tensor_to_image(image_tensor)
+            plt.imshow(image)
+        elif image_tensor.ndim == 4:
+            num_images = image_tensor.size(0)
+            images = [cls.tensor_to_image(t) for t in image_tensor]
+
+            num_columns = 2
+            num_rows = int(math.ceil(num_images / num_columns))
+            fig, ax = plt.subplots(figsize=(4 * num_columns, 4 * num_rows), ncols=num_columns, nrows=num_rows)
+            for i in range(num_images):
+                x, y = divmod(i, num_columns)
+                ax[x, y].imshow(images[i])
+            plt.show()
+
+    @staticmethod
+    def tensor_to_image(tensor: torch.Tensor):
+        sigma = torch.as_tensor((0.229, 0.224, 0.225), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
+        mu = torch.as_tensor((0.485, 0.456, 0.406), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
+        tensor.mul_(sigma).add_(mu)
+        tensor = tensor.permute((1, 2, 0))
+        array = tensor.cpu().detach().numpy()
+        return Image.fromarray(array, mode="RGB")
 
     @staticmethod
     def display_ingredients(prediction: torch.Tensor, vocab: Vocabulary):

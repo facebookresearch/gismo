@@ -78,16 +78,16 @@ class Recipe1MDataModule(pl.LightningDataModule):
         )
         return data_loader
 
-    def val_dataloader(self):
-        return self._shared_eval_dataloader("val")
+    def val_dataloader(self, batch_size: int = 0):
+        return self._shared_eval_dataloader("val", batch_size=batch_size)
 
-    def test_dataloader(self):
-        return self._shared_eval_dataloader("test")
+    def test_dataloader(self, batch_size: int = 0):
+        return self._shared_eval_dataloader("test", batch_size=batch_size)
 
-    def _shared_eval_dataloader(self, split: str):
+    def _shared_eval_dataloader(self, split: str, batch_size: int = 0):
         data_loader = torch.utils.data.DataLoader(
             dataset=self.dataset_val if split == "val" else self.dataset_test,
-            batch_size=self.dataset_config.loading.batch_size,
+            batch_size=batch_size or self.dataset_config.loading.batch_size,
             shuffle=False,
             num_workers=self.dataset_config.loading.num_workers,
             drop_last=False,

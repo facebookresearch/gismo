@@ -281,9 +281,12 @@ class Recipe1M(data.Dataset):
 
     @staticmethod
     def collate_fn(data):
+        """
+        Merge images, ingredients, recipe and other elements of the dataset
+        into a batch, a dictionary of strings to tensors
+        """
         img, ingr, title, recipe, id, substitution = zip(*data)
         ret = {}
-        # Merge images, ingredients and recipes in minibatch
         if img[0] is not None:
             ret["image"] = torch.stack(img, 0)
         if ingr[0] is not None:

@@ -113,7 +113,7 @@ class ImageToRecipe(_BaseModule):
         return self._evaluation_step(
             batch,
             use_ingr_pred=not self.ingr_teachforce.test,
-            use_ingr_substitutions="substitution" in batch
+            use_ingr_substitutions=False,
         )
 
     def _evaluation_step(
