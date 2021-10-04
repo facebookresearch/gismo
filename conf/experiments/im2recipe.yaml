@@ -39,7 +39,8 @@ im2recipe_invcooking1.0:
   parent: im2recipe
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v0.ckpt
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47053846/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v2.ckpt
+    # load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v0.ckpt
     # load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
 
 im2recipe_invcooking1.0_concat_gelu:
@@ -48,7 +49,8 @@ im2recipe_invcooking1.0_concat_gelu:
   recipe_gen: recipe_gen_tf_gelu
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v0.ckpt
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47053846/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v2.ckpt
+    # load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best-v0.ckpt
     # load_pretrained_from: /checkpoint/adrianars/inversecooking2.0/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
 
 im2recipe_vit32:
@@ -63,4 +65,5 @@ im2recipe_vit32:
      freeze: False
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/46838934/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1-cpu.ckpt
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47053824/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1.ckpt
+    # load_pretrained_from: /checkpoint/qduval/inversecooking2.0/46838934/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1-cpu.ckpt
