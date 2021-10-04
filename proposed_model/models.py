@@ -242,6 +242,7 @@ class GIN_MLP(nn.Module):
         context_emb = torch.sum(embeddings, dim=1)
         mask = indices > 0
         norm = torch.sum(mask, 1).view(-1, 1)
+        norm[norm == 0] = 1
         return context_emb / norm
 
     def embed_title(self, indices):
@@ -455,4 +456,15 @@ class MLP_ATT(nn.Module):
             x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.layers[-1](x)
 
+        return x
+
+
+
+class LT(nn.Module):
+    def __init__(self, train_table):
+        super(LT, self).__init__()
+        self.train_table = train_table
+
+    def forward(self, indices):
+        x = self.train_table[indices[:, 0], indices[:, 1]]
         return x

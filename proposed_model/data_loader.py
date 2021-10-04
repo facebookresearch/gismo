@@ -200,6 +200,7 @@ def load_graph(add_self_loop, dir_, two_hops, device):
         ingredients_cnt,
         node_count2id,
         node_id2name,
+        nnodes
     )
 
 def compute_distances(graph):
@@ -214,6 +215,7 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         ingredients_cnt,
         node_count2id,
         node_id2name,
+        nnodes
     ) = load_graph(add_self_loop, dir_, two_hops, device)
     ingr_vocabs = pickle.load(
         open(
@@ -238,6 +240,7 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         recipe_id2counter,
         neg_sampling,
         data_augmentation,
+        nnodes
     )
 
     val_dataset = SubsData(
@@ -253,6 +256,7 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         train_dataset.recipe_id2counter,
         neg_sampling,
         data_augmentation,
+        nnodes
     )
 
     test_dataset = SubsData(
@@ -268,6 +272,7 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         val_dataset.recipe_id2counter,
         neg_sampling,
         data_augmentation,
+        nnodes
     )
 
     # pickle.dump(recipe_id2counter, open("/private/home/baharef/inversecooking2.0/proposed_model/titles_neede.pkl", "wb"))
@@ -302,7 +307,8 @@ class SubsData(data.Dataset):
         recipe_counter: int,
         recipe_id2counter: dict,
         neg_sampling: str,
-        data_augmentation: bool
+        data_augmentation: bool,
+        nnodes: int,
     ):
         self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.pkl")
         self.split = split
@@ -325,13 +331,24 @@ class SubsData(data.Dataset):
             self.dataset_list, self.ingr_vocab, self.max_context
         )
 
+        self.nnodes = nnodes
+        if self.split == "train":
+            self.lookup_table = self.create_lookup_table(self.dataset)
         print("Number of datapoints in", self.split, self.dataset.shape[0])
+
+    def create_lookup_table(self, dataset):
+        lookup_table = torch.zeros(self.nnodes, self.nnodes)
+        for ind in range(dataset.shape[0]):
+            ing1, ing2 = dataset[ind][0].item(), dataset[ind][1].item()
+            lookup_table[ing1, ing2] += 1
+        return lookup_table
 
     def context_full_examples(self, examples, vocabs, max_context):
 
-        if self.data_augmentation:
+        if self.split == "train" and self.data_augmentation:
             output = torch.full((2*len(examples), max_context + 3), 0)
         else:
+            # output = torch.full((len(examples), max_context + 3), 0)
             output = torch.full((len(examples), max_context + 3), 0)
 
         for ind, example in enumerate(examples):
@@ -363,9 +380,13 @@ class SubsData(data.Dataset):
             )
             output[ind, 0:2] = subs
             output[ind, 2] = id_counter
-            output[ind, 3:len(context) + 3] = context_ids
+            # output[ind, 3:len(context) + 3] = context_ids
 
-            if self.data_augmentation:
+            # Excluding ing1 from the context
+            context_ids = context_ids[context_ids != output[ind, 0]]
+            output[ind, 3:len(context_ids) + 3] = context_ids
+
+            if self.split == "train" and self.data_augmentation:
                 subs_inv = subs.flip(0)
                 context_ids_inv = context_ids.detach().clone()
                 context_ids_inv[context_ids_inv==subs[0]] = float(subs[1])

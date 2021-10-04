@@ -71,6 +71,32 @@ class Trainer:
 
         return ranks, predicted_index
 
+    def get_loss_lookup_table(self, dataloader, model, n_ingrs, rank_file_path):
+        rank_file = open(rank_file_path, "w")
+
+        mrr = 0.0
+        hits = {1: 0, 3: 0, 10: 0}
+        counter = 0
+        
+        for batch in dataloader:
+            sims = model(batch).view(-1, n_ingrs)
+            ranks, predicted_index = self.get_rank(sims)
+            mrr += torch.sum(1.0 / ranks)
+            for key in hits:
+                hits[key] += torch.sum(ranks <= key)
+            counter += len(ranks)
+
+            for ind in range(ranks.shape[0]):
+                rank_file.write(str(batch[ind*n_ingrs][0].cpu().item()) + " " + str(batch[ind*n_ingrs][1].cpu().item()) + " " + str(ranks[ind].cpu().item()) + " " + str(batch[ind*n_ingrs+predicted_index[ind].cpu().item()][1].cpu().item()) + "\n")
+
+        counter = float(counter)
+        mrr = float(mrr) * 100
+        mrr /= counter
+        for key in hits:
+            hits[key] = float(hits[key])
+            hits[key] /= counter / 100.0
+        return mrr, hits
+
     def get_loss_test(self, model, dataloader, n_ingrs, context, name, rank_file_path, I_two_hops, lambda_):
         rank_file = open(rank_file_path, "w")
         if name == "GCN":
@@ -104,8 +130,29 @@ class Trainer:
         return mrr, hits
 
     def train_classification_gcn(
-        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs
+        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, lookup_table
     ):
+        base_dir = os.path.join(
+            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-4/checkpoints/"
+        )
+        context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
+        output_dir = create_output_dir(base_dir, cfg)
+        ranks_file_val = os.path.join(output_dir, "val_ranks.txt")
+        ranks_file_test = os.path.join(output_dir, "test_ranks.txt")
+
+        if cfg.name == "lt":
+            model = LT(lookup_table)
+            print("No training is involved for this setup!")
+            val_mrr, val_hits = self.get_loss_lookup_table(
+                val_dataloader, model, n_ingrs, ranks_file_val
+            )
+
+            test_mrr, test_hits = self.get_loss_lookup_table(
+                test_dataloader, model, n_ingrs, ranks_file_test
+            )
+            print(test_mrr, test_hits)
+
+            return val_mrr, test_mrr, test_hits
 
         model = globals()[cfg.name](
             in_channels=cfg.emb_d,
@@ -122,13 +169,7 @@ class Trainer:
 
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
 
-        base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "sept-30/checkpoints/"
-        )
-        context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
-        output_dir = create_output_dir(base_dir, cfg)
-        ranks_file_val = os.path.join(output_dir, "val_ranks.txt")
-        ranks_file_test = os.path.join(output_dir, "test_ranks.txt")
+        
 
         best_val_mrr = 0
         best_model = None
@@ -237,7 +278,7 @@ class Trainer:
         test_hits_arr = []
         for trial in range(cfg.ntrials):
             val_mrr, test_mrr, test_hits = self.train_classification_gcn(
-                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs
+                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, train_dataset.lookup_table
             )
             val_mrr_arr.append(val_mrr)
             test_mrr_arr.append(test_mrr)
