@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any
 from PIL import Image
 
 import torch
+import numpy as np
 
 from inv_cooking.datasets.recipe1m import Recipe1MDataModule
 from inv_cooking.datasets.vocabulary import Vocabulary
@@ -64,16 +65,18 @@ class Im2RecipeVisualiser:
         if batch is None:
             batch = self.sample_input()
 
+        self.model.eval()
         ingredients = batch["ingredients"] if not with_substitutions else batch["substitution"]
-        losses, (ingr_predictions, recipe_predictions) = self.model(
-            image=batch["image"],
-            ingredients=ingredients,
-            recipe=batch["recipe"],
-            use_ingr_pred=False,
-            compute_losses=True,
-            compute_predictions=True,
-        )
-        return batch, losses, ingr_predictions, recipe_predictions
+        with torch.no_grad():
+            losses, (ingr_predictions, recipe_predictions) = self.model(
+                image=batch["image"],
+                ingredients=ingredients,
+                recipe=batch["recipe"],
+                use_ingr_pred=False,
+                compute_losses=True,
+                compute_predictions=True,
+            )
+            return batch, losses, ingr_predictions, recipe_predictions
 
     def display_sample(
         self, batch: Dict[str, Any], losses: Dict[str, Any], ingr_predictions: torch.Tensor,
@@ -93,6 +96,9 @@ class Im2RecipeVisualiser:
             limit = min(limit, num_recipes)
 
         for i in range(start, start + limit):
+
+            self.display_image(batch["image"][i])
+
             print("INGREDIENTS (GT):")
             self.display_ingredients(batch["ingredients"][i], ingr_vocab)
 
@@ -116,6 +122,7 @@ class Im2RecipeVisualiser:
         if image_tensor.ndim == 3:
             image = cls.tensor_to_image(image_tensor)
             plt.imshow(image)
+            plt.axis("off")
         elif image_tensor.ndim == 4:
             num_images = image_tensor.size(0)
             images = [cls.tensor_to_image(t) for t in image_tensor]
@@ -130,12 +137,14 @@ class Im2RecipeVisualiser:
 
     @staticmethod
     def tensor_to_image(tensor: torch.Tensor):
-        sigma = torch.as_tensor((0.229, 0.224, 0.225), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
-        mu = torch.as_tensor((0.485, 0.456, 0.406), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
-        tensor.mul_(sigma).add_(mu)
-        tensor = tensor.permute((1, 2, 0))
-        array = tensor.cpu().detach().numpy()
-        return Image.fromarray(array, mode="RGB")
+        with torch.no_grad():
+            sigma = torch.as_tensor((0.229, 0.224, 0.225), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
+            mu = torch.as_tensor((0.485, 0.456, 0.406), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
+            tensor = (tensor * sigma) + mu
+            tensor = tensor.permute((1, 2, 0))
+            array = tensor.cpu().detach().numpy()
+            array = np.uint8(array * 255)
+            return Image.fromarray(array, mode="RGB")
 
     @staticmethod
     def display_ingredients(prediction: torch.Tensor, vocab: Vocabulary):
