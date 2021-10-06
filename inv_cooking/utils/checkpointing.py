@@ -2,8 +2,9 @@ import glob
 import os
 from typing import List
 
+import pytorch_lightning
 import torch
-
+import numpy as np
 from inv_cooking.config import Config
 
 
@@ -29,10 +30,13 @@ def select_best_checkpoint(available_checkpoints: List[str], metric_mode: str) -
     :param metric_mode: either "min" or "max", how to select the best metric
     :return the path of the best checkpoint
     """
-    best_scores = torch.zeros(len(available_checkpoints))
+    best_scores = []
     for i, filename in enumerate(available_checkpoints):
         check = torch.load(filename)
-        best_scores[i] = list(check["callbacks"].values())[0]["best_model_score"]
+        best_score = check["callbacks"][pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint]["best_model_score"]
+        best_scores.append(best_score.item())
         del check
+    best_scores = np.array(best_scores)
     pos = best_scores.argmin() if metric_mode == "min" else best_scores.argmax()
-    return available_checkpoints[pos.item()]
+    best_checkpoint = available_checkpoints[pos.item()]
+    return best_checkpoint
