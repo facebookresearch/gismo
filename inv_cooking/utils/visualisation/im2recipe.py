@@ -1,3 +1,4 @@
+import copy
 import math
 from typing import Optional, Dict, Any
 from PIL import Image
@@ -33,17 +34,6 @@ class Im2RecipeVisualiser:
         Use the other functions individually for finer control.
         """
         batch = self.sample_input(batch_size=batch_size)
-
-        # Investigation of the important of images:
-        # - roll images (each input gets the image of the next input)
-        # - replace images by gray images
-        if swap_images:
-            batch["image"] = batch["image"].roll(shifts=[1], dims=[0])
-        if gray_images:
-            images = batch["images"]
-            batch["image"] = torch.zeros(size=images.shape, dtype=images.dtype, device=images.device)
-
-        # Pass inputs to the model and display the outputs
         batch, losses, ingr_predictions, recipe_predictions = self.sample_output(
             batch,
             with_substitutions=with_substitutions
@@ -57,13 +47,32 @@ class Im2RecipeVisualiser:
         loader = self.data_module.test_dataloader(batch_size=batch_size)
         return next(iter(loader))
 
-    def sample_output(self, batch: Optional[dict] = None, with_substitutions: bool = False):
+    def sample_output(
+        self,
+        batch: Optional[dict] = None,
+        with_substitutions: bool = False,
+        swap_images: bool = False,
+        gray_images: bool = False,
+    ):
         """
         Sample an output, using the batch as input to generate the outputs
         or generating a new sample input if not provided
         """
         if batch is None:
             batch = self.sample_input()
+        else:
+            batch = copy.copy(batch)
+
+        # Investigation of the importance of images:
+        # - roll images (each input gets the image of the next input)
+        # - replace images by gray images
+        if swap_images:
+            batch["image"] = batch["image"].roll(shifts=[1], dims=[0])
+        elif gray_images:
+            images = batch["image"]
+            batch["image"] = torch.zeros(size=images.shape, dtype=images.dtype, device=images.device)
+        else:
+            batch["image"] = batch["image"]
 
         self.model.eval()
         ingredients = batch["ingredients"] if not with_substitutions else batch["substitution"]

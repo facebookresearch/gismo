@@ -113,6 +113,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             self.dataset_config.path,
             stage,
             filtering=self.dataset_config.filtering,
+            ablations=self.dataset_config.ablation,
             transform=self._get_transforms(stage=stage),
             use_lmdb=False,  # TODO - check if necessary
             selected_indices=selected_indices,

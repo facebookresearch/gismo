@@ -19,6 +19,9 @@ filtering:
   max_instruction_length: 15
   max_title_seq_len: 20
 
+ablation:
+  gray_images: false
+
 pre_processing:
   save_path: "data/recipe1m/preprocessed_flavorgraph"  #  012319/preprocessed# 'data/recipe1m/preprocessed_new'
   threshold_ingrs: 10  # minimum ingr count threshold

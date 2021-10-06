@@ -10,6 +10,7 @@ import torch.utils.data as data
 from PIL import Image
 
 from inv_cooking.config import DatasetFilterConfig
+from inv_cooking.config.dataset import DatasetAblationConfig
 from inv_cooking.datasets.vocabulary import Vocabulary
 
 
@@ -40,6 +41,7 @@ class Recipe1M(data.Dataset):
         data_dir: str,
         split: str,
         filtering: DatasetFilterConfig,
+        ablations: DatasetAblationConfig,
         loading: LoadingOptions,
         preprocessed_folder: str,
         transform=None,
@@ -55,6 +57,7 @@ class Recipe1M(data.Dataset):
         self.max_seq_length = (
             filtering.max_num_instructions * filtering.max_instruction_length
         )
+        self.ablations = ablations
         self.loading = loading
         self.transform = transform
         self.use_lmdb = use_lmdb
@@ -206,9 +209,9 @@ class Recipe1M(data.Dataset):
         return true_ingr_idxs + [self.ingr_pad_value] * nb_pad_values
 
     def _load_image(self, index: int):
-        paths = self.dataset[index]["images"][0 : self.max_num_images]
+        paths = self.dataset[index]["images"][0:self.max_num_images]
         if not paths:
-            return torch.zeros(size=(3, 224, 224))  # TODO: ???
+            return torch.zeros(size=(3, 224, 224))  # TODO - not the right resolution
 
         # If several images, select one image
         img_idx = np.random.randint(0, len(paths)) if self.split == "train" else 0
@@ -234,6 +237,11 @@ class Recipe1M(data.Dataset):
         # Transform the image
         if self.transform is not None:
             image = self.transform(image)
+
+        # Take into account ablations
+        if self.ablations.gray_images:
+            return torch.zeros(size=image.shape, device=image.device, dtype=image.dtype)
+
         return image
 
     def _load_id(self, index: int) -> int:

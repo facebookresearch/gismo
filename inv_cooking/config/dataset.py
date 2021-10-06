@@ -26,6 +26,11 @@ class DatasetFilterConfig:
 
 
 @dataclass
+class DatasetAblationConfig:
+    gray_images: bool = MISSING
+
+
+@dataclass
 class DatasetConfig:
     name: DatasetName = DatasetName.recipe1m
     path: str = MISSING
@@ -35,4 +40,5 @@ class DatasetConfig:
     image_crop_size: int = MISSING
     loading: DatasetLoadingConfig = DatasetLoadingConfig()
     filtering: DatasetFilterConfig = DatasetFilterConfig()
+    ablation: DatasetAblationConfig = DatasetAblationConfig()
     pre_processing: DictConfig = untyped_config()
