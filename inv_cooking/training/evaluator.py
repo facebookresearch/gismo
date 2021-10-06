@@ -12,6 +12,12 @@ from .trainer import create_model, load_data_set
 
 
 def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
+    """
+    Evaluate a model using:
+    - either the validation set or the test set
+    - ground truth as ingredient or not (for im2recipe)
+    """
+
     seed_everything(cfg.optimization.seed)
 
     checkpoint_dir = cfg.eval_checkpoint_dir

@@ -10,6 +10,7 @@ from inv_cooking.config import (
     PretrainedConfig,
     RecipeGeneratorConfig,
 )
+from inv_cooking.config.config import IngredientTeacherForcingFlag
 from inv_cooking.models.im2recipe import Im2Recipe
 from inv_cooking.training.utils import MonitoredMetric, OptimizationGroup, _BaseModule
 from inv_cooking.utils.metrics import (
@@ -110,10 +111,12 @@ class ImageToRecipe(_BaseModule):
         )
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
+        use_ingr_prediction = self.ingr_teachforce.test == IngredientTeacherForcingFlag.use_predictions
+        use_ingr_substitutions = self.ingr_teachforce.test == IngredientTeacherForcingFlag.use_substitutions
         return self._evaluation_step(
             batch,
-            use_ingr_pred=not self.ingr_teachforce.test,
-            use_ingr_substitutions=False,
+            use_ingr_pred=use_ingr_prediction,
+            use_ingr_substitutions=use_ingr_substitutions,
         )
 
     def _evaluation_step(

@@ -32,11 +32,17 @@ class PretrainedConfig:
     load_pretrained_from: str = MISSING
 
 
+class IngredientTeacherForcingFlag(Enum):
+    use_predictions = 0
+    use_ground_truth = 1
+    use_substitutions = 2
+
+
 @dataclass
 class IngredientTeacherForcingConfig:
     train: bool = MISSING
     val: bool = MISSING
-    test: bool = MISSING
+    test: IngredientTeacherForcingFlag = MISSING
 
 
 @dataclass
