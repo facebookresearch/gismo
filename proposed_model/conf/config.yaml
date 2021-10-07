@@ -21,3 +21,5 @@ nlayers: 2
 nr: 400
 add_self_loop: False
 data_augmentation: False
+context_emb_mode: "avg"
+pool: "avg"

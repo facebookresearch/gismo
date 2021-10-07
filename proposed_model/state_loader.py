@@ -20,7 +20,9 @@ def create_output_dir(base_dir, conf):
     params += "_init_emb_" + str(conf.init_emb)
     params += "_lambda_" + str(conf.lambda_)
     params += "_i_" + str(conf.i)
-    # params += "_data_augmentation_" + str(conf.data_augmentation)
+    params += "_data_augmentation_" + str(conf.data_augmentation)
+    params += "_context_emb_mode_" + str(conf.context_emb_mode)
+    params += "_pool_" + str(conf.pool)
 
     output_dir = os.path.join(base_dir, params)
 

@@ -45,7 +45,7 @@ class Trainer:
                 ing1 = embs[:, 0]
                 ing2 = embs[:, 1]
             sims = torch.bmm(ing1.unsqueeze(1), ing2.unsqueeze(2))
-        elif name == "GIN_MLP":
+        elif name == "GIN_MLP" or name == "GIN_MLP2":
             sims = model(indices, context)
         elif name == "MLP":
             sims = model(indices, context)
@@ -133,7 +133,7 @@ class Trainer:
         self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, lookup_table
     ):
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-4/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-7/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
@@ -164,8 +164,12 @@ class Trainer:
             recipe_id2counter=recipe_id2counter,
             with_titles=cfg.with_titles,
             node_count2id=node_count2id,
-            init_emb=cfg.init_emb
+            init_emb=cfg.init_emb,
+            context_emb_mode=cfg.context_emb_mode,
+            pool=cfg.pool
         ).to(device)
+
+        # model = torch.nn.DataParallel(model)
 
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
 
@@ -184,21 +188,28 @@ class Trainer:
         model = model.to(device)
         model.epoch = model.epoch.to(device)
 
+
         loss_layer = torch.nn.CrossEntropyLoss()
 
         for epoch in range(model.epoch.cpu().item() + 1, cfg.epochs + 1):
             model.train()
             epoch_loss = 0.0
+            start_time = time.time()
             for train_batch in train_dataloader:
                 indices = train_batch[:, :-1]
                 sims = self.get_loss(model, indices, cfg.nr, context, cfg.name, I_two_hops, cfg.lambda_)
                 targets = torch.zeros(sims.shape[0]).long().to(device)
                 loss = loss_layer(sims, targets)
+                # print(loss.cpu().item())
+                # import math
+                # if math.isnan(loss.cpu().item()):
+                #     exit()
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
                 epoch_loss += loss.cpu().item()
             print(epoch, epoch_loss)
+            print(time.time() - start_time)
             model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
             save_model(model, opt, output_dir, is_best_model=False)
             if epoch % cfg.val_itr == 0:

@@ -380,11 +380,11 @@ class SubsData(data.Dataset):
             )
             output[ind, 0:2] = subs
             output[ind, 2] = id_counter
-            # output[ind, 3:len(context) + 3] = context_ids
+            output[ind, 3:len(context) + 3] = context_ids
 
-            # Excluding ing1 from the context
-            context_ids = context_ids[context_ids != output[ind, 0]]
-            output[ind, 3:len(context_ids) + 3] = context_ids
+            # # Excluding ing1 from the context
+            # context_ids = context_ids[context_ids != output[ind, 0]]
+            # output[ind, 3:len(context_ids) + 3] = context_ids
 
             if self.split == "train" and self.data_augmentation:
                 subs_inv = subs.flip(0)
