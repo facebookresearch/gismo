@@ -133,26 +133,27 @@ class Trainer:
         self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, lookup_table
     ):
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-7/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-8/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
         ranks_file_val = os.path.join(output_dir, "val_ranks.txt")
         ranks_file_test = os.path.join(output_dir, "test_ranks.txt")
 
-        if cfg.name == "lt":
-            model = LT(lookup_table)
+        if cfg.name == "LT" or cfg.name == "LTFreq" or cfg.name == "Random" or cfg.name == "Freq" or cfg.name == "Mode":
+            print("Starting Here!")
+            model = globals()[cfg.name](lookup_table)
             print("No training is involved for this setup!")
             val_mrr, val_hits = self.get_loss_lookup_table(
                 val_dataloader, model, n_ingrs, ranks_file_val
             )
-
             test_mrr, test_hits = self.get_loss_lookup_table(
                 test_dataloader, model, n_ingrs, ranks_file_test
             )
             print(test_mrr, test_hits)
 
             return val_mrr, test_mrr, test_hits
+
 
         model = globals()[cfg.name](
             in_channels=cfg.emb_d,
@@ -200,10 +201,6 @@ class Trainer:
                 sims = self.get_loss(model, indices, cfg.nr, context, cfg.name, I_two_hops, cfg.lambda_)
                 targets = torch.zeros(sims.shape[0]).long().to(device)
                 loss = loss_layer(sims, targets)
-                # print(loss.cpu().item())
-                # import math
-                # if math.isnan(loss.cpu().item()):
-                #     exit()
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
@@ -295,4 +292,21 @@ class Trainer:
             test_mrr_arr.append(test_mrr)
             test_hits_arr.append(test_hits)
 
-        print(val_mrr_arr, test_mrr_arr, test_hits)
+        self.print_results(val_mrr_arr, test_mrr_arr, test_hits_arr)
+
+    def print_results(self, val_mrr_arr, test_mrr_arr, test_hits_arr):
+        print("Val MRR:", np.mean(val_mrr_arr), np.std(val_mrr_arr))
+        print("Test MRR:", np.mean(test_mrr_arr), np.std(test_mrr_arr))
+
+        hit1 = []
+        hit3 = []
+        hit10 = []
+
+        for ind in range(len(test_hits_arr)):
+            hit1.append(test_hits_arr[ind][1])
+            hit3.append(test_hits_arr[ind][3])
+            hit10.append(test_hits_arr[ind][10])
+
+        print("Test Hit1:", np.mean(hit1), np.std(hit1))
+        print("Test Hit3:", np.mean(hit3), np.std(hit3))
+        print("Test Hit10:", np.mean(hit10), np.std(hit10))

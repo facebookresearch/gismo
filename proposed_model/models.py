@@ -5,6 +5,7 @@ from torch import nn
 import dgl.nn as dglnn
 import pickle
 import numpy as np
+import time
 
 class GAT(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device):
@@ -235,7 +236,11 @@ class GIN_MLP(nn.Module):
         if self.context_emb_mode == "transformer":
             self.transformer_layers = nn.ModuleList()
             self.transformer_layers.append(nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=5, dim_feedforward=2*hidden_channels , batch_first=True))
-            # self.transformer_layers.append(nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=5, dim_feedforward=2*hidden_channels , batch_first=True))
+        elif self.context_emb_mode == "transformer2":
+            self.cls_token = nn.Embedding(1, hidden_channels)
+            self.transformer_layers = nn.ModuleList()
+            self.transformer_layers.append(nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=5, dim_feedforward=2*hidden_channels , batch_first=True))
+            self.transformer_layers.append(nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=5, dim_feedforward=2*hidden_channels , batch_first=True))
 
         self.epoch = torch.nn.Parameter(
             torch.tensor(0, dtype=torch.int32), requires_grad=False
@@ -258,13 +263,23 @@ class GIN_MLP(nn.Module):
             mask = (indices == 0)
             for i, layer in enumerate(self.transformer_layers):
                 context_emb = layer(context_emb, src_key_padding_mask=mask)
-
             mask2 = (indices > 0)
             norm = torch.sum(mask2, 1).view(-1, 1)
             mask2 = mask2.unsqueeze(2).repeat(1, 1, context_emb.shape[2])
-            # norm[norm == 0] = 1
             context_emb = torch.sum(context_emb * mask2, dim=1)/norm
             return context_emb
+        elif self.context_emb_mode == "transformer2":
+            start_time = time.time()
+            context_emb = torch.index_select(x, 0, indices.reshape(-1)).reshape(indices.shape[0], indices.shape[1], x.shape[1])
+            cls_emb = self.cls_token(torch.tensor([0]).cuda()).repeat(context_emb.shape[0], 1).unsqueeze(1)
+            context_emb = torch.cat((cls_emb, context_emb), 1)
+            mask_ind = (indices == 0)
+            mask_cls = torch.full((context_emb.shape[0], 1), False).cuda()
+            mask = torch.cat((mask_cls, mask_ind), 1)
+            for i, layer in enumerate(self.transformer_layers):
+                context_emb = layer(context_emb, src_key_padding_mask=mask)
+            print("*", time.time() - start_time)
+            return context_emb[:, 0, :]
 
 
     def embed_title(self, indices):
@@ -284,8 +299,11 @@ class GIN_MLP(nn.Module):
 
         x[0] = torch.zeros(x.shape[1], dtype=torch.float).cuda()
 
-        ing1 = x[indices[:, 0]]
-        ing2 = x[indices[:, 1]]
+        # ing1 = x[indices[:, 0]]
+        # ing2 = x[indices[:, 1]]
+
+        ing1 = torch.index_select(x, 0, indices[:, 0].view(-1))
+        ing2 = torch.index_select(x, 0, indices[:, 1].view(-1))
 
         if context:
             context_emb = self.embed_context(indices[:, 3:], x)
@@ -592,11 +610,47 @@ class MLP_ATT(nn.Module):
 
 
 
-class LT(nn.Module):
+class LTFreq(nn.Module):
     def __init__(self, train_table):
-        super(LT, self).__init__()
+        super(LTFreq, self).__init__()
         self.train_table = train_table
 
     def forward(self, indices):
         x = self.train_table[indices[:, 0], indices[:, 1]]
         return x
+
+class LT(nn.Module):
+    def __init__(self, train_table):
+        super(LT, self).__init__()
+        self.train_table = train_table
+        self.train_table[self.train_table>0] = 1
+
+    def forward(self, indices):
+        x = self.train_table[indices[:, 0], indices[:, 1]]
+        return x
+
+class Random(nn.Module):
+    def __init__(self, train_table):
+        super(Random, self).__init__()
+        
+    def forward(self, indices):
+        return torch.rand(indices.shape[0])
+
+class Freq(nn.Module):
+    def __init__(self, train_table):
+        super(Freq, self).__init__()
+        self.train_table = torch.sum(train_table, 1)
+
+    def forward(self, indices):
+        return self.train_table[indices[:, 1]]
+
+class Mode(nn.Module):
+    def __init__(self, train_table):
+        super(Mode, self).__init__()
+        self.train_table = torch.sum(train_table, 1)
+        mode_ind = torch.argmax(self.train_table)
+        self.train_table = torch.zeros(self.train_table)
+        self.train_table[mode_ind] = 1
+
+    def forward(self, indices):
+        return self.train_table[indices[:, 1]]
