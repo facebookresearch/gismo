@@ -5,7 +5,7 @@
 import timm.models.vision_transformer as timm
 import torch
 import torch.nn as nn
-
+import math
 from inv_cooking.config import ImageEncoderConfig
 
 
@@ -88,7 +88,8 @@ class OneClassVit(BaseVit):
         self, image: torch.Tensor, return_reshaped_features=True
     ) -> torch.Tensor:
         """
-        :param x: tensor of shape (batch_size, 3, height, width)
+        :param image: tensor of shape (batch_size, 3, height, width)
+        :param return_reshaped_features: reshape as a sequence of 1 token
         :return shape (batch_size, embedding_size, seq_len)
         """
         image = self.interpolate(image)
@@ -227,7 +228,11 @@ class NoClassVit(BaseVit):
         super().__init__(config, image_size)
         self._remove_classification_token()
         self.adapt_head = self._build_adaptation_head(
-            input_size=768, embed_size=embed_size, dropout=config.dropout
+            input_size=768,
+            embed_size=embed_size,
+            dropout=config.dropout,
+            pooling_kernel_size=config.pooling_kernel_size,
+            pooling_kernel_dim=config.pooling_kernel_dim,
         )
 
     def forward(self, x: torch.Tensor, return_reshaped_features=True):
@@ -258,12 +263,53 @@ class NoClassVit(BaseVit):
         )
 
     @staticmethod
-    def _build_adaptation_head(input_size: int, embed_size: int, dropout: float):
+    def _build_adaptation_head(
+        input_size: int, embed_size: int, dropout: float, pooling_kernel_dim: int, pooling_kernel_size: int
+    ) -> nn.Module:
         if input_size == embed_size:
             return nn.Identity()
-        return nn.Sequential(
-            nn.Conv1d(input_size, embed_size, kernel_size=1, padding=0, bias=False),
-            nn.Dropout(dropout),
-            nn.BatchNorm1d(embed_size),
-            nn.ReLU(),
+
+        if pooling_kernel_dim == 1:
+            return nn.Sequential(
+                nn.Conv1d(
+                    input_size,
+                    embed_size,
+                    kernel_size=pooling_kernel_size,
+                    stride=pooling_kernel_size,
+                    padding=0,
+                    bias=False,
+                ),
+                nn.Dropout(dropout),
+                nn.BatchNorm1d(embed_size),
+                nn.ReLU(),
+            )
+
+        return WithSequenceToSquare(
+            nn.Sequential(
+                nn.Conv2d(
+                    input_size,
+                    embed_size,
+                    kernel_size=(pooling_kernel_size, pooling_kernel_size),
+                    stride=(pooling_kernel_size, pooling_kernel_size),
+                    padding=0,
+                    bias=False,
+                ),
+                nn.Dropout(dropout),
+                nn.BatchNorm2d(embed_size),
+                nn.ReLU(),
+            )
         )
+
+
+class WithSequenceToSquare(nn.Module):
+    def __init__(self, wrapped: nn.Module):
+        super().__init__()
+        self.wrapped = wrapped
+        self.flatten = nn.Flatten(start_dim=2)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        batch_size, channel, seq_len = x.shape
+        height = int(math.sqrt(seq_len))
+        x = x.reshape((batch_size, channel, height, -1))
+        x = self.wrapped(x)
+        return self.flatten(x)

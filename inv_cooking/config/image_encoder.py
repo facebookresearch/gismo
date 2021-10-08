@@ -18,3 +18,5 @@ class ImageEncoderConfig:
         default_factory=list
     )  # Only used for VIT with one class token
     concatenate_repr_levels: bool = False  # Only used for VIT with one class token
+    pooling_kernel_size: int = 1  # Only used for VIT with no class tokens
+    pooling_kernel_dim: int = 1  # Only used for VIT with no class tokens

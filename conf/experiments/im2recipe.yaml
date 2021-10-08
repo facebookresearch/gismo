@@ -68,6 +68,67 @@ im2recipe_vit32:
     load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47053824/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1.ckpt
     # load_pretrained_from: /checkpoint/qduval/inversecooking2.0/46838934/im2ingr-im2ingr_vit_32_ff_bce_cat/best-v1-cpu.ckpt
 
+im2recipe_vit32_no_class:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 0
+    freeze: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47277525/im2ingr-im2ingr_vit_32_no_class_ff_bce_cat/best-v1.ckpt
+
+im2recipe_vit32_multi_level:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 1
+    freeze: False
+    additional_repr_levels: [1, 3, 6, 8, 10]
+    concatenate_repr_levels: True
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47552754/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level/
+
+im2recipe_vit32_multi_level_2:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 1
+    freeze: False
+    additional_repr_levels: [1, 3, 6, 8, 10]
+    concatenate_repr_levels: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47552760/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_2
+
+im2recipe_vit32_no_class_conv:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 0
+    freeze: False
+    pooling_kernel_size: 3
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47308826/im2ingr-im2ingr_vit_32_no_class_ff_bce_cat_conv/best-v0.ckpt
+
 im2recipe_vit16:
   comment: 'evaluation of the performance of vision transformers'
   parent: im2recipe
@@ -82,6 +143,83 @@ im2recipe_vit16:
     freeze: True
     load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/47141749/im2ingr-im2ingr_vit_16_ff_bce_cat/best-v4.ckpt"
 
+im2recipe_vit16_no_class:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 16
+    n_cls_tokens: 0
+    freeze: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/47518179/im2ingr-im2ingr_vit_16_no_class_ff_bce_cat"
+
+im2recipe_vit16_multi_level:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 16
+    n_cls_tokens: 1
+    freeze: False
+    additional_repr_levels: [1, 3, 6, 8, 10]
+    concatenate_repr_levels: True
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/47681666/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level"
+
+im2recipe_vit16_multi_level_2:
+  comment: 'evaluation of the performance of vision transformers'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 16
+    n_cls_tokens: 1
+    freeze: False
+    additional_repr_levels: [1, 3, 6, 8, 10]
+    concatenate_repr_levels: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/47681740/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_2"
+
+im2recipe_vit_32_no_class_ff_bce_cat_pool2:
+  comment: "Trying to reduce the length of the sequence"
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 0
+    freeze: False
+    pooling_kernel_size: 2
+    pooling_kernel_dim: 2
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/47940684/im2ingr-im2ingr_vit_32_no_class_ff_bce_cat_pool2"
+
+im2recipe_vit_16_no_class_ff_bce_cat_pool4:
+  comment: "Trying to reduce the length of the sequence"
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 16
+    n_cls_tokens: 0
+    freeze: False
+    pooling_kernel_size: 4
+    pooling_kernel_dim: 2
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/47940687/im2ingr-im2ingr_vit_16_ff_bce_cat_no_class_pool4"
 
 # -----------------------------------------------------------------------------
 # Evaluate impact of ingredient substitutions on the quality of the recipes
@@ -103,12 +241,93 @@ eval_im2recipe_vit32_teacherforcing:
   ingr_teachforce:
     test: use_ground_truth
 
+eval_im2recipe_vit32_no_class_teacherforcing:
+  comment: "/checkpoint/qduval/inversecooking2.0/47308686/im2recipe-im2recipe_vit32_no_class"
+  parent: im2recipe_vit32_no_class
+  with_substitutions: True
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_no_class_conv_teacherforcing:
+  comment: "/checkpoint/qduval/inversecooking2.0/47410061/im2recipe-im2recipe_vit32_no_class_conv"
+  parent: im2recipe_vit32_no_class_conv
+  with_substitutions: False
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_multi_level:
+  comment: "/checkpoint/qduval/inversecooking2.0/47573940/im2recipe-im2recipe_vit32_multi_level"
+  parent: im2recipe_vit32_multi_level
+  # with_substitutions: True
+  with_substitutions: False
+  ingr_teachforce:
+    test: use_ground_truth
+    # test: use_predictions
+    # test: use_substitutions
+
+eval_im2recipe_vit32_multi_level_2:
+  comment: "/checkpoint/qduval/inversecooking2.0/47574002/im2recipe-im2recipe_vit32_multi_level_2"
+  parent: im2recipe_vit32_multi_level_2
+  with_substitutions: True
+  # with_substitutions: False
+  ingr_teachforce:
+    # test: use_ground_truth
+    # test: use_predictions
+    test: use_substitutions
+
 eval_im2recipe_vit16_teacherforcing:
   comment: 'evaluating with and without substitutions'
   parent: im2recipe_vit16
   with_substitutions: True
   ingr_teachforce:
     test: use_ground_truth
+
+eval_im2recipe_vit16_no_class:
+  comment: "/checkpoint/qduval/inversecooking2.0/47552483/im2recipe-im2recipe_vit16_no_class"
+  parent: im2recipe_vit16_no_class
+  with_substitutions: True
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level:
+  comment: /checkpoint/qduval/inversecooking2.0/47881172/im2recipe-im2recipe_vit16_multi_level
+  parent: im2recipe_vit16_multi_level
+  with_substitutions: True
+  # with_substitutions: False
+  ingr_teachforce:
+    # test: use_predictions
+    test: use_ground_truth
+    # test: use_substitutions
+
+eval_im2recipe_vit16_multi_level_2:
+  comment: /checkpoint/qduval/inversecooking2.0/47881171/im2recipe-im2recipe_vit16_multi_level_2
+  parent: im2recipe_vit16_multi_level_2
+  with_substitutions: True
+  # with_substitutions: False
+  ingr_teachforce:
+    # test: use_predictions
+    # test: use_ground_truth
+    test: use_substitutions
+
+eval_im2recipe_vit_32_no_class_ff_bce_cat_pool2:
+  comment: "/checkpoint/qduval/inversecooking2.0/47948487/im2recipe-im2recipe_vit_32_no_class_ff_bce_cat_pool2"
+  parent: im2recipe_vit_32_no_class_ff_bce_cat_pool2
+  with_substitutions: True
+  # with_substitutions: False
+  ingr_teachforce:
+    # test: use_predictions
+    test: use_ground_truth
+    # test: use_substitutions
+
+eval_im2recipe_vit_16_no_class_ff_bce_cat_pool4:
+  comment: "/checkpoint/qduval/inversecooking2.0/47989553/im2recipe-im2recipe_vit_16_no_class_ff_bce_cat_pool4"
+  parent: im2recipe_vit_16_no_class_ff_bce_cat_pool4
+  with_substitutions: True
+  # with_substitutions: False
+  ingr_teachforce:
+    # test: use_predictions
+    test: use_ground_truth
+    # test: use_substitutions
 
 # -----------------------------------------------------------------------------
 
@@ -122,6 +341,27 @@ eval_im2recipe_invcooking1.0_substitutions:
 eval_im2recipe_vit32_substitutions:
   comment: 'evaluating with and without substitutions'
   parent: eval_im2recipe_vit32_teacherforcing
+  with_substitutions: True
+  ingr_teachforce:
+    test: use_substitutions
+
+eval_im2recipe_vit32_no_class_substitutions:
+  comment: "/checkpoint/qduval/inversecooking2.0/47308686/im2recipe-im2recipe_vit32_no_class"
+  parent: im2recipe_vit32_no_class
+  with_substitutions: True
+  ingr_teachforce:
+    test: use_substitutions
+
+eval_im2recipe_vit32_no_class_conv_substitutions:
+  comment: "/checkpoint/qduval/inversecooking2.0/47410061/im2recipe-im2recipe_vit32_no_class_conv"
+  parent: im2recipe_vit32_no_class_conv
+  with_substitutions: True
+  ingr_teachforce:
+    test: use_substitutions
+
+eval_im2recipe_vit32_multi_level_substitutions:
+  comment: "/checkpoint/qduval/inversecooking2.0/47428542/im2recipe-im2recipe_vit32_multi_level"
+  parent: im2recipe_vit32_multi_level_2
   with_substitutions: True
   ingr_teachforce:
     test: use_substitutions

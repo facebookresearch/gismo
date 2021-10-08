@@ -21,7 +21,10 @@ from inv_cooking.models.modules.ingredient_embeddings import IngredientEmbedding
 from inv_cooking.models.modules.transformer_encoder import EncoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.models.recipe_generator import RecipeGenerator
-from inv_cooking.utils.checkpointing import list_available_checkpoints, select_best_checkpoint
+from inv_cooking.utils.checkpointing import (
+    list_available_checkpoints,
+    select_best_checkpoint,
+)
 
 
 class Im2Recipe(nn.Module):
@@ -110,10 +113,7 @@ class Im2Recipe(nn.Module):
             num_cross_attn = 2
 
         self.recipe_gen = RecipeGenerator(
-            recipe_gen_config,
-            instr_vocab_size,
-            max_recipe_len,
-            num_cross_attn,
+            recipe_gen_config, instr_vocab_size, max_recipe_len, num_cross_attn,
         )
 
     def _load_im2ingr_pretrained_model(self, im2ingr_path: str):
@@ -128,7 +128,7 @@ class Im2Recipe(nn.Module):
 
         # Initializing the image encoder
         pretrained_image_encoder_dict = {
-            k[len("model.image_encoder."):]: v
+            k[len("model.image_encoder.") :]: v
             for k, v in pretrained_model["state_dict"].items()
             if "image_encoder" in k
         }
@@ -136,7 +136,7 @@ class Im2Recipe(nn.Module):
 
         # Initialize the ingredient predictor
         pretrained_ingr_predictor_dict = {
-            k[len("model.ingr_predictor."):]: v
+            k[len("model.ingr_predictor.") :]: v
             for k, v in pretrained_model["state_dict"].items()
             if "ingr_predictor" in k
         }
@@ -164,8 +164,8 @@ class Im2Recipe(nn.Module):
         losses = {}
         img_features = self.image_encoder(image, return_reshaped_features=False)
 
+        # predict ingredients (do not use the ground truth)
         if use_ingr_pred:
-            # predict ingredients (do not use the ground truth)
             ingr_losses, ingr_predictions = self.ingr_predictor(
                 img_features.reshape(img_features.size(0), img_features.size(1), -1),
                 label_target=target_ingredients,
@@ -178,8 +178,9 @@ class Im2Recipe(nn.Module):
                 ingr_predictions, eos_value=self.ingr_eos_value, mult_before=False
             )
             ingr_mask = (1 - ingr_mask).bool()
+
+        # encode ingredients (using ground truth ingredients)
         else:
-            # encode ingredients (using ground truth ingredients)
             ingr_features = self.ingr_encoder(target_ingredients)
             ingr_mask = mask_from_eos(
                 target_ingredients, eos_value=self.ingr_eos_value, mult_before=False
