@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import os
 from typing import Dict, Optional, Tuple
 
 import torch
@@ -20,6 +21,7 @@ from inv_cooking.models.modules.ingredient_embeddings import IngredientEmbedding
 from inv_cooking.models.modules.transformer_encoder import EncoderTransformer
 from inv_cooking.models.modules.utils import freeze_fn
 from inv_cooking.models.recipe_generator import RecipeGenerator
+from inv_cooking.utils.checkpointing import list_available_checkpoints, select_best_checkpoint
 
 
 class Im2Recipe(nn.Module):
@@ -51,23 +53,10 @@ class Im2Recipe(nn.Module):
             eos_value=ingr_eos_value,
         )
 
-        # load pretrained model from checkpoint
-        if pretrained_im2ingr_config.load_pretrained_from != "None":
-            pretrained_model = torch.load(
-                pretrained_im2ingr_config.load_pretrained_from
-            )
-            pretrained_image_encoder_dict = {
-                k[len("model.image_encoder.") :]: v
-                for k, v in pretrained_model["state_dict"].items()
-                if "image_encoder" in k
-            }
-            self.image_encoder.load_state_dict(pretrained_image_encoder_dict)
-            pretrained_ingr_predictor_dict = {
-                k[len("model.ingr_predictor.") :]: v
-                for k, v in pretrained_model["state_dict"].items()
-                if "ingr_predictor" in k
-            }
-            self.ingr_predictor.load_state_dict(pretrained_ingr_predictor_dict)
+        # load pre-trained model from checkpoint
+        im2ingr_path = pretrained_im2ingr_config.load_pretrained_from
+        if im2ingr_path != "None":
+            self._load_im2ingr_pretrained_model(im2ingr_path)
 
         # freeze pretrained model
         if pretrained_im2ingr_config.freeze:
@@ -126,6 +115,32 @@ class Im2Recipe(nn.Module):
             max_recipe_len,
             num_cross_attn,
         )
+
+    def _load_im2ingr_pretrained_model(self, im2ingr_path: str):
+        # If provided a directory, find the best checkpoint in that directory
+        if os.path.isdir(im2ingr_path):
+            all_checkpoints = list_available_checkpoints(im2ingr_path)
+            im2ingr_path = select_best_checkpoint(all_checkpoints, metric_mode="max")
+
+        # Load the checkpoint at the chosen path
+        print(f"Using im2ingr checkpoint: {im2ingr_path}")
+        pretrained_model = torch.load(im2ingr_path)
+
+        # Initializing the image encoder
+        pretrained_image_encoder_dict = {
+            k[len("model.image_encoder."):]: v
+            for k, v in pretrained_model["state_dict"].items()
+            if "image_encoder" in k
+        }
+        self.image_encoder.load_state_dict(pretrained_image_encoder_dict)
+
+        # Initialize the ingredient predictor
+        pretrained_ingr_predictor_dict = {
+            k[len("model.ingr_predictor."):]: v
+            for k, v in pretrained_model["state_dict"].items()
+            if "ingr_predictor" in k
+        }
+        self.ingr_predictor.load_state_dict(pretrained_ingr_predictor_dict)
 
     def forward(
         self,
