@@ -207,7 +207,7 @@ def compute_distances(graph):
     nx_g = dgl.to_networkx(graph.cpu(), edge_attrs=['w'])
     lengths = dict(nx.shortest_path_length(nx_g))
 
-def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augmentation, device, dir_):
+def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augmentation, p_augmentation, device, dir_):
     (
         graph,
         node_name2id,
@@ -240,7 +240,8 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         recipe_id2counter,
         neg_sampling,
         data_augmentation,
-        nnodes
+        nnodes,
+        p_augmentation
     )
 
     val_dataset = SubsData(
@@ -256,7 +257,8 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         train_dataset.recipe_id2counter,
         neg_sampling,
         data_augmentation,
-        nnodes
+        nnodes,
+        p_augmentation=0.0
     )
 
     test_dataset = SubsData(
@@ -272,7 +274,8 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         val_dataset.recipe_id2counter,
         neg_sampling,
         data_augmentation,
-        nnodes
+        nnodes,
+        p_augmentation=0.0
     )
 
     # pickle.dump(recipe_id2counter, open("/private/home/baharef/inversecooking2.0/proposed_model/titles_neede.pkl", "wb"))
@@ -309,12 +312,14 @@ class SubsData(data.Dataset):
         neg_sampling: str,
         data_augmentation: bool,
         nnodes: int,
+        p_augmentation: float,
     ):
         self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.pkl")
         self.split = split
         self.dataset = []
         self.nr = nr
         self.data_augmentation = data_augmentation
+        self.p_augmentation = p_augmentation
         self.max_context = max_context
         self.neg_sampling = neg_sampling
         # load ingredient voc
@@ -345,11 +350,10 @@ class SubsData(data.Dataset):
 
     def context_full_examples(self, examples, vocabs, max_context):
 
-        if self.split == "train" and self.data_augmentation:
-            output = torch.full((2*len(examples), max_context + 3), 0)
-        else:
-            # output = torch.full((len(examples), max_context + 3), 0)
-            output = torch.full((len(examples), max_context + 3), 0)
+        # if self.split == "train" and self.data_augmentation:
+        #     output = torch.full((2*len(examples), max_context + 3), 0)
+        # else:
+        output = torch.full((len(examples), max_context + 3), 0)
 
         for ind, example in enumerate(examples):
             subs = example["subs"]
@@ -380,19 +384,19 @@ class SubsData(data.Dataset):
             )
             output[ind, 0:2] = subs
             output[ind, 2] = id_counter
-            output[ind, 3:len(context) + 3] = context_ids
+            # output[ind, 3:len(context) + 3] = context_ids
 
-            # # Excluding ing1 from the context
-            # context_ids = context_ids[context_ids != output[ind, 0]]
-            # output[ind, 3:len(context_ids) + 3] = context_ids
+            # Excluding ing1 from the context
+            context_ids = context_ids[context_ids != output[ind, 0]]
+            output[ind, 3:len(context_ids) + 3] = context_ids
 
-            if self.split == "train" and self.data_augmentation:
-                subs_inv = subs.flip(0)
-                context_ids_inv = context_ids.detach().clone()
-                context_ids_inv[context_ids_inv==subs[0]] = float(subs[1])
-                output[len(examples)+ind, 0:2] = subs_inv
-                output[len(examples)+ind, 2] = id_counter
-                output[len(examples)+ind, 3:len(context) + 3] = context_ids_inv
+            # if self.split == "train" and self.data_augmentation:
+            #     subs_inv = subs.flip(0)
+            #     context_ids_inv = context_ids.detach().clone()
+            #     context_ids_inv[context_ids_inv==subs[0]] = float(subs[1])
+            #     output[len(examples)+ind, 0:2] = subs_inv
+            #     output[len(examples)+ind, 2] = id_counter
+            #     output[len(examples)+ind, 3:len(context) + 3] = context_ids_inv
 
         return output
 
@@ -402,6 +406,12 @@ class SubsData(data.Dataset):
     def __getitem__(self, index: int):
         if self.split == "train":
             pos_example = self.dataset[index, :].view(1, -1)
+
+            if self.data_augmentation and self.p_augmentation > 0.0:
+                p = np.random.rand()
+                if p <= self.p_augmentation:
+                    pos_example[0, 0], pos_example[0, 1] = pos_example[0, 1].clone(), pos_example[0, 0].clone()
+
             neg_examples = self.neg_examples(pos_example, self.nr, self.set_ingredients_cnt)
             pos_labels = torch.zeros(1, 1)
             neg_labels = torch.ones(len(neg_examples), 1)

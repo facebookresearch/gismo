@@ -46,7 +46,7 @@ class Trainer:
                 ing2 = embs[:, 1]
             sims = torch.bmm(ing1.unsqueeze(1), ing2.unsqueeze(2))
         elif name == "GIN_MLP" or name == "GIN_MLP2":
-            sims = model(indices, context)
+            sims = model(indices, context, nr)
         elif name == "MLP":
             sims = model(indices, context)
         elif name == "MLP_CAT":
@@ -61,7 +61,7 @@ class Trainer:
             else:
                 print("The model MLP_ATT is not defined in the context-free setup")
                 exit()
-        sims += lambda_ * I_two_hops[indices[:, 0], indices[:, 1]].view(-1, 1)
+        # sims += lambda_ * I_two_hops[indices[:, 0], indices[:, 1]].view(-1, 1)
         return sims
 
     def get_rank(self, scores):
@@ -133,7 +133,7 @@ class Trainer:
         self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, lookup_table
     ):
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-8/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-20/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
@@ -144,15 +144,15 @@ class Trainer:
             print("Starting Here!")
             model = globals()[cfg.name](lookup_table)
             print("No training is involved for this setup!")
-            val_mrr, val_hits = self.get_loss_lookup_table(
-                val_dataloader, model, n_ingrs, ranks_file_val
-            )
+            # val_mrr, val_hits = self.get_loss_lookup_table(
+            #     val_dataloader, model, n_ingrs, ranks_file_val
+            # )
             test_mrr, test_hits = self.get_loss_lookup_table(
                 test_dataloader, model, n_ingrs, ranks_file_test
             )
             print(test_mrr, test_hits)
 
-            return val_mrr, test_mrr, test_hits
+            return 0.0, test_mrr, test_hits
 
 
         model = globals()[cfg.name](
@@ -164,18 +164,16 @@ class Trainer:
             device=device,
             recipe_id2counter=recipe_id2counter,
             with_titles=cfg.with_titles,
+            with_set=cfg.with_set,
             node_count2id=node_count2id,
             init_emb=cfg.init_emb,
             context_emb_mode=cfg.context_emb_mode,
             pool=cfg.pool
         ).to(device)
 
-        # model = torch.nn.DataParallel(model)
-
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
 
-        
-
+    
         best_val_mrr = 0
         best_model = None
 
@@ -204,6 +202,11 @@ class Trainer:
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
+                
+                if cfg.init_emb == "flavorgraph2" or cfg.init_emb == "food_bert2":
+                    # print(loss.cpu().item(), torch.norm(model.ndata1.weight).cpu().item())
+                    loss += torch.norm(model.ndata1.weight) * cfg.lambda_
+
                 epoch_loss += loss.cpu().item()
             print(epoch, epoch_loss)
             print(time.time() - start_time)
@@ -248,6 +251,7 @@ class Trainer:
             cfg.two_hops,
             cfg.neg_sampling,
             cfg.data_augmentation,
+            cfg.p_augmentation,
             device,
             dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
         )
@@ -281,18 +285,19 @@ class Trainer:
             collate_fn=SubsData.collate_fn_val_test,
         )
 
-        val_mrr_arr = []
-        test_mrr_arr = []
-        test_hits_arr = []
+        # val_mrr_arr = []
+        # test_mrr_arr = []
+        # test_hits_arr = []
         for trial in range(cfg.ntrials):
             val_mrr, test_mrr, test_hits = self.train_classification_gcn(
                 graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, train_dataset.lookup_table
             )
-            val_mrr_arr.append(val_mrr)
-            test_mrr_arr.append(test_mrr)
-            test_hits_arr.append(test_hits)
+            print(val_mrr, test_mrr, test_hits)
+            # val_mrr_arr.append(val_mrr)
+            # test_mrr_arr.append(test_mrr)
+            # test_hits_arr.append(test_hits)
 
-        self.print_results(val_mrr_arr, test_mrr_arr, test_hits_arr)
+        # self.print_results(val_mrr_arr, test_mrr_arr, test_hits_arr)
 
     def print_results(self, val_mrr_arr, test_mrr_arr, test_hits_arr):
         print("Val MRR:", np.mean(val_mrr_arr), np.std(val_mrr_arr))

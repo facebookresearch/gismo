@@ -17,12 +17,14 @@ def create_output_dir(base_dir, conf):
     params += "_nr_" + str(conf.nr)
     params += "_neg_sampling_" + str(conf.neg_sampling)
     params += "_with_titels_" + str(conf.with_titles)
+    params += "_with_set_" + str(conf.with_set)
     params += "_init_emb_" + str(conf.init_emb)
     params += "_lambda_" + str(conf.lambda_)
     params += "_i_" + str(conf.i)
     params += "_data_augmentation_" + str(conf.data_augmentation)
     params += "_context_emb_mode_" + str(conf.context_emb_mode)
     params += "_pool_" + str(conf.pool)
+    params += "_p_augmentation_" + str(conf.p_augmentation)
 
     output_dir = os.path.join(base_dir, params)
 

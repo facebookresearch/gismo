@@ -3,13 +3,14 @@ setup: "context-full"
 neg_sampling: "regular"
 i: 0
 with_titles: False
+with_set: False
 lambda_: 0.0
 init_emb: "random"
 two_hops: False
 epochs: 500
 val_itr: 50
 ntrials: 1
-train_batch_size: 1000
+train_batch_size: 500
 val_test_batch_size: 50
 max_context: 43
 lr: 0.0001
@@ -21,5 +22,6 @@ nlayers: 2
 nr: 400
 add_self_loop: False
 data_augmentation: False
+p_augmentation: 0.5
 context_emb_mode: "avg"
 pool: "avg"
