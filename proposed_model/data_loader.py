@@ -280,7 +280,7 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
 
     # pickle.dump(recipe_id2counter, open("/private/home/baharef/inversecooking2.0/proposed_model/titles_neede.pkl", "wb"))
     
-    I_two_hops = pickle.load(open("/private/home/baharef/inversecooking2.0/proposed_model/two_hops_tensor.pkl", "rb")).to(device)
+    I_two_hops = pickle.load(open("/private/home/baharef/inversecooking2.0/proposed_model/features/two_hops_tensor.pkl", "rb")).to(device)
 
     return (
         graph,
@@ -350,9 +350,6 @@ class SubsData(data.Dataset):
 
     def context_full_examples(self, examples, vocabs, max_context):
 
-        # if self.split == "train" and self.data_augmentation:
-        #     output = torch.full((2*len(examples), max_context + 3), 0)
-        # else:
         output = torch.full((len(examples), max_context + 3), 0)
 
         for ind, example in enumerate(examples):
@@ -389,15 +386,7 @@ class SubsData(data.Dataset):
             # Excluding ing1 from the context
             context_ids = context_ids[context_ids != output[ind, 0]]
             output[ind, 3:len(context_ids) + 3] = context_ids
-
-            # if self.split == "train" and self.data_augmentation:
-            #     subs_inv = subs.flip(0)
-            #     context_ids_inv = context_ids.detach().clone()
-            #     context_ids_inv[context_ids_inv==subs[0]] = float(subs[1])
-            #     output[len(examples)+ind, 0:2] = subs_inv
-            #     output[len(examples)+ind, 2] = id_counter
-            #     output[len(examples)+ind, 3:len(context) + 3] = context_ids_inv
-
+            
         return output
 
     def __len__(self):
