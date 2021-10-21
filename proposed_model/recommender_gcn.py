@@ -61,7 +61,7 @@ class Trainer:
             else:
                 print("The model MLP_ATT is not defined in the context-free setup")
                 exit()
-        # sims += lambda_ * I_two_hops[indices[:, 0], indices[:, 1]].view(-1, 1)
+
         return sims
 
     def get_rank(self, scores):
@@ -144,15 +144,15 @@ class Trainer:
             print("Starting Here!")
             model = globals()[cfg.name](lookup_table)
             print("No training is involved for this setup!")
-            # val_mrr, val_hits = self.get_loss_lookup_table(
-            #     val_dataloader, model, n_ingrs, ranks_file_val
-            # )
+            val_mrr, val_hits = self.get_loss_lookup_table(
+                val_dataloader, model, n_ingrs, ranks_file_val
+            )
             test_mrr, test_hits = self.get_loss_lookup_table(
                 test_dataloader, model, n_ingrs, ranks_file_test
             )
             print(test_mrr, test_hits)
 
-            return 0.0, test_mrr, test_hits
+            return val_mrr, test_mrr, test_hits
 
 
         model = globals()[cfg.name](
@@ -187,7 +187,6 @@ class Trainer:
         model = model.to(device)
         model.epoch = model.epoch.to(device)
 
-
         loss_layer = torch.nn.CrossEntropyLoss()
 
         for epoch in range(model.epoch.cpu().item() + 1, cfg.epochs + 1):
@@ -204,10 +203,10 @@ class Trainer:
                 opt.step()
                 
                 if cfg.init_emb == "flavorgraph2" or cfg.init_emb == "food_bert2":
-                    # print(loss.cpu().item(), torch.norm(model.ndata1.weight).cpu().item())
                     loss += torch.norm(model.ndata1.weight) * cfg.lambda_
 
                 epoch_loss += loss.cpu().item()
+
             print(epoch, epoch_loss)
             print(time.time() - start_time)
             model.epoch.data = torch.from_numpy(np.array([epoch])).to(device)
@@ -285,33 +284,8 @@ class Trainer:
             collate_fn=SubsData.collate_fn_val_test,
         )
 
-        # val_mrr_arr = []
-        # test_mrr_arr = []
-        # test_hits_arr = []
         for trial in range(cfg.ntrials):
             val_mrr, test_mrr, test_hits = self.train_classification_gcn(
                 graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, train_dataset.lookup_table
             )
             print(val_mrr, test_mrr, test_hits)
-            # val_mrr_arr.append(val_mrr)
-            # test_mrr_arr.append(test_mrr)
-            # test_hits_arr.append(test_hits)
-
-        # self.print_results(val_mrr_arr, test_mrr_arr, test_hits_arr)
-
-    def print_results(self, val_mrr_arr, test_mrr_arr, test_hits_arr):
-        print("Val MRR:", np.mean(val_mrr_arr), np.std(val_mrr_arr))
-        print("Test MRR:", np.mean(test_mrr_arr), np.std(test_mrr_arr))
-
-        hit1 = []
-        hit3 = []
-        hit10 = []
-
-        for ind in range(len(test_hits_arr)):
-            hit1.append(test_hits_arr[ind][1])
-            hit3.append(test_hits_arr[ind][3])
-            hit10.append(test_hits_arr[ind][10])
-
-        print("Test Hit1:", np.mean(hit1), np.std(hit1))
-        print("Test Hit3:", np.mean(hit3), np.std(hit3))
-        print("Test Hit10:", np.mean(hit10), np.std(hit10))
