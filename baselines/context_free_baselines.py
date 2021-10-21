@@ -21,7 +21,7 @@ def context_free_examples(examples, vocabs, mode=0):
 
 def load_split_data(split):
     examples = json.load(
-        open("../data/substitutions/" + split + "_comments_subs.txt", "r")
+        open("/private/home/baharef/inversecooking2.0/preprocessed_data/" + split + "_comments_subs.pkl", "r")
     )
     return examples
 
@@ -45,11 +45,13 @@ def load_vocab():
     return vocab_ing
 
 
-def test_model(model_name, split="test"):
+def test_model(model_name, trial, split="test"):
+    output_file = open('outputs/' + model_name + "test_ranks_i" + str(trial) + '.txt', 'w')
     metrics = Metrics()
     vocabs = load_vocab()
     examples = load_split_data(split)
     examples_cf = context_free_examples(examples, vocabs)
+
     if model_name == "food2vec":
         subs = json.load(
             open(
@@ -66,6 +68,22 @@ def test_model(model_name, split="test"):
                 "r",
             )
         )
+    
+    elif model_name == "rbert":
+        subs_list = json.load(
+            open(
+                "/private/home/baharef/Exploiting-Food-Embeddings-for-Ingredient-Substitution/relation_extraction/data/substitute_pairs_relation_extraction.json",
+                "r",
+            )
+        )
+        subs = {}
+        for example in subs_list:
+            example[0] = example[0].replace(' ', '_')
+            example[1] = example[1].replace(' ', '_')
+            if example[0] not in subs:
+                subs[example[0]] = []
+            subs[example[0]].append(example[1])
+
     print("dictionary loaded!")
 
     subs_dict = load_dict(subs, vocabs)
@@ -76,18 +94,20 @@ def test_model(model_name, split="test"):
         except Exception:
             rank = random.randint(0, 6633) + 1
         metrics.update(rank)
+
+        output_file.write(str(example[0]) + " " + str(example[1]) + " " + str(rank) + "\n")
     return metrics.normalize()
 
 
 if __name__ == "__main__":
-    model_name = "foodbert"
+    model_name = "rbert"
 
     mrrs = []
     hits1 = []
     hits3 = []
     hits10 = []
     for trial in range(5):
-        mrr, hit1, hit3, hit10 = test_model(model_name)
+        mrr, hit1, hit3, hit10 = test_model(model_name, trial)
         mrrs.append(mrr)
         hits1.append(hit1)
         hits3.append(hit3)
