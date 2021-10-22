@@ -60,10 +60,12 @@ class Recipe1MDataModule(pl.LightningDataModule):
             print(f"Training set composed of {len(self.dataset_train)} samples.")
             print(f"Validation set composed of {len(self.dataset_val)} samples.")
         elif stage == "test":
-            self.dataset_test = self._get_dataset(stage, self.dataset_config.eval_split)
-            print(
-                f"Eval split: {self.dataset_config.eval_split} composed of {len(self.dataset_test)} samples."
-            )
+            eval_split = self.dataset_config.eval_split
+            if eval_split == "test":
+                self.dataset_test = self._get_dataset("test")
+            else:
+                self.dataset_test = self._get_dataset("val", eval_split)
+            print(f"Eval split: {eval_split} composed of {len(self.dataset_test)} samples.")
             self.title_vocab_size = self.dataset_test.get_title_vocab_size()
             self.ingr_vocab_size = self.dataset_test.get_ingr_vocab_size()
             self.instr_vocab_size = self.dataset_test.get_instr_vocab_size()
