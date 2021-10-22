@@ -75,4 +75,3 @@ class Config:
     slurm: SlurmConfig = SlurmConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()
     ingr_teachforce: IngredientTeacherForcingConfig = IngredientTeacherForcingConfig()
-    with_substitutions: bool = MISSING

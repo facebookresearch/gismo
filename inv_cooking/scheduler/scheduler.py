@@ -31,12 +31,19 @@ def schedule_jobs(cfg: RawConfig, training_mode: TrainingMode) -> None:
     # than one in case of hyper-parameter search
     for config in RawConfig.to_config(cfg):
         if config.slurm.partition == "local":
-            _schedule_job_locally(config, training_mode)
+            schedule_job_locally(config, training_mode)
         else:
-            _schedule_job_on_slurm(config, training_mode)
+            schedule_job_on_slurm(config, training_mode)
 
 
-def _schedule_job_locally(cfg: Config, training_mode: TrainingMode):
+def schedule_job(config: Config, training_mode: TrainingMode):
+    if config.slurm.partition == "local":
+        schedule_job_locally(config, training_mode)
+    else:
+        schedule_job_on_slurm(config, training_mode)
+
+
+def schedule_job_locally(cfg: Config, training_mode: TrainingMode):
     nb_gpu = cfg.slurm.gpus_per_node
     if training_mode == TrainingMode.TRAIN:
         run_training(
@@ -48,7 +55,7 @@ def _schedule_job_locally(cfg: Config, training_mode: TrainingMode):
         run_visualisation(cfg)
 
 
-def _schedule_job_on_slurm(cfg: Config, training_mode: TrainingMode):
+def schedule_job_on_slurm(cfg: Config, training_mode: TrainingMode):
     nb_gpus = cfg.slurm.gpus_per_node
     executor = submitit.AutoExecutor(folder=cfg.checkpoint.log_folder)
     executor.update_parameters(

@@ -248,7 +248,7 @@ eval_im2recipe_vit32_multi_level_2:
   parent: im2recipe_vit32_multi_level_2
   eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47574002/im2recipe-im2recipe_vit32_multi_level_2"
   ingr_teachforce:
-    test: use_substitutions
+    test: use_ground_truth
 
 eval_im2recipe_vit16_no_class:
   parent: im2recipe_vit16_no_class
@@ -266,7 +266,7 @@ eval_im2recipe_vit16_multi_level_2:
   parent: im2recipe_vit16_multi_level_2
   eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47881171/im2recipe-im2recipe_vit16_multi_level_2"
   ingr_teachforce:
-    test: use_substitutions
+    test: use_ground_truth
 
 eval_im2recipe_vit_32_no_class_ff_bce_cat_pool2:
   parent: im2recipe_vit_32_no_class_ff_bce_cat_pool2

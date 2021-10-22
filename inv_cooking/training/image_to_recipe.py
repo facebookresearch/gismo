@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional
 
 import torch
+from pytorch_lightning.utilities import rank_zero_only
 
 from inv_cooking.config import (
     ImageEncoderConfig,
@@ -181,13 +182,33 @@ class ImageToRecipe(_BaseModule):
 
     def _eval_epoch_end(self, split: str):
         if split == "test":
-            self.log(f"{split}_o_f1", self.o_f1.compute())
-            self.log(f"{split}_c_f1", self.c_f1.compute())
-            self.log(f"{split}_i_f1", self.i_f1.compute())
-        self.log(f"{split}_perplexity", self.perplexity.compute())
+            self._log_ingredient_metrics(split)
+
+        self.log_test_results(f"{split}_perplexity", self.perplexity.compute())
         val_losses = self.val_losses.compute()
         for k, v in val_losses.items():
-            self.log(f"{split}_{k}", v)
+            self.log_test_results(f"{split}_{k}", v)
+
+    def _log_ingredient_metrics(self, split):
+        use_ingr_prediction = self.ingr_teachforce.test == IngredientTeacherForcingFlag.use_predictions
+        if use_ingr_prediction:
+            self.log_test_results(f"{split}_c_f1", self.c_f1.compute())
+            self.log_test_results(f"{split}_i_f1", self.i_f1.compute())
+            self.log_test_results(f"{split}_o_f1", self.o_f1.compute())
+        else:
+            self.log_test_results(f"{split}_c_f1", 0.0)
+            self.log_test_results(f"{split}_i_f1", 0.0)
+            self.log_test_results(f"{split}_o_f1", 0.0)
+
+    def log_test_results(self, key: str, value: Any) -> None:
+        self.log(key, value)
+        self.log_as_hparam(key, value)
+
+    @rank_zero_only
+    def log_as_hparam(self, key: str, value: Any) -> None:
+        if isinstance(value, torch.Tensor):
+            value = value.item()
+        print(f"[HPARAM] {key}: {value}")
 
     def configure_optimizers(self):
         return self.create_optimizers(
