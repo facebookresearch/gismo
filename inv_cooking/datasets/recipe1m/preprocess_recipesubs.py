@@ -2,6 +2,7 @@
 
 import os
 import pickle
+from pathlib import Path
 
 
 def create_pre_processed_recipesubs_data(
@@ -9,6 +10,9 @@ def create_pre_processed_recipesubs_data(
 ):
 
     dataset = {"train": [], "val": [], "test": []}
+
+    vocab_path = Path(pre_processed_dir) / "final_recipe1m_vocab_ingrs.pkl"
+    vocab = pickle.load(vocab_path.open("rb"))
 
     for split in ["train", "val", "test"]:
 
@@ -19,22 +23,26 @@ def create_pre_processed_recipesubs_data(
         substitution_dataset_split = substitution_dataset[split]
 
         # get all recipe ids
-        recipe_ids = [recipe["id"] for recipe in recipe_dataset_split]
+        recipes_by_id = {recipe["id"]: recipe for recipe in recipe_dataset_split}
 
         # create recipesubs dataset
+        visited_keys = set()
         for i, subs in enumerate(substitution_dataset_split):
-
             if i % 500 == 0:
                 print(
                     f"Processing {i} out of {len(substitution_dataset_split)} samples."
                 )
 
-            try:
-                found_id = recipe_ids.index(subs["id"])
-            except ValueError:
+            recipe_entry = recipes_by_id.get(subs["id"])
+            if recipe_entry is None:
                 continue
 
-            recipe_entry = recipe_dataset_split[found_id]
+            ingr_before, ingr_after = subs["subs"]
+            key = (recipe_entry["id"], vocab(ingr_before), vocab(ingr_after))
+            if key in visited_keys:
+                continue
+
+            visited_keys.add(key)
             new_entry = {
                 "id": recipe_entry["id"],
                 "instructions": recipe_entry["instructions"],
