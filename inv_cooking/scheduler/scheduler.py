@@ -73,12 +73,31 @@ def schedule_job_on_slurm(cfg: Config, training_mode: TrainingMode):
 
     if training_mode == TrainingMode.TRAIN:
         trainer = ResumableTrainer(config=cfg, nb_gpu=nb_gpus, nb_node=cfg.slurm.nodes)
-        job = executor.submit(
-            trainer,
-        )
+        job = executor.submit(trainer)
+        print(f"Submitted {job.job_id}")
+    elif training_mode == TrainingMode.EVALUATE:
+        evaluator = AsyncEvaluation(config=cfg, nb_gpu=nb_gpus, nb_node=cfg.slurm.nodes)
+        job = executor.submit(evaluator)
         print(f"Submitted {job.job_id}")
     else:
         raise NotImplementedError
+
+
+class AsyncEvaluation:
+    """
+    A way to run an evaluation on SLURM
+    """
+
+    def __init__(
+        self, config: Config, nb_gpu: int, nb_node: int, load_checkpoint: bool = False
+    ):
+        self.config = config
+        self.nb_gpu = nb_gpu
+        self.nb_node = nb_node
+        self.load_checkpoint = load_checkpoint
+
+    def __call__(self):
+        run_eval(self.config, gpus=self.nb_gpu, nodes=self.nb_node, distributed_mode="ddp")
 
 
 class ResumableTrainer:

@@ -50,6 +50,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
         accelerator=distributed_mode,
         benchmark=True,  # increases speed for fixed image sizes
         precision=32,
+        progress_bar_refresh_rate=1 if cfg.slurm.partition == "local" else 0,
         # resume_from_checkpoint=best_checkpoint,
     )
 
