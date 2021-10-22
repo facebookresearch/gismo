@@ -8,7 +8,6 @@ im2recipe:
     freeze: False 
     load_pretrained_from: None
   recipe_gen: recipe_gen_tf
-  with_substitutions: False
   optimization:
     seed: 1235
     lr: 0.001
@@ -227,150 +226,59 @@ im2recipe_vit_16_no_class_ff_bce_cat_pool4:
 # - either with teacher forcing or ground truth ingredients or substitutions
 # -----------------------------------------------------------------------------
 
-eval_im2recipe_invcooking1.0_teacherforcing:
-  comment: 'evaluating with and without substitutions'
-  parent: im2recipe
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_ground_truth
-
-eval_im2recipe_vit32_teacherforcing:
-  comment: 'evaluating with and without substitutions'
-  parent: im2recipe_vit32
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_ground_truth
-
-eval_im2recipe_vit32_no_class_teacherforcing:
-  comment: "/checkpoint/qduval/inversecooking2.0/47308686/im2recipe-im2recipe_vit32_no_class"
+eval_im2recipe_vit32_no_class:
   parent: im2recipe_vit32_no_class
-  with_substitutions: True
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47308686/im2recipe-im2recipe_vit32_no_class"
   ingr_teachforce:
     test: use_ground_truth
 
-eval_im2recipe_vit32_no_class_conv_teacherforcing:
-  comment: "/checkpoint/qduval/inversecooking2.0/47410061/im2recipe-im2recipe_vit32_no_class_conv"
+eval_im2recipe_vit32_no_class_conv:
   parent: im2recipe_vit32_no_class_conv
-  with_substitutions: False
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47410061/im2recipe-im2recipe_vit32_no_class_conv"
   ingr_teachforce:
     test: use_ground_truth
 
 eval_im2recipe_vit32_multi_level:
-  comment: "/checkpoint/qduval/inversecooking2.0/47573940/im2recipe-im2recipe_vit32_multi_level"
   parent: im2recipe_vit32_multi_level
-  # with_substitutions: True
-  with_substitutions: False
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47573940/im2recipe-im2recipe_vit32_multi_level"
   ingr_teachforce:
     test: use_ground_truth
-    # test: use_predictions
-    # test: use_substitutions
 
 eval_im2recipe_vit32_multi_level_2:
-  comment: "/checkpoint/qduval/inversecooking2.0/47574002/im2recipe-im2recipe_vit32_multi_level_2"
   parent: im2recipe_vit32_multi_level_2
-  with_substitutions: True
-  # with_substitutions: False
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47574002/im2recipe-im2recipe_vit32_multi_level_2"
   ingr_teachforce:
-    # test: use_ground_truth
-    # test: use_predictions
     test: use_substitutions
 
-eval_im2recipe_vit16_teacherforcing:
-  comment: 'evaluating with and without substitutions'
-  parent: im2recipe_vit16
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_ground_truth
-
 eval_im2recipe_vit16_no_class:
-  comment: "/checkpoint/qduval/inversecooking2.0/47552483/im2recipe-im2recipe_vit16_no_class"
   parent: im2recipe_vit16_no_class
-  with_substitutions: True
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47552483/im2recipe-im2recipe_vit16_no_class"
   ingr_teachforce:
     test: use_ground_truth
 
 eval_im2recipe_vit16_multi_level:
-  comment: /checkpoint/qduval/inversecooking2.0/47881172/im2recipe-im2recipe_vit16_multi_level
   parent: im2recipe_vit16_multi_level
-  with_substitutions: True
-  # with_substitutions: False
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47881172/im2recipe-im2recipe_vit16_multi_level"
   ingr_teachforce:
-    # test: use_predictions
     test: use_ground_truth
-    # test: use_substitutions
 
 eval_im2recipe_vit16_multi_level_2:
-  comment: /checkpoint/qduval/inversecooking2.0/47881171/im2recipe-im2recipe_vit16_multi_level_2
   parent: im2recipe_vit16_multi_level_2
-  with_substitutions: True
-  # with_substitutions: False
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47881171/im2recipe-im2recipe_vit16_multi_level_2"
   ingr_teachforce:
-    # test: use_predictions
-    # test: use_ground_truth
     test: use_substitutions
 
 eval_im2recipe_vit_32_no_class_ff_bce_cat_pool2:
-  comment: "/checkpoint/qduval/inversecooking2.0/47948487/im2recipe-im2recipe_vit_32_no_class_ff_bce_cat_pool2"
   parent: im2recipe_vit_32_no_class_ff_bce_cat_pool2
-  with_substitutions: True
-  # with_substitutions: False
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47948487/im2recipe-im2recipe_vit_32_no_class_ff_bce_cat_pool2"
   ingr_teachforce:
-    # test: use_predictions
     test: use_ground_truth
-    # test: use_substitutions
 
 eval_im2recipe_vit_16_no_class_ff_bce_cat_pool4:
-  comment: "/checkpoint/qduval/inversecooking2.0/47989553/im2recipe-im2recipe_vit_16_no_class_ff_bce_cat_pool4"
   parent: im2recipe_vit_16_no_class_ff_bce_cat_pool4
-  with_substitutions: True
-  # with_substitutions: False
+  eval_checkpoint_dir: "/checkpoint/qduval/inversecooking2.0/47989553/im2recipe-im2recipe_vit_16_no_class_ff_bce_cat_pool4"
   ingr_teachforce:
-    # test: use_predictions
     test: use_ground_truth
     # test: use_substitutions
-
-# -----------------------------------------------------------------------------
-
-eval_im2recipe_invcooking1.0_substitutions:
-  comment: 'evaluating with and without substitutions'
-  parent: eval_im2recipe_invcooking1.0_teacherforcing
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_substitutions
-
-eval_im2recipe_vit32_substitutions:
-  comment: 'evaluating with and without substitutions'
-  parent: eval_im2recipe_vit32_teacherforcing
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_substitutions
-
-eval_im2recipe_vit32_no_class_substitutions:
-  comment: "/checkpoint/qduval/inversecooking2.0/47308686/im2recipe-im2recipe_vit32_no_class"
-  parent: im2recipe_vit32_no_class
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_substitutions
-
-eval_im2recipe_vit32_no_class_conv_substitutions:
-  comment: "/checkpoint/qduval/inversecooking2.0/47410061/im2recipe-im2recipe_vit32_no_class_conv"
-  parent: im2recipe_vit32_no_class_conv
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_substitutions
-
-eval_im2recipe_vit32_multi_level_substitutions:
-  comment: "/checkpoint/qduval/inversecooking2.0/47428542/im2recipe-im2recipe_vit32_multi_level"
-  parent: im2recipe_vit32_multi_level_2
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_substitutions
-
-eval_im2recipe_vit16_substitutions:
-  comment: 'evaluating with and without substitutions'
-  parent: eval_im2recipe_vit16_teacherforcing
-  with_substitutions: True
-  ingr_teachforce:
-    test: use_substitutions
 
 # -----------------------------------------------------------------------------

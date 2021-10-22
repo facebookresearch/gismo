@@ -28,6 +28,8 @@ class DatasetFilterConfig:
 @dataclass
 class DatasetAblationConfig:
     gray_images: bool = MISSING
+    with_substitutions: bool = MISSING
+    alternate_substitution_set: str = MISSING
 
 
 @dataclass

@@ -56,7 +56,10 @@ class RawConfig:
             config.comment = experiment.comment
             config.debug_mode = raw_config.debug_mode
             config.eval_on_test = raw_config.eval_on_test
-            config.eval_checkpoint_dir = raw_config.eval_checkpoint_dir
+            if not OmegaConf.is_missing(experiment, "eval_checkpoint_dir"):
+                config.eval_checkpoint_dir = experiment.eval_checkpoint_dir
+            else:
+                config.eval_checkpoint_dir = raw_config.eval_checkpoint_dir
             config.slurm = raw_config.slurm
             config.dataset = raw_config.dataset
             config.dataset.loading = merge_with_non_missing(
@@ -70,7 +73,6 @@ class RawConfig:
             config.optimization = experiment.optimization
             config.pretrained_im2ingr = experiment.pretrained_im2ingr
             config.ingr_teachforce = experiment.ingr_teachforce
-            config.with_substitutions = experiment.with_substitutions
             configs.append(config)
         return configs
 

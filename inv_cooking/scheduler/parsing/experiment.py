@@ -11,7 +11,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, MISSING
 
 from inv_cooking.config import (
     DatasetLoadingConfig,
@@ -49,9 +49,7 @@ class Experiment:
 
     name: str = ""
     comment: str = ""
-    loading: DatasetLoadingConfig = (
-        DatasetLoadingConfig()
-    )  # Allow to override the dataset config
+
     recipe_gen: RecipeGeneratorConfig = RecipeGeneratorConfig()
     image_encoder: ImageEncoderConfig = ImageEncoderConfig()
     title_encoder: TitleEncoderConfig = TitleEncoderConfig()
@@ -59,7 +57,10 @@ class Experiment:
     optimization: OptimizationConfig = OptimizationConfig()
     pretrained_im2ingr: PretrainedConfig = PretrainedConfig()
     ingr_teachforce: IngredientTeacherForcingConfig = IngredientTeacherForcingConfig()
-    with_substitutions: bool = False
+
+    # Allow to override the dataset config
+    eval_checkpoint_dir: str = MISSING
+    loading: DatasetLoadingConfig = DatasetLoadingConfig()
 
 
 def parse_experiments(db: Experiments, task: str, name: str) -> List[Experiment]:

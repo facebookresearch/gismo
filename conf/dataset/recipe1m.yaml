@@ -21,6 +21,8 @@ filtering:
 
 ablation:
   gray_images: false
+  with_substitutions: false
+  alternate_substitution_set: ""
 
 pre_processing:
   save_path: "data/recipe1m/preprocessed_flavorgraph"  #  012319/preprocessed# 'data/recipe1m/preprocessed_new'

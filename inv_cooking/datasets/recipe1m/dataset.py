@@ -134,6 +134,23 @@ class Recipe1M(data.Dataset):
                                 Please set either return_images, return_ingr or return_recipe to True."""
             )
 
+        # Use alternate substitution set (for testing purpose)
+        if self.ablations.alternate_substitution_set and self.loading.with_substitutions:
+            alternate_substitutions = pickle.load(open(self.ablations.alternate_substitution_set, "rb"))
+            alternate_substitutions = {
+                (recipe_id, self.ingr_vocab(ingr_a), self.ingr_vocab(ingr_b)): ingr_c
+                for (recipe_id, ingr_a, ingr_b), ingr_c in alternate_substitutions.items()
+            }
+
+            for recipe_entry in self.dataset:
+                recipe_id = recipe_entry["id"]
+                ingr_a, ingr_b = recipe_entry["substitution"]
+                key = recipe_id, self.ingr_vocab(ingr_a), self.ingr_vocab(ingr_b)
+                # TODO - this check should not be necessary, all should be found
+                if key in alternate_substitutions:
+                    ingr_c = alternate_substitutions[key]
+                    recipe_entry["substitution"] = ingr_a, ingr_c
+
         if use_lmdb:
             # open lmdb file
             self.image_file = lmdb.open(
@@ -260,6 +277,11 @@ class Recipe1M(data.Dataset):
         old_ingredient, new_ingredient = self.dataset[index]["substitution"]
         old_ingredient = self.ingr_vocab(old_ingredient)
         new_ingredient = self.ingr_vocab(new_ingredient)
+
+        if self.ablations.alternate_substitution_set:
+            recipe_id = self.dataset[index]["id"]
+
+
         return old_ingredient, new_ingredient
 
     @staticmethod
