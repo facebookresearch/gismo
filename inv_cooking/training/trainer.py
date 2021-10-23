@@ -130,8 +130,6 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
             with_ingredient_eos=include_eos,
             with_recipe=True,
             with_substitutions=with_substitutions,
-            with_title=True,
-            with_id=True,
         )
     elif cfg.task == TaskType.ingr2recipe:
         return LoadingOptions(
