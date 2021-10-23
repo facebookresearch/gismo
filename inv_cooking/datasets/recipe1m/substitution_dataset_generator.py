@@ -114,6 +114,7 @@ def make_consistent(ing1, ing2, word2idx):
 
 # map comment text to substitutions
 def create_substitutions(union, id2ing, vocab_ing, file):
+    duplicate_keys = {}
     input_file = open(file, "wb")
     examples = []
     counter = 0
@@ -152,8 +153,23 @@ def create_substitutions(union, id2ing, vocab_ing, file):
                     ing1_ = make_consistent(ing1_, ing2, vocab_ing.word2idx)
                     example["subs"] = (ing2, ing1_)
 
-                if example not in examples:
+                if (
+                    example not in examples
+                    and (
+                        example["id"],
+                        vocab_ing.word2idx[example["subs"][0]],
+                        vocab_ing.word2idx[example["subs"][1]],
+                    )
+                    not in duplicate_keys
+                ):
                     examples.append(example)
+                    duplicate_keys[
+                        (
+                            example["id"],
+                            vocab_ing.word2idx[example["subs"][0]],
+                            vocab_ing.word2idx[example["subs"][1]],
+                        )
+                    ] = True
     pickle.dump(examples, input_file)
     print(len(examples))
     return examples
