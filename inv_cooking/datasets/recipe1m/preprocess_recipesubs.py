@@ -3,11 +3,14 @@
 import os
 import pickle
 
-def create_pre_processed_recipesubs_data(pre_processed_dir: str, recipe_dataset: dict, substitution_dataset: dict):
+
+def create_pre_processed_recipesubs_data(
+    pre_processed_dir: str, recipe_dataset: dict, substitution_dataset: dict
+):
 
     dataset = {"train": [], "val": [], "test": []}
 
-    for split in ['train', 'val', 'test']:
+    for split in ["train", "val", "test"]:
 
         # load preprocessed recipe dataset
         recipe_dataset_split = recipe_dataset[split]
@@ -18,17 +21,19 @@ def create_pre_processed_recipesubs_data(pre_processed_dir: str, recipe_dataset:
         # get all recipe ids
         recipe_ids = [recipe["id"] for recipe in recipe_dataset_split]
 
-        # create recipesubs dataset  
+        # create recipesubs dataset
         for i, subs in enumerate(substitution_dataset_split):
 
             if i % 500 == 0:
-                print(f"Processing {i} out of {len(substitution_dataset_split)} samples.")
+                print(
+                    f"Processing {i} out of {len(substitution_dataset_split)} samples."
+                )
 
             try:
                 found_id = recipe_ids.index(subs["id"])
             except ValueError:
                 continue
-            
+
             recipe_entry = recipe_dataset_split[found_id]
             new_entry = {
                 "id": recipe_entry["id"],

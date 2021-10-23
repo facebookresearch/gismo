@@ -1,10 +1,10 @@
 import copy
 import math
-from typing import Optional, Dict, Any
-from PIL import Image
+from typing import Any, Dict, Optional
 
-import torch
 import numpy as np
+import torch
+from PIL import Image
 
 from inv_cooking.datasets.recipe1m import Recipe1MDataModule
 from inv_cooking.datasets.vocabulary import Vocabulary
@@ -25,7 +25,7 @@ class Im2RecipeVisualiser:
         swap_images: bool = False,
         gray_images: bool = False,
         with_substitutions: bool = False,
-        batch_size: int = 0
+        batch_size: int = 0,
     ):
         """
         Function that combines the sampling of an input, passing through the model,
@@ -35,8 +35,7 @@ class Im2RecipeVisualiser:
         """
         batch = self.sample_input(batch_size=batch_size)
         batch, losses, ingr_predictions, recipe_predictions = self.sample_output(
-            batch,
-            with_substitutions=with_substitutions
+            batch, with_substitutions=with_substitutions
         )
         self.display_sample(batch, losses, ingr_predictions, recipe_predictions)
 
@@ -70,12 +69,16 @@ class Im2RecipeVisualiser:
             batch["image"] = batch["image"].roll(shifts=[1], dims=[0])
         elif gray_images:
             images = batch["image"]
-            batch["image"] = torch.zeros(size=images.shape, dtype=images.dtype, device=images.device)
+            batch["image"] = torch.zeros(
+                size=images.shape, dtype=images.dtype, device=images.device
+            )
         else:
             batch["image"] = batch["image"]
 
         self.model.eval()
-        ingredients = batch["ingredients"] if not with_substitutions else batch["substitution"]
+        ingredients = (
+            batch["ingredients"] if not with_substitutions else batch["substitution"]
+        )
         with torch.no_grad():
             losses, (ingr_predictions, recipe_predictions) = self.model(
                 image=batch["image"],
@@ -88,8 +91,13 @@ class Im2RecipeVisualiser:
             return batch, losses, ingr_predictions, recipe_predictions
 
     def display_sample(
-        self, batch: Dict[str, Any], losses: Dict[str, Any], ingr_predictions: torch.Tensor,
-        recipe_predictions: torch.Tensor, start: int = 0, limit: int = -1
+        self,
+        batch: Dict[str, Any],
+        losses: Dict[str, Any],
+        ingr_predictions: torch.Tensor,
+        recipe_predictions: torch.Tensor,
+        start: int = 0,
+        limit: int = -1,
     ):
         """
         Display the outputs of the model in terms of text
@@ -138,7 +146,11 @@ class Im2RecipeVisualiser:
 
             num_columns = 2
             num_rows = int(math.ceil(num_images / num_columns))
-            fig, ax = plt.subplots(figsize=(4 * num_columns, 4 * num_rows), ncols=num_columns, nrows=num_rows)
+            fig, ax = plt.subplots(
+                figsize=(4 * num_columns, 4 * num_rows),
+                ncols=num_columns,
+                nrows=num_rows,
+            )
             for i in range(num_images):
                 x, y = divmod(i, num_columns)
                 ax[x, y].imshow(images[i])
@@ -147,8 +159,12 @@ class Im2RecipeVisualiser:
     @staticmethod
     def tensor_to_image(tensor: torch.Tensor):
         with torch.no_grad():
-            sigma = torch.as_tensor((0.229, 0.224, 0.225), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
-            mu = torch.as_tensor((0.485, 0.456, 0.406), dtype=tensor.dtype, device=tensor.device).view(-1, 1, 1)
+            sigma = torch.as_tensor(
+                (0.229, 0.224, 0.225), dtype=tensor.dtype, device=tensor.device
+            ).view(-1, 1, 1)
+            mu = torch.as_tensor(
+                (0.485, 0.456, 0.406), dtype=tensor.dtype, device=tensor.device
+            ).view(-1, 1, 1)
             tensor = (tensor * sigma) + mu
             tensor = tensor.permute((1, 2, 0))
             array = tensor.cpu().detach().numpy()

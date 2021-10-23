@@ -41,7 +41,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
     # Load the checkpoint
     checkpoint = torch.load(best_checkpoint, map_location="cpu")
     model.on_load_checkpoint(checkpoint)  # callback of our models
-    model.load_state_dict(checkpoint['state_dict'], strict=True)
+    model.load_state_dict(checkpoint["state_dict"], strict=True)
 
     # Create the training, initializing from the provided checkpoint
     trainer = pl.Trainer(

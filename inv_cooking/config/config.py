@@ -18,7 +18,7 @@ class TaskType(Enum):
     im2title = 3
     ingrsubs = 4
 
-    
+
 @dataclass
 class CheckpointConfig:
     log_folder: str = MISSING

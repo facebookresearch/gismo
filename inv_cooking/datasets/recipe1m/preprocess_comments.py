@@ -230,10 +230,13 @@ def load_split_per_dataset(dataset, train_ids, val_ids, test_ids):
     return train_dataset, val_dataset, test_dataset
 
 
-def run_comment_pre_processing(recipe1m_path: str, preprocessed_dir: str, vocab_ingrs, splits):
+def run_comment_pre_processing(
+    recipe1m_path: str, preprocessed_dir: str, vocab_ingrs, splits
+):
 
     # Early catching of missing spicy package
     import spacy
+
     spacy.load("en_core_web_lg")
 
     recipe1m_path = Path(recipe1m_path)

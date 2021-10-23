@@ -1,7 +1,7 @@
 import os
 import pickle
 from dataclasses import dataclass
-from typing import Tuple, List
+from typing import List, Tuple
 
 import lmdb
 import numpy as np
@@ -114,7 +114,11 @@ class Recipe1M(data.Dataset):
             )
 
         # load dataset
-        dataset_filename = "final_recipe1msubs_" if self.loading.with_substitutions else "final_recipe1m_"
+        dataset_filename = (
+            "final_recipe1msubs_"
+            if self.loading.with_substitutions
+            else "final_recipe1m_"
+        )
         if self.loading.need_load():
             self.dataset = pickle.load(
                 open(
@@ -129,7 +133,7 @@ class Recipe1M(data.Dataset):
                 """Dataset loader asked to not return images, nor ingredients, nor titles, nor recipes. 
                                 Please set either return_images, return_ingr or return_recipe to True."""
             )
-        
+
         if use_lmdb:
             # open lmdb file
             self.image_file = lmdb.open(
@@ -158,7 +162,9 @@ class Recipe1M(data.Dataset):
 
     def __getitem__(
         self, index: int
-    ) -> Tuple[Image.Image, "ingredients", "title", "recipe", "id", "substituted_ingredients"]:
+    ) -> Tuple[
+        Image.Image, "ingredients", "title", "recipe", "id", "substituted_ingredients"
+    ]:
         """
         Return the relevant elements of the recipe (all optional):
         - image of the finished recipe
@@ -182,7 +188,9 @@ class Recipe1M(data.Dataset):
         subs_ingredients = None
         if self.loading.with_substitutions:
             old_ingr, new_ingr = self._load_substitution(index)
-            subs_ingredients = self._apply_ingredient_substitution(ingredients, old_ingr, new_ingr)
+            subs_ingredients = self._apply_ingredient_substitution(
+                ingredients, old_ingr, new_ingr
+            )
 
         return image, ingredients, title, recipe, id, subs_ingredients
 
@@ -209,7 +217,7 @@ class Recipe1M(data.Dataset):
         return true_ingr_idxs + [self.ingr_pad_value] * nb_pad_values
 
     def _load_image(self, index: int):
-        paths = self.dataset[index]["images"][0:self.max_num_images]
+        paths = self.dataset[index]["images"][0 : self.max_num_images]
         if not paths:
             return torch.zeros(size=(3, 224, 224))  # TODO - not the right resolution
 
@@ -255,7 +263,9 @@ class Recipe1M(data.Dataset):
         return old_ingredient, new_ingredient
 
     @staticmethod
-    def _apply_ingredient_substitution(ingredients: List[int], old_ingr: int, new_ingr: int) -> List[int]:
+    def _apply_ingredient_substitution(
+        ingredients: List[int], old_ingr: int, new_ingr: int
+    ) -> List[int]:
         return [(ingr if ingr != old_ingr else new_ingr) for ingr in ingredients]
 
     def _load_title(self, index: int) -> List[int]:

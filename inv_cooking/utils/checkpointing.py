@@ -2,9 +2,10 @@ import glob
 import os
 from typing import List
 
+import numpy as np
 import pytorch_lightning
 import torch
-import numpy as np
+
 from inv_cooking.config import Config
 
 
@@ -33,7 +34,9 @@ def select_best_checkpoint(available_checkpoints: List[str], metric_mode: str) -
     best_scores = []
     for i, filename in enumerate(available_checkpoints):
         check = torch.load(filename)
-        best_score = check["callbacks"][pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint]["best_model_score"]
+        best_score = check["callbacks"][
+            pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint
+        ]["best_model_score"]
         best_scores.append(best_score.item())
         del check
     best_scores = np.array(best_scores)

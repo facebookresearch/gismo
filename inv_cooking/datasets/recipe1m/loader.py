@@ -37,9 +37,16 @@ class Recipe1MDataModule(pl.LightningDataModule):
                 self.dataset_config.path, self.dataset_config.pre_processing
             )
             train_subs, val_subs, test_subs = run_comment_pre_processing(
-                self.dataset_config.path, self.dataset_config.pre_processing.save_path, vocab_ingrs, dataset)
-            create_pre_processed_recipesubs_data(self.dataset_config.pre_processing.save_path, 
-                                                 dataset, {"train": train_subs, "val": val_subs, "test": test_subs})
+                self.dataset_config.path,
+                self.dataset_config.pre_processing.save_path,
+                vocab_ingrs,
+                dataset,
+            )
+            create_pre_processed_recipesubs_data(
+                self.dataset_config.pre_processing.save_path,
+                dataset,
+                {"train": train_subs, "val": val_subs, "test": test_subs},
+            )
 
     def setup(self, stage: Optional[str] = None):
         if stage == "fit":

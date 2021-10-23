@@ -99,7 +99,8 @@ class ImageToRecipe(_BaseModule):
             image=batch["image"],
             ingredients=batch["ingredients"],
             recipe=batch["recipe"],
-            compute_losses=True, use_ingr_pred=not self.ingr_teachforce.train,
+            compute_losses=True,
+            use_ingr_pred=not self.ingr_teachforce.train,
         )
         return out[0]
 
@@ -111,8 +112,12 @@ class ImageToRecipe(_BaseModule):
         )
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
-        use_ingr_prediction = self.ingr_teachforce.test == IngredientTeacherForcingFlag.use_predictions
-        use_ingr_substitutions = self.ingr_teachforce.test == IngredientTeacherForcingFlag.use_substitutions
+        use_ingr_prediction = (
+            self.ingr_teachforce.test == IngredientTeacherForcingFlag.use_predictions
+        )
+        use_ingr_substitutions = (
+            self.ingr_teachforce.test == IngredientTeacherForcingFlag.use_substitutions
+        )
         return self._evaluation_step(
             batch,
             use_ingr_pred=use_ingr_prediction,
@@ -125,7 +130,11 @@ class ImageToRecipe(_BaseModule):
         use_ingr_pred: bool,
         use_ingr_substitutions: bool,
     ):
-        ingredients = batch["ingredients"] if not use_ingr_substitutions else batch["substitution"]
+        ingredients = (
+            batch["ingredients"]
+            if not use_ingr_substitutions
+            else batch["substitution"]
+        )
         out = self(
             image=batch["image"],
             ingredients=ingredients,
