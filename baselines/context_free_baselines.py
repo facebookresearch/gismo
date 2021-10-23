@@ -21,7 +21,7 @@ def context_free_examples(examples, vocabs, mode=0):
 
 def load_split_data(split):
     examples = json.load(
-        open("/private/home/baharef/inversecooking2.0/preprocessed_data/" + split + "_comments_subs.pkl", "r")
+        open("/private/home/baharef/inversecooking2.0/preprocessed_data/" + split + "_comments_subs_deduplicated.pkl", "r")
     )
     return examples
 
@@ -84,7 +84,7 @@ def test_model(model_name, trial, split="test"):
                 subs[example[0]] = []
             subs[example[0]].append(example[1])
 
-    print("dictionary loaded!")
+    # print("dictionary loaded!")
 
     subs_dict = load_dict(subs, vocabs)
     for example in examples_cf:
@@ -100,8 +100,8 @@ def test_model(model_name, trial, split="test"):
 
 
 if __name__ == "__main__":
-    model_name = "rbert"
-
+    model_name = "food2vec"
+    print("===========", model_name, "===========")
     mrrs = []
     hits1 = []
     hits3 = []

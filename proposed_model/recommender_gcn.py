@@ -13,8 +13,8 @@ class Trainer:
     def __init__(self):
         super(Trainer, self).__init__()
 
-    def get_loss(self, model, indices, nr, context, name, I_two_hops, lambda_):
-        sims = self.get_model_output(model, indices, context, nr, name, I_two_hops, lambda_)
+    def get_loss(self, model, indices, nr, context, name):
+        sims = self.get_model_output(model, indices, context, nr, name)
         sims = sims.view(-1, nr + 1)
         return sims
 
@@ -28,7 +28,7 @@ class Trainer:
             embeddings.shape[0], embeddings.shape[2]
         )
 
-    def get_model_output(self, model, indices, context, nr, name, I_two_hops, lambda_, embeddings=None):
+    def get_model_output(self, model, indices, context, nr, name, embeddings=None):
         if name == "GCN" or name == "SAGE" or name == "GIN" or name == "GAT":
             if embeddings is None:
                 embeddings = model()
@@ -71,7 +71,7 @@ class Trainer:
 
         return ranks, predicted_index
 
-    def get_loss_lookup_table(self, dataloader, model, n_ingrs, rank_file_path):
+    def get_loss_naive_baseline(self, dataloader, model, n_ingrs, rank_file_path):
         rank_file = open(rank_file_path, "w")
 
         mrr = 0.0
@@ -97,7 +97,7 @@ class Trainer:
             hits[key] /= counter / 100.0
         return mrr, hits
 
-    def get_loss_test(self, model, dataloader, n_ingrs, context, name, rank_file_path, I_two_hops, lambda_):
+    def get_loss_test(self, model, dataloader, n_ingrs, context, name, rank_file_path, lambda_):
         rank_file = open(rank_file_path, "w")
         if name == "GCN":
             embeddings = model()
@@ -110,7 +110,7 @@ class Trainer:
 
         for batch in dataloader:
             sims = self.get_model_output(
-                model, batch, context, n_ingrs - 1, name, I_two_hops, lambda_, embeddings
+                model, batch, context, n_ingrs - 1, name, embeddings
             ).view(-1, n_ingrs)
             ranks, predicted_index = self.get_rank(sims)
             mrr += torch.sum(1.0 / ranks)
@@ -130,10 +130,10 @@ class Trainer:
         return mrr, hits
 
     def train_classification_gcn(
-        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, lookup_table
+        self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, ingrs, lookup_table
     ):
         base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-20/checkpoints/"
+            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-22/checkpoints/"
         )
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         output_dir = create_output_dir(base_dir, cfg)
@@ -141,18 +141,17 @@ class Trainer:
         ranks_file_test = os.path.join(output_dir, "test_ranks.txt")
 
         if cfg.name == "LT" or cfg.name == "LTFreq" or cfg.name == "Random" or cfg.name == "Freq" or cfg.name == "Mode":
-            print("Starting Here!")
             model = globals()[cfg.name](lookup_table)
             print("No training is involved for this setup!")
-            val_mrr, val_hits = self.get_loss_lookup_table(
-                val_dataloader, model, n_ingrs, ranks_file_val
-            )
-            test_mrr, test_hits = self.get_loss_lookup_table(
+            # val_mrr, val_hits = self.get_loss_naive_baseline(
+            #     val_dataloader, model, n_ingrs, ranks_file_val
+            # )
+            test_mrr, test_hits = self.get_loss_naive_baseline(
                 test_dataloader, model, n_ingrs, ranks_file_test
             )
             print(test_mrr, test_hits)
 
-            return val_mrr, test_mrr, test_hits
+            return 0.0, test_mrr, test_hits
 
 
         model = globals()[cfg.name](
@@ -195,7 +194,7 @@ class Trainer:
             start_time = time.time()
             for train_batch in train_dataloader:
                 indices = train_batch[:, :-1]
-                sims = self.get_loss(model, indices, cfg.nr, context, cfg.name, I_two_hops, cfg.lambda_)
+                sims = self.get_loss(model, indices, cfg.nr, context, cfg.name)
                 targets = torch.zeros(sims.shape[0]).long().to(device)
                 loss = loss_layer(sims, targets)
                 opt.zero_grad()
@@ -215,7 +214,7 @@ class Trainer:
                 with torch.no_grad():
                     model.eval()
                     val_mrr, val_hits = self.get_loss_test(
-                        model, val_dataloader, n_ingrs, context, cfg.name, ranks_file_val, I_two_hops, cfg.lambda_
+                        model, val_dataloader, n_ingrs, context, cfg.name, ranks_file_val, cfg.lambda_
                     )
                     print("vall metrics:", val_mrr, val_hits)
                     if val_mrr > best_val_mrr:
@@ -235,7 +234,7 @@ class Trainer:
         with torch.no_grad():
             best_model.eval()
             test_mrr, test_hits = self.get_loss_test(
-                best_model, test_dataloader, n_ingrs, context, cfg.name, ranks_file_test, I_two_hops, cfg.lambda_
+                best_model, test_dataloader, n_ingrs, context, cfg.name, ranks_file_test, cfg.lambda_
             )
         print(test_mrr, test_hits)
         return best_val_mrr, test_mrr, test_hits
@@ -243,11 +242,10 @@ class Trainer:
     def train_recommender_gcn(self, cfg):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        graph, train_dataset, val_dataset, test_dataset, ingrs, node_count2id, node_id2name, node_id2count, recipe_id2counter, I_two_hops = load_data(
+        graph, train_dataset, val_dataset, test_dataset, ingrs, node_count2id, node_id2name, node_id2count, recipe_id2counter = load_data(
             cfg.nr,
             cfg.max_context,
             cfg.add_self_loop,
-            cfg.two_hops,
             cfg.neg_sampling,
             cfg.data_augmentation,
             cfg.p_augmentation,
@@ -286,6 +284,6 @@ class Trainer:
 
         for trial in range(cfg.ntrials):
             val_mrr, test_mrr, test_hits = self.train_classification_gcn(
-                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, I_two_hops, ingrs, train_dataset.lookup_table
+                graph, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, ingrs, train_dataset.lookup_table
             )
             print(val_mrr, test_mrr, test_hits)

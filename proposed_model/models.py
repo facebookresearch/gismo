@@ -229,8 +229,8 @@ class GIN_MLP(nn.Module):
         self.adj.requires_grad = False
 
         if self.with_titles:
-            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/features/title_embeddings_CLIP.pkl', 'rb'))
-            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/features/title_recipe_ids.pkl', 'rb'))
+            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_embeddings_CLIP.pkl', 'rb'))
+            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_recipe_ids.pkl', 'rb'))
             emb_dim = len(embs[0])
             self.title_embeddings = torch.zeros((len(embs),emb_dim)).to(device)
             for id_ in recipe_id2counter:
@@ -280,6 +280,14 @@ class GIN_MLP(nn.Module):
         self.mrr = torch.nn.Parameter(
             torch.tensor(0, dtype=torch.float64), requires_grad=False
         ).to(device)
+
+
+        self.mlp_layers = nn.ModuleList()
+        self.mlp_layers.append(torch.nn.Linear(hidden_channels * 2, hidden_channels))
+        for _ in range(num_layers - 1):
+            self.mlp_layers.append(torch.nn.Linear(hidden_channels, hidden_channels//2))
+        self.mlp_layers.append(torch.nn.Linear(hidden_channels//2, 1))
+        
 
     def embed_context(self, indices, x):
         if self.context_emb_mode == "avg":
@@ -574,8 +582,8 @@ class MLP_CAT(nn.Module):
         self.with_set = with_set
 
         if self.with_titles:
-            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/features/title_embeddings_CLIP.pkl', 'rb'))
-            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/features/title_recipe_ids.pkl', 'rb'))
+            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_embeddings_CLIP.pkl', 'rb'))
+            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_recipe_ids.pkl', 'rb'))
             emb_dim = len(embs[0])
             self.title_embeddings = torch.zeros((len(embs),emb_dim)).to(device)
             for id_ in recipe_id2counter:

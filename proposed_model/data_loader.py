@@ -9,13 +9,12 @@ import dgl.function as fn
 import dgl.ops as ops
 import torch
 import torch.utils.data as data
-import networkx as nx
 
 from inv_cooking.datasets.vocabulary import Vocabulary
 
 
 def load_edges(
-    dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, two_hops, device, normalize=True,
+    dir_, node_id2count, nnodes, add_self_loop, device, normalize=True,
 ):
     sources, destinations, weights, types = [], [], [], []
 
@@ -24,7 +23,6 @@ def load_edges(
         line_count = 0
         for row in csv_reader:
             if line_count == 0:
-                # print(f'Column names are {", ".join(row)}')
                 line_count += 1
             node1, node2 = int(row["id_1"]), int(row["id_2"])
             node1_cnt, node2_cnt = node_id2count[node1], node_id2count[node2]
@@ -74,11 +72,6 @@ def load_edges(
     graph = dgl.graph((sources, destinations))
     graph.edata["w"] = weights
     graph.edata["t"] = types
-
-    # transfer to two hops graph
-    if two_hops:
-        print("Graph modified to a two-hops graph")
-        graph = convert_two_hops(graph).to(device)
 
     # symmetric normalization
     if normalize:
@@ -131,58 +124,11 @@ def load_nodes(dir_):
         nnodes,
     )
 
-def convert_two_hops(graph):
-    nx_g = dgl.to_networkx(graph.cpu(), edge_attrs=['w'])
-    np_g_weighted = nx.convert_matrix.to_numpy_array(nx_g, weight='weight')
-    np_g_two_hops = np.matmul(np_g_weighted, np_g_weighted)
-    dgl_g_two_hops = numpy_to_graph(np_g_two_hops)
-    dgl_g_two_hops.edata['w'] = dgl_g_two_hops.edata['weight']
-    return dgl_g_two_hops
-
-def numpy_to_graph(A, type_graph='dgl', node_features=None):
-    '''Convert numpy arrays to graph
-
-    Parameters
-    ----------
-    A : mxm array
-        Adjacency matrix
-    type_graph : str
-        'dgl' or 'nx'
-    node_features : dict
-        Optional, dictionary with key=feature name, value=list of size m
-        Allows user to specify node features
-
-    Returns
-
-    -------
-    Graph of 'type_graph' specification
-    '''
-    
-    G = nx.from_numpy_array(A)
-    
-    if node_features != None:
-        for n in G.nodes():
-            for k,v in node_features.items():
-                G.nodes[n][k] = v[n]
-    
-    if type_graph == 'nx':
-        return G
-    
-    G = G.to_directed()
-    
-    if node_features != None:
-        node_attrs = list(node_features.keys())
-    else:
-        node_attrs = []
-        
-    g = dgl.from_networkx(G, node_attrs=node_attrs, edge_attrs=['weight'])
-    return g
-
 def node_count2name(count, node_count2id, node_id2name):
     return node_id2name[node_count2id[count]]
 
 
-def load_graph(add_self_loop, dir_, two_hops, device):
+def load_graph(add_self_loop, dir_, device):
     (
         node_id2count,
         node_count2id,
@@ -192,7 +138,7 @@ def load_graph(add_self_loop, dir_, two_hops, device):
         node_id2name,
         nnodes,
     ) = load_nodes(dir_)
-    graph = load_edges(dir_, node_id2count, node_count2id, node_id2name, nnodes, add_self_loop, two_hops, device)
+    graph = load_edges(dir_, node_id2count, nnodes, add_self_loop, device)
     return (
         graph,
         node_name2id,
@@ -203,11 +149,7 @@ def load_graph(add_self_loop, dir_, two_hops, device):
         nnodes
     )
 
-def compute_distances(graph):
-    nx_g = dgl.to_networkx(graph.cpu(), edge_attrs=['w'])
-    lengths = dict(nx.shortest_path_length(nx_g))
-
-def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augmentation, p_augmentation, device, dir_):
+def load_data(nr, max_context, add_self_loop, neg_sampling, data_augmentation, p_augmentation, device, dir_):
     (
         graph,
         node_name2id,
@@ -216,7 +158,7 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         node_count2id,
         node_id2name,
         nnodes
-    ) = load_graph(add_self_loop, dir_, two_hops, device)
+    ) = load_graph(add_self_loop, dir_, device)
     ingr_vocabs = pickle.load(
         open(
             "/private/home/baharef/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
@@ -278,10 +220,6 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         p_augmentation=0.0
     )
 
-    # pickle.dump(recipe_id2counter, open("/private/home/baharef/inversecooking2.0/proposed_model/titles_neede.pkl", "wb"))
-    
-    I_two_hops = pickle.load(open("/private/home/baharef/inversecooking2.0/proposed_model/features/two_hops_tensor.pkl", "rb")).to(device)
-
     return (
         graph,
         train_dataset,
@@ -292,7 +230,6 @@ def load_data(nr, max_context, add_self_loop, two_hops, neg_sampling, data_augme
         node_id2name,
         node_id2count,
         recipe_id2counter,
-        I_two_hops
     )
 
 
@@ -314,7 +251,7 @@ class SubsData(data.Dataset):
         nnodes: int,
         p_augmentation: float,
     ):
-        self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs.pkl")
+        self.substitutions_dir = os.path.join(data_dir, split + "_comments_subs_deduplicated.pkl")
         self.split = split
         self.dataset = []
         self.nr = nr
@@ -386,7 +323,7 @@ class SubsData(data.Dataset):
             # Excluding ing1 from the context
             context_ids = context_ids[context_ids != output[ind, 0]]
             output[ind, 3:len(context_ids) + 3] = context_ids
-            
+
         return output
 
     def __len__(self):
