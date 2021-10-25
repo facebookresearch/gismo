@@ -1,6 +1,4 @@
 import pickle
-import random
-
 
 # remove the possible duplicates in the dataset
 def remove_duplicates(set_):
