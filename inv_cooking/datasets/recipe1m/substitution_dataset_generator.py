@@ -44,7 +44,7 @@ def find_word_ing(word, ings):
             for ing in super_str:
                 if ing.endswith(word):
                     return True, ing
-            return True, random.choice(super_str)
+            return True, super_str[0]
     return False, word
 
 
