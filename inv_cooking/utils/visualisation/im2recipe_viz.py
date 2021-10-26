@@ -9,6 +9,7 @@ from PIL import Image
 from inv_cooking.datasets.recipe1m import Recipe1MDataModule
 from inv_cooking.datasets.vocabulary import Vocabulary
 from inv_cooking.training.image_to_recipe import ImageToRecipe
+from inv_cooking.utils.visualisation.recipe_utils import recipe_to_text, format_recipe
 
 
 class Im2RecipeVisualiser:
@@ -186,17 +187,9 @@ class Im2RecipeVisualiser:
                     ingredient_list.append(word)
         print(ingredient_list)
 
-    @staticmethod
-    def display_recipe(prediction: torch.Tensor, vocab: Vocabulary):
-        sentence = ""
-        for i in prediction.cpu().numpy():
-            word = vocab.idx2word.get(i)
-            if word == "<end>":
-                print(sentence)
-                break
-
-            if word == "<eoi>":
-                print(sentence)
-                sentence = ""
-            elif word != "<start>":
-                sentence += " " + word
+    @classmethod
+    def display_recipe(cls, prediction: torch.Tensor, vocab: Vocabulary):
+        text = recipe_to_text(prediction, vocab)
+        text = format_recipe(text)
+        for line in text.splitlines():
+            print(line)

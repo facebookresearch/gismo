@@ -6,6 +6,7 @@ import torch.nn.functional as functional
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 from inv_cooking.datasets.vocabulary import Vocabulary
+from inv_cooking.utils.visualisation.recipe_utils import recipe_to_text, format_recipe
 
 
 class LanguageModelType(Enum):
@@ -67,7 +68,6 @@ class PretrainedLanguageModel:
 
         :return a tensor with one element containing the perplexity
         """
-        generated_recipe = self.format_recipe(generated_recipe)
         gpt_prompt = self.tokenizer.encode("recipe instructions:")
         generated_recipe = self.tokenizer.encode(generated_recipe)
 
@@ -82,8 +82,8 @@ class PretrainedLanguageModel:
                 prob_target = probs[0, -1, generated_recipe[i]]
                 prob_sentence.append(prob_target.cpu())
         prob_sentence = torch.stack(prob_sentence)
-        perplexity = torch.exp(-torch.mean(torch.log(probs)))
-        return perplexity(prob_sentence).cpu()
+        perplexity = torch.exp(-torch.mean(torch.log(prob_sentence)))
+        return perplexity.cpu()
 
     def measure_perplexity_parallel(self, generated_recipe: str) -> torch.Tensor:
         """
@@ -93,7 +93,6 @@ class PretrainedLanguageModel:
 
         :return a tensor with one element containing the perplexity
         """
-        generated_recipe = self.format_recipe(generated_recipe)
         gpt_prompt = self.tokenizer.encode("recipe instructions: ")
         generated_recipe = self.tokenizer.encode(generated_recipe)
 
@@ -120,7 +119,6 @@ class PretrainedLanguageModel:
                 each entry containing the perplexity of the given recipe
         """
         gpt_prompt = self.tokenizer.encode("recipe instructions: ")
-        generated_recipes = [self.format_recipe(r) for r in generated_recipes]
         generated_recipes = [self.tokenizer.encode(r) for r in generated_recipes]
 
         input_tokens = [gpt_prompt + r[:-1] for r in generated_recipes]
@@ -165,14 +163,6 @@ class PretrainedLanguageModel:
         # Return the perplexity, one for each recipe
         return torch.exp(ce).cpu()
 
-    @staticmethod
-    def format_recipe(generated_recipe: str):
-        generated_recipe = generated_recipe.strip()
-        generated_recipe = generated_recipe.replace(" .", ".")
-        generated_recipe = generated_recipe.replace(" ,", ",")
-        generated_recipe = generated_recipe.replace("\n", "\n - ")
-        return generated_recipe
-
 
 class LanguageModelPerplexity:
     def __init__(
@@ -190,7 +180,8 @@ class LanguageModelPerplexity:
 
         all_perplexity = []
         for recipe_out in recipe_outs:
-            text = self._recipe_to_text(recipe_out, self.vocab_instructions)
+            text = recipe_to_text(recipe_out, self.vocab_instructions)
+            text = format_recipe(text)
             ppl = self.pretrained_language_model.measure_perplexity_parallel(text)
             all_perplexity.append(ppl)
         return torch.stack(all_perplexity)
@@ -200,20 +191,7 @@ class LanguageModelPerplexity:
             self.pretrained_language_model.to(recipe_outs.device)
 
         text_recipes = [
-            self._recipe_to_text(r, self.vocab_instructions) for r in recipe_outs
+            format_recipe(recipe_to_text(r, self.vocab_instructions)) for r in recipe_outs
         ]
         return self.pretrained_language_model.measure_perplexity_batch(text_recipes)
 
-    @staticmethod
-    def _recipe_to_text(prediction: torch.Tensor, vocab: Vocabulary):
-        sentence = ""
-        for i in prediction.cpu().numpy():
-            word = vocab.idx2word.get(i)
-            if word == "<end>":
-                return sentence
-
-            if word == "<eoi>":
-                sentence += "\n - "
-            elif word != "<start>":
-                sentence += " " + word
-        return sentence
