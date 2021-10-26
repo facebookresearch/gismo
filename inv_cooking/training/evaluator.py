@@ -7,7 +7,12 @@ from inv_cooking.utils.checkpointing import (
     list_available_checkpoints,
     select_best_checkpoint,
 )
+from inv_cooking.utils.metrics.gpt2_perplexity import (
+    LanguageModelPerplexity,
+    LanguageModelType,
+)
 
+from .image_to_recipe import ImageToRecipe
 from .trainer import create_model, load_data_set
 
 
@@ -32,6 +37,12 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
 
     # Creating the model
     model = create_model(cfg, data_module)
+    if isinstance(model, ImageToRecipe):
+        # TODO - do better: inject a new evaluator instead (with its own reduction)
+        vocab_instructions = data_module.dataset_test.get_instr_vocab()
+        model.pretrained_language_model_evaluator = LanguageModelPerplexity(
+            vocab_instructions=vocab_instructions, model_type=LanguageModelType.small,
+        )
     monitored_metric = model.get_monitored_metric()
 
     # Find best checkpoint path
@@ -51,12 +62,9 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
         benchmark=True,  # increases speed for fixed image sizes
         precision=32,
         progress_bar_refresh_rate=1 if cfg.slurm.partition == "local" else 0,
-        # resume_from_checkpoint=best_checkpoint,
     )
 
     # Run the evaluation on the module
     trainer.test(
-        model,
-        datamodule=data_module,
-        # ckpt_path = best_checkpoint,
+        model, datamodule=data_module,
     )

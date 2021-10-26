@@ -7,7 +7,7 @@ from inv_cooking.utils.checkpointing import (
     list_available_checkpoints,
     select_best_checkpoint,
 )
-from inv_cooking.utils.visualisation.im2recipe import Im2RecipeVisualiser
+from inv_cooking.utils.visualisation.im2recipe_viz import Im2RecipeVisualiser
 
 
 def run_visualisation(cfg: Config) -> None:

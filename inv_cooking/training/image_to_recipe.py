@@ -19,6 +19,7 @@ from inv_cooking.utils.metrics import (
     DistributedF1,
     DistributedValLosses,
 )
+from inv_cooking.utils.metrics.gpt2_perplexity import LanguageModelPerplexity
 
 
 class ImageToRecipe(_BaseModule):
@@ -73,6 +74,10 @@ class ImageToRecipe(_BaseModule):
         )
         self.perplexity = DistributedAverage()
 
+        # To compute the recipe perplexity from a language model point of view
+        self.pretrained_language_model_evaluator: Optional[LanguageModelPerplexity] = None
+        self.pretrained_language_perplexity = DistributedAverage()
+
     def get_monitored_metric(self) -> MonitoredMetric:
         return MonitoredMetric(name="val_perplexity", mode="min")
 
@@ -110,6 +115,7 @@ class ImageToRecipe(_BaseModule):
             batch,
             use_ingr_pred=not self.ingr_teachforce.val,
             use_ingr_substitutions=False,
+            compute_recipe_predictions=False,
         )
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int):
@@ -123,6 +129,7 @@ class ImageToRecipe(_BaseModule):
             batch,
             use_ingr_pred=use_ingr_prediction,
             use_ingr_substitutions=use_ingr_substitutions,
+            compute_recipe_predictions=self.pretrained_language_model_evaluator is not None,
         )
 
     def _evaluation_step(
@@ -130,6 +137,7 @@ class ImageToRecipe(_BaseModule):
         batch: Dict[str, torch.Tensor],
         use_ingr_pred: bool,
         use_ingr_substitutions: bool,
+        compute_recipe_predictions: bool,
     ):
         ingredients = (
             batch["ingredients"]
@@ -141,11 +149,14 @@ class ImageToRecipe(_BaseModule):
             ingredients=ingredients,
             recipe=batch["recipe"],
             use_ingr_pred=use_ingr_pred,
-            compute_predictions=False,
+            compute_predictions=compute_recipe_predictions,
             compute_losses=True,
         )
         out[0]["n_samples"] = batch["recipe"].shape[0]
         out[0]["ingr_pred"] = out[1][0]
+        if compute_recipe_predictions:
+            assert self.pretrained_language_model_evaluator is not None
+            out[0]["gpt_perplexity"] = self.pretrained_language_model_evaluator.compute_batch(out[1][1])
         out[0]["ingr_gt"] = batch["ingredients"]
         return out[0]
 
@@ -169,6 +180,8 @@ class ImageToRecipe(_BaseModule):
             self.i_f1(step_output["ingr_pred"], step_output["ingr_gt"])
 
         # update recipe metrics
+        if "gpt_perplexity" in step_output:
+            self.pretrained_language_perplexity(step_output["gpt_perplexity"])
         self.perplexity(torch.exp(step_output["recipe_loss"]))
 
         # update losses
@@ -185,6 +198,8 @@ class ImageToRecipe(_BaseModule):
             self._log_ingredient_metrics(split)
 
         self.log_test_results(f"{split}_perplexity", self.perplexity.compute())
+        if self.pretrained_language_model_evaluator is not None:
+            self.log_test_results(f"{split}_gpt_perplexity", self.pretrained_language_perplexity.compute())
         val_losses = self.val_losses.compute()
         for k, v in val_losses.items():
             self.log_test_results(f"{split}_{k}", v)

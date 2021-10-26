@@ -35,7 +35,10 @@ class Im2RecipeVisualiser:
         """
         batch = self.sample_input(batch_size=batch_size)
         batch, losses, ingr_predictions, recipe_predictions = self.sample_output(
-            batch, with_substitutions=with_substitutions
+            batch,
+            with_substitutions=with_substitutions,
+            swap_images=swap_images,
+            gray_images=gray_images,
         )
         self.display_sample(batch, losses, ingr_predictions, recipe_predictions)
 
