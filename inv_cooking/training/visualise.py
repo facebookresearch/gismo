@@ -1,3 +1,4 @@
+import os
 import torch
 from pytorch_lightning import seed_everything
 
@@ -45,8 +46,11 @@ def run_visualisation(cfg: Config) -> None:
         "model": model,
         "data_module": data_module,
     }
-    torch.save(result, "model_and_module.torch")
+    path_to_model = os.path.abspath("model_and_module.torch")
+    torch.save(result, path_to_model)
 
     # Take some example of data and print the corresponding recipes
     visualizer = Im2RecipeVisualiser(model=model, data_module=data_module)
     visualizer.visualize()
+
+    print(f"Model available at: {path_to_model}" )
