@@ -136,20 +136,7 @@ class Recipe1M(data.Dataset):
 
         # Use alternate substitution set (for testing purpose)
         if self.ablations.alternate_substitution_set and self.loading.with_substitutions:
-            alternate_substitutions = pickle.load(open(self.ablations.alternate_substitution_set, "rb"))
-            alternate_substitutions = {
-                (recipe_id, self.ingr_vocab(ingr_a), self.ingr_vocab(ingr_b)): ingr_c
-                for (recipe_id, ingr_a, ingr_b), ingr_c in alternate_substitutions.items()
-            }
-
-            for recipe_entry in self.dataset:
-                recipe_id = recipe_entry["id"]
-                ingr_a, ingr_b = recipe_entry["substitution"]
-                key = recipe_id, self.ingr_vocab(ingr_a), self.ingr_vocab(ingr_b)
-                # TODO - this check should not be necessary, all should be found
-                if key in alternate_substitutions:
-                    ingr_c = alternate_substitutions[key]
-                    recipe_entry["substitution"] = ingr_a, ingr_c
+            self.load_alternate_substitutions(self.ablations.alternate_substitution_set)
 
         if use_lmdb:
             # open lmdb file
@@ -173,6 +160,20 @@ class Recipe1M(data.Dataset):
             selected_indices = [s for s in selected_indices if s < len(ids)]
             ids = np.array(ids)[selected_indices]
         self.dataset = [self.dataset[i] for i in ids]
+
+    def load_alternate_substitutions(self, substitution_set: str):
+        alternate_substitutions = pickle.load(open(substitution_set, "rb"))
+        alternate_substitutions = {
+            (recipe_id, self.ingr_vocab(ingr_a), self.ingr_vocab(ingr_b)): ingr_c
+            for (recipe_id, ingr_a, ingr_b), ingr_c in alternate_substitutions.items()
+        }
+        for recipe_entry in self.dataset:
+            recipe_id = recipe_entry["id"]
+            ingr_a, ingr_b = recipe_entry["substitution"]
+            key = recipe_id, self.ingr_vocab(ingr_a), self.ingr_vocab(ingr_b)
+            if key in alternate_substitutions:
+                ingr_c = alternate_substitutions[key]
+                recipe_entry["substitution"] = ingr_a, ingr_c
 
     def __len__(self):
         return len(self.dataset)

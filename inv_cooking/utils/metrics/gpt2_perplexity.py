@@ -45,20 +45,20 @@ class PretrainedLanguageModel:
         self.device = device
         self.model.cuda(self.device)
 
-    def auto_complete(self, text: str) -> str:
+    def auto_complete(self, text: str, steps: int = 1) -> str:
         """
         Auto complete a sentence: the initial text provided
         cannot be empty (need an initial prompt).
         """
-        indexed_tokens = self.tokenizer.encode(text)
-        tokens_tensor = torch.tensor([indexed_tokens])
-        tokens_tensor = tokens_tensor.to(self.device)
-        with torch.no_grad():
-            outputs = self.model(tokens_tensor)
-            predictions = outputs[0]
-        predicted_index = torch.argmax(predictions[0, -1, :]).item()
-        predicted_text = self.tokenizer.decode(indexed_tokens + [predicted_index])
-        return predicted_text
+        for _ in range(steps):
+            indexed_tokens = self.tokenizer.encode(text)
+            tokens_tensor = torch.tensor([indexed_tokens], device=self.device)
+            with torch.no_grad():
+                outputs = self.model(tokens_tensor)
+                predictions = outputs[0]
+                predicted_index = torch.argmax(predictions[0, -1, :]).item()
+            text = self.tokenizer.decode(indexed_tokens + [predicted_index])
+        return text
 
     def measure_perplexity_slow(self, generated_recipe: str) -> torch.Tensor:
         """

@@ -51,6 +51,6 @@ def run_visualisation(cfg: Config) -> None:
 
     # Take some example of data and print the corresponding recipes
     visualizer = Im2RecipeVisualiser(model=model, data_module=data_module)
-    visualizer.visualize()
+    visualizer.visualise_impact_of_substitutions()
 
     print(f"Model available at: {path_to_model}" )
