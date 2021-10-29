@@ -38,10 +38,10 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
     # Creating the model
     model = create_model(cfg, data_module)
     if isinstance(model, ImageToRecipe):
-        # TODO - do better: inject a new evaluator instead (with its own reduction)
         vocab_instructions = data_module.dataset_test.get_instr_vocab()
         model.pretrained_language_model_evaluator = LanguageModelPerplexity(
-            vocab_instructions=vocab_instructions, model_type=LanguageModelType.small,
+            vocab_instructions=vocab_instructions,
+            model_type=LanguageModelType.medium,
         )
     monitored_metric = model.get_monitored_metric()
 

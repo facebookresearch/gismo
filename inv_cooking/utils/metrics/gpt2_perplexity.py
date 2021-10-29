@@ -19,10 +19,8 @@ class LanguageModelType(Enum):
             return "gpt2"
         elif self == LanguageModelType.medium:
             return "gpt2-medium"
-        elif self == LanguageModelType.large:
-            return "gpt2-large"
         else:
-            raise ValueError(f"Unsupported model {self}")
+            return "gpt2-large"
 
 
 class PretrainedLanguageModel:
