@@ -10,6 +10,8 @@ from inv_cooking.utils.checkpointing import (
 from inv_cooking.utils.metrics.gpt2_perplexity import (
     LanguageModelPerplexity,
     LanguageModelType,
+    PerplexityMetricType,
+    PretrainedLanguageModel,
 )
 
 from .image_to_recipe import ImageToRecipe
@@ -37,13 +39,54 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
 
     # Creating the model
     model = create_model(cfg, data_module)
+    monitored_metric = model.get_monitored_metric()
+
+    # Adding custom metrics
     if isinstance(model, ImageToRecipe):
         vocab_instructions = data_module.dataset_test.get_instr_vocab()
-        model.pretrained_language_model_evaluator = LanguageModelPerplexity(
-            vocab_instructions=vocab_instructions,
-            model_type=LanguageModelType.medium,
+        language_model = PretrainedLanguageModel(LanguageModelType.medium)
+        model.add_input_language_metric(
+            name="input_gpt_perplexity",
+            evaluator=LanguageModelPerplexity(
+                vocab_instructions=vocab_instructions,
+                pretrained_language_model=language_model,
+                metric_type=PerplexityMetricType.full_recipe,
+            ),
         )
-    monitored_metric = model.get_monitored_metric()
+        model.add_output_language_metric(
+            name="gpt_perplexity",
+            evaluator=LanguageModelPerplexity(
+                vocab_instructions=vocab_instructions,
+                pretrained_language_model=language_model,
+                metric_type=PerplexityMetricType.full_recipe,
+            ),
+        )
+        """
+        model.add_pretrained_language_metric(
+            name="gpt_perplexity_title",
+            evaluator=LanguageModelPerplexity(
+                vocab_instructions=vocab_instructions,
+                pretrained_language_model=language_model,
+                metric_type=PerplexityMetricType.title_only,
+            )
+        )
+        model.add_pretrained_language_metric(
+            name="gpt_perplexity_instructions",
+            evaluator=LanguageModelPerplexity(
+                vocab_instructions=vocab_instructions,
+                pretrained_language_model=language_model,
+                metric_type=PerplexityMetricType.instructions_only,
+            )
+        )
+        model.add_pretrained_language_metric(
+            name="gpt_perplexity_cond_instructions",
+            evaluator=LanguageModelPerplexity(
+                vocab_instructions=vocab_instructions,
+                pretrained_language_model=language_model,
+                metric_type=PerplexityMetricType.instructions_conditioned_on_title,
+            )
+        )
+        """
 
     # Find best checkpoint path
     best_checkpoint = select_best_checkpoint(all_checkpoints, monitored_metric.mode)

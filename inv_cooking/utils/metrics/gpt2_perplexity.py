@@ -1,12 +1,12 @@
 from enum import Enum
-from typing import List
+from typing import List, Tuple
 
 import torch
 import torch.nn.functional as functional
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 from inv_cooking.datasets.vocabulary import Vocabulary
-from inv_cooking.utils.visualisation.recipe_utils import recipe_to_text, format_recipe
+from inv_cooking.utils.visualisation.recipe_utils import format_recipe, recipe_to_text
 
 
 class LanguageModelType(Enum):
@@ -47,6 +47,9 @@ class PretrainedLanguageModel:
         """
         Auto complete a sentence: the initial text provided
         cannot be empty (need an initial prompt).
+
+        Used for probing GPT2 ability to generate recipes
+        from different prompts.
         """
         for _ in range(steps):
             indexed_tokens = self.tokenizer.encode(text)
@@ -58,7 +61,9 @@ class PretrainedLanguageModel:
             text = self.tokenizer.decode(indexed_tokens + [predicted_index])
         return text
 
-    def measure_perplexity_slow(self, generated_recipe: str) -> torch.Tensor:
+    def measure_perplexity(
+        self, generated_recipe: str, prompt: str = "recipe instructions: ",
+    ) -> torch.Tensor:
         """
         Measure the perplexity of a recipe by asking GPT to
         generate text after an initial prompt "recipe instructions:"
@@ -66,32 +71,7 @@ class PretrainedLanguageModel:
 
         :return a tensor with one element containing the perplexity
         """
-        gpt_prompt = self.tokenizer.encode("recipe instructions:")
-        generated_recipe = self.tokenizer.encode(generated_recipe)
-
-        prob_sentence = []
-        for i in range(len(generated_recipe)):
-            tokens_tensor = torch.tensor([gpt_prompt + generated_recipe[:i]])
-            tokens_tensor = tokens_tensor.to(self.device)
-            with torch.no_grad():
-                outputs = self.model(tokens_tensor)
-                predictions = outputs[0]
-                probs = torch.nn.functional.softmax(predictions, dim=-1)
-                prob_target = probs[0, -1, generated_recipe[i]]
-                prob_sentence.append(prob_target.cpu())
-        prob_sentence = torch.stack(prob_sentence)
-        perplexity = torch.exp(-torch.mean(torch.log(prob_sentence)))
-        return perplexity.cpu()
-
-    def measure_perplexity_parallel(self, generated_recipe: str) -> torch.Tensor:
-        """
-        Measure the perplexity of a recipe by asking GPT to
-        generate text after an initial prompt "recipe instructions:"
-        and measure the perplexity of the ground truth recipe
-
-        :return a tensor with one element containing the perplexity
-        """
-        gpt_prompt = self.tokenizer.encode("recipe instructions: ")
+        gpt_prompt = self.tokenizer.encode(prompt)
         generated_recipe = self.tokenizer.encode(generated_recipe)
 
         input_tokens = gpt_prompt + generated_recipe[:-1]
@@ -107,7 +87,9 @@ class PretrainedLanguageModel:
             perplexity = torch.exp(ce)
         return perplexity.cpu()
 
-    def measure_perplexity_batch(self, generated_recipes: List[str]) -> torch.Tensor:
+    def measure_perplexity_batch(
+        self, generated_recipes: List[str], prompt: str = "recipe instructions: ",
+    ) -> torch.Tensor:
         """
         Measure the perplexity of a BATCH of recipe by asking GPT to
         generate text after an initial prompt "recipe instructions:"
@@ -116,7 +98,7 @@ class PretrainedLanguageModel:
         :return a tensor with one element for each provided recipe,
                 each entry containing the perplexity of the given recipe
         """
-        gpt_prompt = self.tokenizer.encode("recipe instructions: ")
+        gpt_prompt = self.tokenizer.encode(prompt)
         generated_recipes = [self.tokenizer.encode(r) for r in generated_recipes]
 
         input_tokens = [gpt_prompt + r[:-1] for r in generated_recipes]
@@ -162,15 +144,33 @@ class PretrainedLanguageModel:
         return torch.exp(ce).cpu()
 
 
+class PerplexityMetricType(Enum):
+    """
+    Types of perplexity metrics we can compute on a generated recipe
+    """
+
+    full_recipe = 0
+    title_only = 1
+    instructions_only = 2
+    instructions_conditioned_on_title = 3
+
+
 class LanguageModelPerplexity:
+    """
+    Utility class to compute a pre-trained language model perplexity
+    on a generated recipe
+    """
+
     def __init__(
         self,
         vocab_instructions: Vocabulary,
-        model_type: LanguageModelType = LanguageModelType.small,
+        pretrained_language_model: PretrainedLanguageModel,
+        metric_type: PerplexityMetricType = PerplexityMetricType.full_recipe,
     ):
         super().__init__()
         self.vocab_instructions = vocab_instructions
-        self.pretrained_language_model = PretrainedLanguageModel(model_type=model_type)
+        self.pretrained_language_model = pretrained_language_model
+        self.metric_type = metric_type
 
     def compute(self, recipe_outs: torch.Tensor) -> torch.Tensor:
         if recipe_outs.device != self.pretrained_language_model.device:
@@ -178,18 +178,55 @@ class LanguageModelPerplexity:
 
         all_perplexity = []
         for recipe_out in recipe_outs:
-            text = recipe_to_text(recipe_out, self.vocab_instructions)
-            text = format_recipe(text)
-            ppl = self.pretrained_language_model.measure_perplexity_parallel(text)
-            all_perplexity.append(ppl)
-        return torch.stack(all_perplexity)
+            recipe_text = self.format_recipe(recipe_out)
+            prompt, text = self.get_prompt_and_text(recipe_text)
+            if text.strip():
+                ppl = self.pretrained_language_model.measure_perplexity(
+                    text, prompt=prompt
+                )
+                all_perplexity.append(ppl)
+            else:
+                print(
+                    f"Ignored recipe for metric {self.metric_type.name}:", recipe_text
+                )
+        perplexities = torch.stack(all_perplexity)
+        return perplexities
 
     def compute_batch(self, recipe_outs: torch.Tensor) -> torch.Tensor:
         if recipe_outs.device != self.pretrained_language_model.device:
             self.pretrained_language_model.to(recipe_outs.device)
 
-        text_recipes = [
-            format_recipe(recipe_to_text(r, self.vocab_instructions)) for r in recipe_outs
-        ]
+        # TODO - batch the computations in case of stratified metrics
+        if self.metric_type != PerplexityMetricType.full_recipe:
+            return self.compute(recipe_outs)
+
+        text_recipes = [self.format_recipe(r) for r in recipe_outs]
         return self.pretrained_language_model.measure_perplexity_batch(text_recipes)
 
+    def format_recipe(self, recipe: torch.Tensor) -> str:
+        """
+        Return the text to evaluate the pre-trained language perplexity on
+        along with the initial prompt to give to the pret-rained model
+        """
+        return format_recipe(recipe_to_text(recipe, self.vocab_instructions))
+
+    def get_prompt_and_text(self, full_text: str) -> Tuple[str, str]:
+        if self.metric_type == PerplexityMetricType.full_recipe:
+            return "recipe instructions: ", full_text
+
+        # TODO - need a check on whether the split makes sense (because title might not be there)
+        title_text, instruction_text = self.split_title_and_recipe(full_text)
+        if self.metric_type == PerplexityMetricType.title_only:
+            return "recipe name: ", title_text
+        elif self.metric_type == PerplexityMetricType.instructions_only:
+            return "recipe instructions: ", instruction_text
+        elif self.metric_type == PerplexityMetricType.instructions_conditioned_on_title:
+            return (
+                f"recipe of {title_text}\n. \nrecipe instructions: ",
+                instruction_text,
+            )
+
+    @staticmethod
+    def split_title_and_recipe(recipe_text: str):
+        parts = recipe_text.splitlines()
+        return parts[0], "\n".join(parts[1:])

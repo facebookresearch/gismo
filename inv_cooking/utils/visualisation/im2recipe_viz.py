@@ -11,7 +11,7 @@ from inv_cooking.datasets.recipe1m import Recipe1MDataModule
 from inv_cooking.datasets.vocabulary import Vocabulary
 from inv_cooking.training.image_to_recipe import ImageToRecipe
 from inv_cooking.utils.metrics.gpt2_perplexity import PretrainedLanguageModel
-from inv_cooking.utils.visualisation.recipe_utils import recipe_to_text, format_recipe
+from inv_cooking.utils.visualisation.recipe_utils import format_recipe, recipe_to_text
 
 
 @dataclass
@@ -131,9 +131,11 @@ class VisualOutput:
         return text
 
     @classmethod
-    def display_recipe(cls, prefix: str, text: str, language_model: Optional[PretrainedLanguageModel]):
+    def display_recipe(
+        cls, prefix: str, text: str, language_model: Optional[PretrainedLanguageModel]
+    ):
         if language_model is not None:
-            lm_ppl = language_model.measure_perplexity_parallel(text)
+            lm_ppl = language_model.measure_perplexity(text)
             print(f"\n{prefix} (perplexity GPT: {lm_ppl:.2f}):")
         else:
             print(f"\n{prefix}:")
@@ -147,9 +149,7 @@ class Im2RecipeVisualiser:
     """
 
     def __init__(
-        self,
-        model: ImageToRecipe,
-        data_module: Recipe1MDataModule,
+        self, model: ImageToRecipe, data_module: Recipe1MDataModule,
     ):
         self.model = model
         self.data_module = data_module
@@ -214,11 +214,11 @@ class Im2RecipeVisualiser:
         return next(iterator)
 
     def sample_output(
-            self,
-            batch: Optional[dict] = None,
-            with_substitutions: bool = False,
-            swap_images: bool = False,
-            gray_images: bool = False,
+        self,
+        batch: Optional[dict] = None,
+        with_substitutions: bool = False,
+        swap_images: bool = False,
+        gray_images: bool = False,
     ):
         """
         Sample an output, using the batch as input to generate the outputs
@@ -258,13 +258,13 @@ class Im2RecipeVisualiser:
             return batch, losses, ingr_predictions, recipe_predictions
 
     def display_sample(
-            self,
-            batch: Dict[str, Any],
-            losses: Dict[str, Any],
-            ingr_predictions: torch.Tensor,
-            recipe_predictions: torch.Tensor,
-            start: int = 0,
-            limit: int = -1,
+        self,
+        batch: Dict[str, Any],
+        losses: Dict[str, Any],
+        ingr_predictions: torch.Tensor,
+        recipe_predictions: torch.Tensor,
+        start: int = 0,
+        limit: int = -1,
     ):
         """
         Display the outputs of the model in terms of text
