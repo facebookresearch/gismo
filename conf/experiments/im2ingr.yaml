@@ -124,7 +124,7 @@ im2ingr_vit_32_ff_bce_cat:
 im2ingr_vit_16_ff_bce_cat:
   parent: im2ingr_vit_32_ff_bce_cat
   loading:
-    batch_size: 8
+    batch_size: 32
   image_encoder:
     patch_size: 16
 
@@ -186,6 +186,20 @@ im2ingr_vit_32_ff_bce_cat_multi_level_2:
      additional_repr_levels: [1, 3, 6, 8, 10]
      concatenate_repr_levels: False
 
+im2ingr_vit_32_ff_bce_cat_multi_level_3:
+  parent: im2ingr_vit_32_ff_bce_cat
+  comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
+  image_encoder:
+     additional_repr_levels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+     concatenate_repr_levels: False
+
+im2ingr_vit_32_ff_bce_cat_multi_level_4:
+  parent: im2ingr_vit_32_ff_bce_cat
+  comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
+  image_encoder:
+     additional_repr_levels: [1, 3, 5, 7, 9]
+     concatenate_repr_levels: False
+
 im2ingr_vit_16_ff_bce_cat_multi_level:
   parent: im2ingr_vit_16_ff_bce_cat
   comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
@@ -198,6 +212,20 @@ im2ingr_vit_16_ff_bce_cat_multi_level_2:
   comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
   image_encoder:
      additional_repr_levels: [1, 3, 6, 8, 10]
+     concatenate_repr_levels: False
+
+im2ingr_vit_16_ff_bce_cat_multi_level_3:
+  parent: im2ingr_vit_16_ff_bce_cat
+  comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
+  image_encoder:
+     additional_repr_levels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+     concatenate_repr_levels: False
+
+im2ingr_vit_16_ff_bce_cat_multi_level_4:
+  parent: im2ingr_vit_16_ff_bce_cat
+  comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
+  image_encoder:
+     additional_repr_levels: [1, 3, 5, 7, 9]
      concatenate_repr_levels: False
 
 im2ingr_vit_16_ff_bce_cat_no_class_pool3:

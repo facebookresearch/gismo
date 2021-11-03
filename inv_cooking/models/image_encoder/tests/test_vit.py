@@ -138,14 +138,14 @@ def test_one_class_vit_multi_layer_as_sequence(patch_size: int, pretrained: bool
             freeze=False,
             n_cls_tokens=1,
             patch_size=patch_size,
-            additional_repr_levels=[5, 8],
-            concatenate_repr_levels=False,  # TODO - this is the interesting part: do the same for spatial not depth
+            additional_repr_levels=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            concatenate_repr_levels=False,
         ),
         image_size=448,
     )
     x = torch.randn(size=(2, 3, 448, 448))
     out = vit(x)
-    assert out.shape == torch.Size([2, 1024, 3])
+    assert out.shape == torch.Size([2, 1024, 12])
 
 
 @pytest.mark.parametrize("patch_size,pretrained", [[16, 32], [False, True]])
