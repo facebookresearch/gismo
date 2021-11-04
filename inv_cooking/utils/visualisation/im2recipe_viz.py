@@ -11,7 +11,11 @@ from inv_cooking.datasets.recipe1m import Recipe1MDataModule
 from inv_cooking.datasets.vocabulary import Vocabulary
 from inv_cooking.training.image_to_recipe import ImageToRecipe
 from inv_cooking.utils.metrics.gpt2_perplexity import PretrainedLanguageModel
-from inv_cooking.utils.visualisation.recipe_utils import format_recipe, recipe_to_text
+from inv_cooking.utils.visualisation.recipe_utils import (
+    format_recipe,
+    ingredients_to_text,
+    recipe_to_text,
+)
 
 
 @dataclass
@@ -112,17 +116,14 @@ class VisualOutput:
             array = np.uint8(array * 255)
             return Image.fromarray(array, mode="RGB")
 
-    @staticmethod
-    def display_ingredients(prediction: torch.Tensor, vocab: Vocabulary):
-        ingredient_list = []
-        for i in prediction.cpu().numpy():
-            word = vocab.idx2word.get(i)
-            if word != "<pad>":
-                if isinstance(word, list):
-                    ingredient_list.append(word[0])
-                else:
-                    ingredient_list.append(word)
+    @classmethod
+    def display_ingredients(cls, prediction: torch.Tensor, vocab: Vocabulary):
+        ingredient_list = cls.get_ingredients_text(prediction, vocab)
         print(ingredient_list)
+
+    @staticmethod
+    def get_ingredients_text(prediction: torch.Tensor, vocab: Vocabulary):
+        return ingredients_to_text(prediction, vocab)
 
     @classmethod
     def get_recipe_text(cls, prediction: torch.Tensor, vocab: Vocabulary):

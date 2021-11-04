@@ -20,6 +20,7 @@ from inv_cooking.utils.metrics import (
     DistributedValLosses,
 )
 from inv_cooking.utils.metrics.gpt2_perplexity import LanguageModelPerplexity
+from inv_cooking.utils.metrics.ingredient_iou import IngredientIntersection
 
 
 class ImageToRecipe(_BaseModule):
@@ -79,6 +80,9 @@ class ImageToRecipe(_BaseModule):
         self.input_language_perplexities = torch.nn.ModuleDict()
         self.outut_language_evaluators: Dict[str, LanguageModelPerplexity] = {}
         self.output_language_perplexities = torch.nn.ModuleDict()
+
+        # To compute metrics on if ingredients appear in the recipe
+        self.ingredient_intersection: Optional[IngredientIntersection] = None
 
     def get_monitored_metric(self) -> MonitoredMetric:
         return MonitoredMetric(name="val_perplexity", mode="min")
@@ -146,7 +150,8 @@ class ImageToRecipe(_BaseModule):
             batch,
             use_ingr_pred=use_ingr_prediction,
             use_ingr_substitutions=use_ingr_substitutions,
-            compute_recipe_predictions=num_evaluators > 0,
+            compute_recipe_predictions=num_evaluators > 0
+            or self.ingredient_intersection,
         )
 
     def _evaluation_step(
@@ -172,6 +177,8 @@ class ImageToRecipe(_BaseModule):
         out[0]["n_samples"] = batch["recipe"].shape[0]
         out[0]["ingr_pred"] = out[1][0]
         if compute_recipe_predictions:
+            if self.ingredient_intersection:
+                self.ingredient_intersection.add(ingredients, out[1][1])
             for name, evaluator in self.input_language_evaluators.items():
                 out[0][name] = evaluator.compute_batch(batch["recipe"])
             for name, evaluator in self.outut_language_evaluators.items():
@@ -220,6 +227,11 @@ class ImageToRecipe(_BaseModule):
 
         self.log_test_results(f"{split}_perplexity", self.perplexity.compute())
 
+        # print recipe metrics
+        if self.ingredient_intersection:
+            self.log_test_results(
+                f"{split}_ingr_intersection", self.ingredient_intersection.compute()
+            )
         for name, perplexity in self.input_language_perplexities.items():
             self.log_test_results(f"{split}_{name}", perplexity.compute())
         for name, perplexity in self.output_language_perplexities.items():
