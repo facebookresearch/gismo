@@ -66,8 +66,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
                 metric_type=PerplexityMetricType.full_recipe,
             ),
         )
-        """
-        model.add_pretrained_language_metric(
+        model.add_output_language_metric(
             name="gpt_perplexity_title",
             evaluator=LanguageModelPerplexity(
                 vocab_instructions=vocab_instructions,
@@ -75,7 +74,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
                 metric_type=PerplexityMetricType.title_only,
             )
         )
-        model.add_pretrained_language_metric(
+        model.add_output_language_metric(
             name="gpt_perplexity_instructions",
             evaluator=LanguageModelPerplexity(
                 vocab_instructions=vocab_instructions,
@@ -83,7 +82,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
                 metric_type=PerplexityMetricType.instructions_only,
             )
         )
-        model.add_pretrained_language_metric(
+        model.add_output_language_metric(
             name="gpt_perplexity_cond_instructions",
             evaluator=LanguageModelPerplexity(
                 vocab_instructions=vocab_instructions,
@@ -91,7 +90,6 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
                 metric_type=PerplexityMetricType.instructions_conditioned_on_title,
             )
         )
-        """
 
     # Find best checkpoint path
     best_checkpoint = select_best_checkpoint(all_checkpoints, monitored_metric.mode)

@@ -227,6 +227,12 @@ class LanguageModelPerplexity:
             )
 
     @staticmethod
-    def split_title_and_recipe(recipe_text: str):
+    def split_title_and_recipe(recipe_text: str) -> Tuple[str, str]:
+        """
+        Split the title from the recipe if possible
+        """
         parts = recipe_text.splitlines()
-        return parts[0], "\n".join(parts[1:])
+        if len(parts) > 1:
+            return parts[0], "\n".join(parts[1:])
+        else:
+            return "", ""
