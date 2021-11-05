@@ -246,6 +246,7 @@ im2recipe_vit16_multi_level_4:
     freeze: True
     load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48547836/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_4
 
+
 # -----------------------------------------------------------------------------
 # Evaluate impact of ingredient substitutions on the quality of the recipes
 # - use the substitution dataset
@@ -327,24 +328,8 @@ eval_im2recipe_vit_16_no_class_ff_bce_cat_pool4:
     # test: use_substitutions
 
 # -----------------------------------------------------------------------------
-
-eval_im2recipe_invcooking1_weight_decay_seed_1235:
-  parent: im2recipe_invcooking1.0_weight_decay
-  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48279615/im2recipe-im2recipe_invcooking1.0_weight_decay
-  ingr_teachforce:
-    test: use_ground_truth
-
-eval_im2recipe_invcooking1_weight_decay_seed_0:
-  parent: im2recipe_invcooking1.0_weight_decay
-  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48542772/im2recipe-im2recipe_invcooking1.0_weight_decay
-  ingr_teachforce:
-    test: use_ground_truth
-
-eval_im2recipe_invcooking1_weight_decay_seed_1:
-  parent: im2recipe_invcooking1.0_weight_decay
-  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48542774/im2recipe-im2recipe_invcooking1.0_weight_decay
-  ingr_teachforce:
-    test: use_ground_truth
+# Image encoder trained with batch 8 on im2ingr
+# -----------------------------------------------------------------------------
 
 eval_im2recipe_vit16_weight_decay_seed_1235:
   parent: im2recipe_vit16_weight_decay
@@ -383,6 +368,30 @@ eval_im2recipe_vit16_multi_level_2_weight_decay_seed_1:
   ingr_teachforce:
     test: use_ground_truth
 
+# -----------------------------------------------------------------------------
+# Image encoder trained with batch 8 on im2ingr
+# -----------------------------------------------------------------------------
+
+eval_im2recipe_invcooking1_weight_decay_seed_1235:
+  parent: im2recipe_invcooking1.0_weight_decay
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48279615/im2recipe-im2recipe_invcooking1.0_weight_decay
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_invcooking1_weight_decay_seed_0:
+  parent: im2recipe_invcooking1.0_weight_decay
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48542772/im2recipe-im2recipe_invcooking1.0_weight_decay
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_invcooking1_weight_decay_seed_1:
+  parent: im2recipe_invcooking1.0_weight_decay
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48542774/im2recipe-im2recipe_invcooking1.0_weight_decay
+  ingr_teachforce:
+    test: use_ground_truth
+
+# -----------------------------------------------------------------------------
+
 eval_im2recipe_vit32_weight_decay_seed_1235:
   parent: im2recipe_vit32_weight_decay
   eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48319495/im2recipe-im2recipe_vit32_weight_decay
@@ -416,6 +425,98 @@ eval_im2recipe_vit32_multi_level_2_weight_decay_seed_0:
 eval_im2recipe_vit32_multi_level_2_weight_decay_seed_1:
   parent: im2recipe_vit32_multi_level_2
   eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48483527/im2recipe-im2recipe_vit32_multi_level_2
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_multi_level_3_weight_decay_seed_1235:
+  parent: im2recipe_vit32_multi_level_3
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48593334/im2recipe-im2recipe_vit32_multi_level_3
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_multi_level_3_weight_decay_seed_0:
+  parent: im2recipe_vit32_multi_level_3
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594835/im2recipe-im2recipe_vit32_multi_level_3
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_multi_level_3_weight_decay_seed_1:
+  parent: im2recipe_vit32_multi_level_3
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594838/im2recipe-im2recipe_vit32_multi_level_3
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_multi_level_4_weight_decay_seed_1235:
+  parent: im2recipe_vit32_multi_level_4
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48593342/im2recipe-im2recipe_vit32_multi_level_4
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_multi_level_4_weight_decay_seed_0:
+  parent: im2recipe_vit32_multi_level_4
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594839/im2recipe-im2recipe_vit32_multi_level_4
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit32_multi_level_4_weight_decay_seed_1:
+  parent: im2recipe_vit32_multi_level_4
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594840/im2recipe-im2recipe_vit32_multi_level_4
+  ingr_teachforce:
+    test: use_ground_truth
+
+# -----------------------------------------------------------------------------
+
+eval_im2recipe_vit16_seed_1245:
+  parent: im2recipe_vit16
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48593439/im2recipe-im2recipe_vit16
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_seed_0:
+  parent: im2recipe_vit16
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594821/im2recipe-im2recipe_vit16
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_seed_1:
+  parent: im2recipe_vit16
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594822/im2recipe-im2recipe_vit16
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level_3_seed_1245:
+  parent: im2recipe_vit16_multi_level_3
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48593355/im2recipe-im2recipe_vit16_multi_level_3/
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level_3_seed_0:
+  parent: im2recipe_vit16_multi_level_3
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594828/im2recipe-im2recipe_vit16_multi_level_3
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level_3_seed_1:
+  parent: im2recipe_vit16_multi_level_3
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594829/im2recipe-im2recipe_vit16_multi_level_3/
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level_4_seed_1245:
+  parent: im2recipe_vit16_multi_level_4
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48593356/im2recipe-im2recipe_vit16_multi_level_4/
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level_4_seed_0:
+  parent: im2recipe_vit16_multi_level_4
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594831/im2recipe-im2recipe_vit16_multi_level_4/
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level_4_seed_1:
+  parent: im2recipe_vit16_multi_level_4
+  eval_checkpoint_dir: /checkpoint/qduval/inversecooking2.0/48594832/im2recipe-im2recipe_vit16_multi_level_4
   ingr_teachforce:
     test: use_ground_truth
 
