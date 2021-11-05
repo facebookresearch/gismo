@@ -20,7 +20,7 @@ from inv_cooking.utils.metrics import (
     DistributedValLosses,
 )
 from inv_cooking.utils.metrics.gpt2_perplexity import LanguageModelPerplexity
-from inv_cooking.utils.metrics.ingredient_iou import IngredientIntersection
+from inv_cooking.utils.metrics.ingredient_iou import IngredientIoU
 
 
 class ImageToRecipe(_BaseModule):
@@ -82,7 +82,7 @@ class ImageToRecipe(_BaseModule):
         self.output_language_perplexities = torch.nn.ModuleDict()
 
         # To compute metrics on if ingredients appear in the recipe
-        self.ingredient_intersection: Optional[IngredientIntersection] = None
+        self.ingredient_intersection: Optional[IngredientIoU] = None
 
     def get_monitored_metric(self) -> MonitoredMetric:
         return MonitoredMetric(name="val_perplexity", mode="min")

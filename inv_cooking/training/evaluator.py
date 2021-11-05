@@ -13,7 +13,7 @@ from inv_cooking.utils.metrics.gpt2_perplexity import (
     PerplexityMetricType,
     PretrainedLanguageModel,
 )
-from inv_cooking.utils.metrics.ingredient_iou import IngredientIntersection
+from inv_cooking.utils.metrics.ingredient_iou import IngredientIoU
 
 from .image_to_recipe import ImageToRecipe
 from .trainer import create_model, load_data_set
@@ -46,7 +46,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
     if isinstance(model, ImageToRecipe):
         ingr_vocab = data_module.dataset_test.ingr_vocab
         vocab_instructions = data_module.dataset_test.get_instr_vocab()
-        model.ingredient_intersection = IngredientIntersection(
+        model.ingredient_intersection = IngredientIoU(
             ingr_vocab=ingr_vocab, instr_vocab=vocab_instructions,
         )
         language_model = PretrainedLanguageModel(LanguageModelType.medium)

@@ -11,6 +11,7 @@ from inv_cooking.datasets.recipe1m import Recipe1MDataModule
 from inv_cooking.datasets.vocabulary import Vocabulary
 from inv_cooking.training.image_to_recipe import ImageToRecipe
 from inv_cooking.utils.metrics.gpt2_perplexity import PretrainedLanguageModel
+from inv_cooking.utils.metrics.ingredient_iou import IngredientIoU
 from inv_cooking.utils.visualisation.recipe_utils import (
     format_recipe,
     ingredients_to_text,
@@ -38,6 +39,11 @@ class VisualOutput:
         return self.gt_image.size(0)
 
     def show(self, i: int, language_model: Optional[PretrainedLanguageModel] = None):
+        iou = IngredientIoU(
+            ingr_vocab=self.ingr_vocab,
+            instr_vocab=self.instr_vocab,
+        )
+
         self.display_image(self.gt_image[i])
 
         print("\nGT INGREDIENTS:")
@@ -54,6 +60,7 @@ class VisualOutput:
             text=self.get_recipe_text(self.gt_recipe[i], self.instr_vocab),
             language_model=language_model,
         )
+        iou.visusalise_iou(self.gt_ingredients[i], self.gt_recipe[i])
 
         self.display_recipe(
             prefix=f"RECIPE {self.perplexity(self.pred_recipe_loss[i])}",
@@ -66,12 +73,14 @@ class VisualOutput:
             text=self.get_recipe_text(self.pred_recipe_from_gt[i], self.instr_vocab),
             language_model=language_model,
         )
+        iou.visusalise_iou(self.gt_ingredients[i], self.pred_recipe_from_gt[i])
 
         self.display_recipe(
             prefix=f"RECIPE from SUBS {self.perplexity(self.pred_recipe_from_subs_loss[i])}",
             text=self.get_recipe_text(self.pred_recipe_from_subs[i], self.instr_vocab),
             language_model=language_model,
         )
+        iou.visusalise_iou(self.gt_subs_ingredients[i], self.pred_recipe_from_subs[i])
 
     @classmethod
     def perplexity(cls, loss: torch.Tensor):

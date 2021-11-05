@@ -14,7 +14,7 @@ def recipe_to_text(prediction: torch.Tensor, vocab: Vocabulary):
 
         if word == "<eoi>":
             sentence += "\n"
-        elif word != "<start>":
+        elif word not in {"<start>", "<pad>"}:
             sentence += " " + word
     return sentence
 
