@@ -12,7 +12,6 @@ def main(cfg: RawConfig) -> None:
     """
     for config in RawConfig.to_config(cfg):
         base_name = config.name + "_use_"
-        tested_subset = config.dataset.ablation.alternate_substitution_set
 
         config.dataset.ablation.alternate_substitution_set = ""
         config.dataset.ablation.with_substitutions = False
@@ -39,16 +38,18 @@ def main(cfg: RawConfig) -> None:
         config.ingr_teachforce.test = IngredientTeacherForcingFlag.use_substitutions
         schedule_job(config, training_mode=TrainingMode.EVALUATE)
 
-        if tested_subset:
-            config.name = base_name + "pred_substitutions"
-            config.dataset.ablation.alternate_substitution_set = tested_subset
+        for i in [1, 2, 3, 4, 5]:
+            config.name = base_name + f"pred_substitutions_{i}"
+            config.dataset.ablation.alternate_substitution_set = f"/checkpoint/qduval/inversecooking2.0/gist_output/val_output_{i}.pkl"
             schedule_job(config, training_mode=TrainingMode.EVALUATE)
 
+        '''
         config.name = base_name + "ground_truth_no_image"
         config.dataset.ablation.gray_images = True
         config.ingr_teachforce.test = IngredientTeacherForcingFlag.use_ground_truth
         config.dataset.ablation.alternate_substitution_set = ""
         schedule_job(config, training_mode=TrainingMode.EVALUATE)
+        '''
 
 
 if __name__ == "__main__":
