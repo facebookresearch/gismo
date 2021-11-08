@@ -16,7 +16,6 @@ class RecipeFeaturesMetric(DistributedAverage):
 
     def add(self, recipes: torch.Tensor) -> torch.Tensor:
         features = self._compute_features(recipes)
-        features = torch.tensor(features, dtype=torch.int64, device=recipes.device)
         self.update(features)
         return features
 
