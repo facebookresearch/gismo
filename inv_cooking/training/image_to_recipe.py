@@ -184,12 +184,17 @@ class ImageToRecipe(_BaseModule):
             compute_predictions=compute_recipe_predictions,
             compute_losses=True,
         )
+
+        ingr_pred = out[1][0]
         out[0]["n_samples"] = batch["recipe"].shape[0]
-        out[0]["ingr_pred"] = out[1][0]
+        out[0]["ingr_pred"] = ingr_pred
+        out[0]["ingr_gt"] = batch["ingredients"]
+
         if compute_recipe_predictions:
             recipe_pred = out[1][1]
             if self.ingredient_intersection:
-                self.ingredient_intersection.add(ingredients, recipe_pred)
+                used_ingr = ingr_pred if use_ingr_pred else ingredients
+                self.ingredient_intersection.add(used_ingr, recipe_pred)
             for name, metric in self.input_recipe_feature_metrics.items():
                 metric.add(batch["recipe"])
             for name, metric in self.output_recipe_feature_metrics.items():
@@ -198,7 +203,6 @@ class ImageToRecipe(_BaseModule):
                 out[0][name] = evaluator.compute_batch(batch["recipe"])
             for name, evaluator in self.outut_language_evaluators.items():
                 out[0][name] = evaluator.compute_batch(recipe_pred)
-        out[0]["ingr_gt"] = batch["ingredients"]
         return out[0]
 
     def training_step_end(self, losses: Dict[str, torch.Tensor]):

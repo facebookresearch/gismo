@@ -58,8 +58,6 @@ class TrieIngredientExtractor:
 
     def find_ingredients(self, recipe_words: List[str], preferred_ingredients: Set[int]):
         recipe_words = self._filter_recipe(recipe_words)
-        if len(recipe_words) < self.max_window:
-            return set()
 
         # To identify already found ingredients and already used words
         # this allows to eliminate imperfect match if a perfect match
@@ -142,7 +140,6 @@ class IngredientIoU(DistributedAverage):
         self.ingredient_extractor = TrieIngredientExtractor(ingr_vocab=self.ingr_vocab)
 
     def add(self, ingredients: torch.tensor, recipes: torch.Tensor):
-        # TODO - make sure those are the ingredients deduced!
         results = []
         batch_size = recipes.shape[0]
         for i in range(batch_size):
