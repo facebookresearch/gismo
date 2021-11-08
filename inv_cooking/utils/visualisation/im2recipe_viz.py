@@ -165,37 +165,38 @@ class Im2RecipeVisualiser:
         self.data_module = data_module
         self.model.eval()
 
+    @torch.no_grad()
     def visualise_impact_of_substitutions(self, batch: Optional[dict] = None):
         if batch is None:
             batch = self.sample_input()
         else:
             batch = copy.copy(batch)
 
-        with torch.no_grad():
-            losses_full, (ingr_pred, recipe_full) = self.model(
-                image=batch["image"],
-                ingredients=batch["ingredients"],
-                recipe=batch["recipe"],
-                use_ingr_pred=True,
-                compute_losses=True,
-                compute_predictions=True,
-            )
-            losses_gt, (_, recipe_from_gt) = self.model(
-                image=batch["image"],
-                ingredients=batch["ingredients"],
-                recipe=batch["recipe"],
-                use_ingr_pred=False,
-                compute_losses=True,
-                compute_predictions=True,
-            )
-            losses_gt_subs, (_, recipe_from_gt_subs) = self.model(
-                image=batch["image"],
-                ingredients=batch["substitution"],
-                recipe=batch["recipe"],
-                use_ingr_pred=False,
-                compute_losses=True,
-                compute_predictions=True,
-            )
+        model_device = next(self.model.parameters()).device
+        losses_full, (ingr_pred, recipe_full) = self.model(
+            image=batch["image"].to(model_device),
+            ingredients=batch["ingredients"].to(model_device),
+            recipe=batch["recipe"].to(model_device),
+            use_ingr_pred=True,
+            compute_losses=True,
+            compute_predictions=True,
+        )
+        losses_gt, (_, recipe_from_gt) = self.model(
+            image=batch["image"].to(model_device),
+            ingredients=batch["ingredients"].to(model_device),
+            recipe=batch["recipe"].to(model_device),
+            use_ingr_pred=False,
+            compute_losses=True,
+            compute_predictions=True,
+        )
+        losses_gt_subs, (_, recipe_from_gt_subs) = self.model(
+            image=batch["image"].to(model_device),
+            ingredients=batch["substitution"].to(model_device),
+            recipe=batch["recipe"].to(model_device),
+            use_ingr_pred=False,
+            compute_losses=True,
+            compute_predictions=True,
+        )
 
         return VisualOutput(
             ingr_vocab=self.data_module.dataset_test.ingr_vocab,
@@ -204,13 +205,13 @@ class Im2RecipeVisualiser:
             gt_ingredients=batch["ingredients"],
             gt_subs_ingredients=batch["substitution"],
             gt_recipe=batch["recipe"],
-            pred_ingredients=ingr_pred,
-            pred_recipe=recipe_full,
-            pred_recipe_loss=losses_full["recipe_loss"],
-            pred_recipe_from_gt=recipe_from_gt,
-            pred_recipe_from_gt_loss=losses_gt["recipe_loss"],
-            pred_recipe_from_subs=recipe_from_gt_subs,
-            pred_recipe_from_subs_loss=losses_gt_subs["recipe_loss"],
+            pred_ingredients=ingr_pred.cpu(),
+            pred_recipe=recipe_full.cpu(),
+            pred_recipe_loss=losses_full["recipe_loss"].cpu(),
+            pred_recipe_from_gt=recipe_from_gt.cpu(),
+            pred_recipe_from_gt_loss=losses_gt["recipe_loss"].cpu(),
+            pred_recipe_from_subs=recipe_from_gt_subs.cpu(),
+            pred_recipe_from_subs_loss=losses_gt_subs["recipe_loss"].cpu(),
         )
 
     def sample_input(self, batch_size: int = 0, skip: int = 0):
