@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import List, Set
 
 import torch
@@ -17,6 +22,30 @@ def recipe_to_text(prediction: torch.Tensor, vocab: Vocabulary):
         elif word not in {"<start>", "<pad>"}:
             sentence += " " + word
     return sentence
+
+
+def recipe_length(prediction: torch.Tensor, vocab: Vocabulary) -> int:
+    length = 0
+    for i in prediction.cpu().numpy():
+        word = vocab.idx2word.get(i)
+        if word == "<end>":
+            return length
+
+        if word not in {"<start>", "<pad>"}:
+            length += 1
+    return length
+
+
+def recipe_lexical_diversity(prediction: torch.Tensor, vocab: Vocabulary) -> int:
+    words = set()
+    for i in prediction.cpu().numpy():
+        word = vocab.idx2word.get(i)
+        if word == "<end>":
+            return len(words)
+
+        if word not in {"<start>", "<pad>", "<eoi>"}:
+            words.add(word)
+    return len(words)
 
 
 def format_recipe(generated_recipe: str):

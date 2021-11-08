@@ -21,6 +21,7 @@ from inv_cooking.utils.metrics import (
 )
 from inv_cooking.utils.metrics.gpt2_perplexity import LanguageModelPerplexity
 from inv_cooking.utils.metrics.ingredient_iou import IngredientIoU
+from inv_cooking.utils.metrics.recipe_features import RecipeFeaturesMetric
 
 
 class ImageToRecipe(_BaseModule):
@@ -81,11 +82,19 @@ class ImageToRecipe(_BaseModule):
         self.outut_language_evaluators: Dict[str, LanguageModelPerplexity] = {}
         self.output_language_perplexities = torch.nn.ModuleDict()
 
-        # To compute metrics on if ingredients appear in the recipe
+        # To compute metrics on if ingredients appear in the recipe, or length of recipes
         self.ingredient_intersection: Optional[IngredientIoU] = None
+        self.input_recipe_feature_metrics = torch.nn.ModuleDict()
+        self.output_recipe_feature_metrics = torch.nn.ModuleDict()
 
     def get_monitored_metric(self) -> MonitoredMetric:
         return MonitoredMetric(name="val_perplexity", mode="min")
+
+    def add_input_feature_metric(self, name: str, metric: RecipeFeaturesMetric):
+        self.input_recipe_feature_metrics[name] = metric
+
+    def add_output_feature_metric(self, name: str, metric: RecipeFeaturesMetric):
+        self.output_recipe_feature_metrics[name] = metric
 
     def add_input_language_metric(
         self, name: str, evaluator: LanguageModelPerplexity
@@ -146,11 +155,12 @@ class ImageToRecipe(_BaseModule):
         num_evaluators = len(self.outut_language_evaluators) + len(
             self.input_language_evaluators
         )
+        num_feature_metrics = len(self.output_recipe_feature_metrics) + len(self.input_recipe_feature_metrics)
         return self._evaluation_step(
             batch,
             use_ingr_pred=use_ingr_prediction,
             use_ingr_substitutions=use_ingr_substitutions,
-            compute_recipe_predictions=num_evaluators > 0
+            compute_recipe_predictions=(num_evaluators + num_feature_metrics) > 0
             or self.ingredient_intersection,
         )
 
@@ -177,12 +187,17 @@ class ImageToRecipe(_BaseModule):
         out[0]["n_samples"] = batch["recipe"].shape[0]
         out[0]["ingr_pred"] = out[1][0]
         if compute_recipe_predictions:
+            recipe_pred = out[1][1]
             if self.ingredient_intersection:
-                self.ingredient_intersection.add(ingredients, out[1][1])
+                self.ingredient_intersection.add(ingredients, recipe_pred)
+            for name, metric in self.input_recipe_feature_metrics.items():
+                metric.add(batch["recipe"])
+            for name, metric in self.output_recipe_feature_metrics.items():
+                metric.add(recipe_pred)
             for name, evaluator in self.input_language_evaluators.items():
                 out[0][name] = evaluator.compute_batch(batch["recipe"])
             for name, evaluator in self.outut_language_evaluators.items():
-                out[0][name] = evaluator.compute_batch(out[1][1])
+                out[0][name] = evaluator.compute_batch(recipe_pred)
         out[0]["ingr_gt"] = batch["ingredients"]
         return out[0]
 
@@ -232,6 +247,10 @@ class ImageToRecipe(_BaseModule):
             self.log_test_results(
                 f"{split}_ingr_intersection", self.ingredient_intersection.compute()
             )
+        for name, metric in self.input_recipe_feature_metrics.items():
+            self.log_test_results(f"{split}_{name}", metric.compute())
+        for name, metric in self.output_recipe_feature_metrics.items():
+            self.log_test_results(f"{split}_{name}", metric.compute())
         for name, perplexity in self.input_language_perplexities.items():
             self.log_test_results(f"{split}_{name}", perplexity.compute())
         for name, perplexity in self.output_language_perplexities.items():

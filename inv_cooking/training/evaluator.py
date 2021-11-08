@@ -14,7 +14,7 @@ from inv_cooking.utils.metrics.gpt2_perplexity import (
     PretrainedLanguageModel,
 )
 from inv_cooking.utils.metrics.ingredient_iou import IngredientIoU
-
+from inv_cooking.utils.metrics.recipe_features import RecipeLengthMetric, RecipeVocabDiversity
 from .image_to_recipe import ImageToRecipe
 from .trainer import create_model, load_data_set
 
@@ -49,6 +49,10 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
         model.ingredient_intersection = IngredientIoU(
             ingr_vocab=ingr_vocab, instr_vocab=vocab_instructions,
         )
+        model.add_input_feature_metric("input_recipe_length", RecipeLengthMetric(instr_vocab=vocab_instructions))
+        model.add_input_feature_metric("input_recipe_diversity", RecipeVocabDiversity(instr_vocab=vocab_instructions))
+        model.add_output_feature_metric("recipe_length", RecipeLengthMetric(instr_vocab=vocab_instructions))
+        model.add_output_feature_metric("recipe_diversity", RecipeVocabDiversity(instr_vocab=vocab_instructions))
         language_model = PretrainedLanguageModel(LanguageModelType.medium)
         model.add_input_language_metric(
             name="input_gpt_perplexity",
@@ -66,6 +70,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
                 metric_type=PerplexityMetricType.full_recipe,
             ),
         )
+        '''
         model.add_output_language_metric(
             name="gpt_perplexity_title",
             evaluator=LanguageModelPerplexity(
@@ -90,6 +95,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
                 metric_type=PerplexityMetricType.instructions_conditioned_on_title,
             )
         )
+        '''
 
     # Find best checkpoint path
     best_checkpoint = select_best_checkpoint(all_checkpoints, monitored_metric.mode)
