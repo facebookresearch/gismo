@@ -189,6 +189,8 @@ class ImageToRecipe(_BaseModule):
         out[0]["n_samples"] = batch["recipe"].shape[0]
         out[0]["ingr_pred"] = ingr_pred
         out[0]["ingr_gt"] = batch["ingredients"]
+        if "id" in batch:
+            out[0]["id"] = batch["id"]
 
         if compute_recipe_predictions:
             recipe_pred = out[1][1]
@@ -222,7 +224,7 @@ class ImageToRecipe(_BaseModule):
         if step_output["ingr_pred"] is not None:
             self.o_f1(step_output["ingr_pred"], step_output["ingr_gt"])
             self.c_f1(step_output["ingr_pred"], step_output["ingr_gt"])
-            self.i_f1(step_output["ingr_pred"], step_output["ingr_gt"])
+            self.i_f1(step_output["ingr_pred"], step_output["ingr_gt"], step_output.get("id", None))
 
         # update recipe metrics
         for name, perplexity_value in self.input_language_perplexities.items():
