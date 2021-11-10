@@ -1,7 +1,7 @@
 import os
 import pickle
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, List, NamedTuple, Tuple, Dict
 
 import lmdb
 import numpy as np
@@ -33,6 +33,15 @@ class LoadingOptions:
             or self.with_id
             or self.with_substitutions
         )
+
+
+class RecipeEntry(NamedTuple):
+    image: Any
+    ingredients: Any
+    title: Any
+    recipe: Any
+    recipe_id: Any
+    subs_ingredients: Any
 
 
 class Recipe1M(data.Dataset):
@@ -178,11 +187,7 @@ class Recipe1M(data.Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(
-        self, index: int
-    ) -> Tuple[
-        Image.Image, "ingredients", "title", "recipe", "id", "substituted_ingredients"
-    ]:
+    def __getitem__(self, index: int) -> RecipeEntry:
         """
         Return the relevant elements of the recipe (all optional):
         - image of the finished recipe
@@ -210,7 +215,14 @@ class Recipe1M(data.Dataset):
                 ingredients, old_ingr, new_ingr
             )
 
-        return image, ingredients, title, recipe, id, subs_ingredients
+        return RecipeEntry(
+            image=image,
+            ingredients=ingredients,
+            title=title,
+            recipe=recipe,
+            recipe_id=id,
+            subs_ingredients=subs_ingredients
+        )
 
     def load_ingredients(self, index: int) -> List[int]:
         raw_ingredients = self.dataset[index]["ingredients"]
@@ -365,3 +377,18 @@ class Recipe1M(data.Dataset):
         for token in tokens:
             recipe.append(self.instr_vocab(token))
         return recipe
+
+    def get_recipe_id_to_index_map(self) -> Dict[str, int]:
+        return {
+            entry["id"]: index
+            for index, entry in enumerate(self.dataset)
+        }
+
+    def build_batch_from_indices(self, indices: List[int]):
+        data = [self[i] for i in indices]
+        return self.collate_fn(data)
+
+    def build_batch_from_recipe_ids(self, recipe_ids: List[str]):
+        to_index = self.get_recipe_id_to_index_map()
+        indices = [to_index[recipe_id] for recipe_id in recipe_ids]
+        return self.build_batch_from_indices(indices)
