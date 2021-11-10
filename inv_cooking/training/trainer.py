@@ -105,19 +105,20 @@ def run_training(
         trainer.test(datamodule=data_module)
 
 
-def load_data_set(cfg):
+def load_data_set(cfg, with_id: bool = False):
     return Recipe1MDataModule(
         dataset_config=cfg.dataset,
         seed=cfg.optimization.seed,
-        loading_options=_get_loading_options(cfg),
+        loading_options=_get_loading_options(cfg, with_id=with_id),
     )
 
 
-def _get_loading_options(cfg: Config) -> LoadingOptions:
+def _get_loading_options(cfg: Config, with_id: bool = False) -> LoadingOptions:
     include_eos = requires_eos_token(cfg.ingr_predictor)
     with_substitutions = cfg.dataset.ablation.with_substitutions
     if cfg.task == TaskType.im2ingr:
         return LoadingOptions(
+            with_id=with_id,
             with_image=cfg.image_encoder.with_image_encoder,
             with_ingredient=True,
             with_ingredient_eos=include_eos,
@@ -125,6 +126,7 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
         )
     elif cfg.task == TaskType.im2recipe:
         return LoadingOptions(
+            with_id=with_id,
             with_image=True,
             with_ingredient=True,
             with_ingredient_eos=include_eos,
@@ -133,19 +135,24 @@ def _get_loading_options(cfg: Config) -> LoadingOptions:
         )
     elif cfg.task == TaskType.ingr2recipe:
         return LoadingOptions(
+            with_id=with_id,
             with_ingredient=True,
             with_ingredient_eos=include_eos,
             with_recipe=True,
         )
     elif cfg.task == TaskType.im2title:
-        return LoadingOptions(with_image=True, with_title=True)
+        return LoadingOptions(
+            with_id=with_id,
+            with_image=True,
+            with_title=True
+        )
     elif cfg.task == TaskType.ingrsubs:
         return LoadingOptions(
+            with_id=True,
             with_ingredient=True,
             with_ingredient_eos=include_eos,
             with_recipe=True,
             with_title=True,
-            with_id=True,
         )
     else:
         raise ValueError(f"Unknown task: {cfg.task.name}.")

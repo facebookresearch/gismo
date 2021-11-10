@@ -34,7 +34,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
         raise ValueError(f"Checkpoint {checkpoint_dir} does not exist.")
 
     # Creating the data module
-    data_module = load_data_set(cfg)
+    data_module = load_data_set(cfg, with_id=True)
     data_module.prepare_data()
     data_module.setup("test")
 
@@ -44,58 +44,7 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
 
     # Adding custom metrics
     if isinstance(model, ImageToRecipe):
-        ingr_vocab = data_module.dataset_test.ingr_vocab
-        vocab_instructions = data_module.dataset_test.get_instr_vocab()
-        model.ingredient_intersection = IngredientIoU(
-            ingr_vocab=ingr_vocab, instr_vocab=vocab_instructions,
-        )
-        model.add_input_feature_metric("input_recipe_length", RecipeLengthMetric(instr_vocab=vocab_instructions))
-        model.add_input_feature_metric("input_recipe_diversity", RecipeVocabDiversity(instr_vocab=vocab_instructions))
-        model.add_output_feature_metric("recipe_length", RecipeLengthMetric(instr_vocab=vocab_instructions))
-        model.add_output_feature_metric("recipe_diversity", RecipeVocabDiversity(instr_vocab=vocab_instructions))
-        language_model = PretrainedLanguageModel(LanguageModelType.medium)
-        model.add_input_language_metric(
-            name="input_gpt_perplexity",
-            evaluator=LanguageModelPerplexity(
-                vocab_instructions=vocab_instructions,
-                pretrained_language_model=language_model,
-                metric_type=PerplexityMetricType.full_recipe,
-            ),
-        )
-        model.add_output_language_metric(
-            name="gpt_perplexity",
-            evaluator=LanguageModelPerplexity(
-                vocab_instructions=vocab_instructions,
-                pretrained_language_model=language_model,
-                metric_type=PerplexityMetricType.full_recipe,
-            ),
-        )
-        '''
-        model.add_output_language_metric(
-            name="gpt_perplexity_title",
-            evaluator=LanguageModelPerplexity(
-                vocab_instructions=vocab_instructions,
-                pretrained_language_model=language_model,
-                metric_type=PerplexityMetricType.title_only,
-            )
-        )
-        model.add_output_language_metric(
-            name="gpt_perplexity_instructions",
-            evaluator=LanguageModelPerplexity(
-                vocab_instructions=vocab_instructions,
-                pretrained_language_model=language_model,
-                metric_type=PerplexityMetricType.instructions_only,
-            )
-        )
-        model.add_output_language_metric(
-            name="gpt_perplexity_cond_instructions",
-            evaluator=LanguageModelPerplexity(
-                vocab_instructions=vocab_instructions,
-                pretrained_language_model=language_model,
-                metric_type=PerplexityMetricType.instructions_conditioned_on_title,
-            )
-        )
-        '''
+        _add_recipe_generation_metrics(data_module, model)
 
     # Find best checkpoint path
     best_checkpoint = select_best_checkpoint(all_checkpoints, monitored_metric.mode)
@@ -114,9 +63,66 @@ def run_eval(cfg: Config, gpus: int, nodes: int, distributed_mode: str) -> None:
         benchmark=True,  # increases speed for fixed image sizes
         precision=32,
         progress_bar_refresh_rate=1 if cfg.slurm.partition == "local" else 0,
+        fast_dev_run=cfg.debug_mode,
     )
 
     # Run the evaluation on the module
     trainer.test(
         model, datamodule=data_module,
     )
+
+
+def _add_recipe_generation_metrics(data_module, model):
+    ingr_vocab = data_module.dataset_test.ingr_vocab
+    vocab_instructions = data_module.dataset_test.get_instr_vocab()
+    model.ingredient_intersection = IngredientIoU(
+        ingr_vocab=ingr_vocab, instr_vocab=vocab_instructions,
+    )
+    model.add_input_feature_metric("input_recipe_length", RecipeLengthMetric(instr_vocab=vocab_instructions))
+    model.add_input_feature_metric("input_recipe_diversity", RecipeVocabDiversity(instr_vocab=vocab_instructions))
+    model.add_output_feature_metric("recipe_length", RecipeLengthMetric(instr_vocab=vocab_instructions))
+    model.add_output_feature_metric("recipe_diversity", RecipeVocabDiversity(instr_vocab=vocab_instructions))
+
+    language_model = PretrainedLanguageModel(LanguageModelType.medium)
+    model.add_input_language_metric(
+        name="input_gpt_perplexity",
+        evaluator=LanguageModelPerplexity(
+            vocab_instructions=vocab_instructions,
+            pretrained_language_model=language_model,
+            metric_type=PerplexityMetricType.full_recipe,
+        ),
+    )
+    model.add_output_language_metric(
+        name="gpt_perplexity",
+        evaluator=LanguageModelPerplexity(
+            vocab_instructions=vocab_instructions,
+            pretrained_language_model=language_model,
+            metric_type=PerplexityMetricType.full_recipe,
+        ),
+    )
+    '''
+    model.add_output_language_metric(
+        name="gpt_perplexity_title",
+        evaluator=LanguageModelPerplexity(
+            vocab_instructions=vocab_instructions,
+            pretrained_language_model=language_model,
+            metric_type=PerplexityMetricType.title_only,
+        )
+    )
+    model.add_output_language_metric(
+        name="gpt_perplexity_instructions",
+        evaluator=LanguageModelPerplexity(
+            vocab_instructions=vocab_instructions,
+            pretrained_language_model=language_model,
+            metric_type=PerplexityMetricType.instructions_only,
+        )
+    )
+    model.add_output_language_metric(
+        name="gpt_perplexity_cond_instructions",
+        evaluator=LanguageModelPerplexity(
+            vocab_instructions=vocab_instructions,
+            pretrained_language_model=language_model,
+            metric_type=PerplexityMetricType.instructions_conditioned_on_title,
+        )
+    )
+    '''

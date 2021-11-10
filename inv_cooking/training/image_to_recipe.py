@@ -196,9 +196,9 @@ class ImageToRecipe(_BaseModule):
                 used_ingr = ingr_pred if use_ingr_pred else ingredients
                 self.ingredient_intersection.add(used_ingr, recipe_pred)
             for name, metric in self.input_recipe_feature_metrics.items():
-                metric.add(batch["recipe"])
+                metric.add(batch["recipe"], batch["id"])
             for name, metric in self.output_recipe_feature_metrics.items():
-                metric.add(recipe_pred)
+                metric.add(recipe_pred, batch["id"])
             for name, evaluator in self.input_language_evaluators.items():
                 out[0][name] = evaluator.compute_batch(batch["recipe"])
             for name, evaluator in self.outut_language_evaluators.items():
@@ -252,9 +252,13 @@ class ImageToRecipe(_BaseModule):
                 f"{split}_ingr_intersection", self.ingredient_intersection.compute()
             )
         for name, metric in self.input_recipe_feature_metrics.items():
-            self.log_test_results(f"{split}_{name}", metric.compute())
+            mean, std = metric.compute(name)
+            self.log_test_results(f"{split}_{name}", mean)
+            self.log_test_results(f"{split}_{name}_std", std)
         for name, metric in self.output_recipe_feature_metrics.items():
-            self.log_test_results(f"{split}_{name}", metric.compute())
+            mean, std = metric.compute(name)
+            self.log_test_results(f"{split}_{name}", mean)
+            self.log_test_results(f"{split}_{name}_std", std)
         for name, perplexity in self.input_language_perplexities.items():
             self.log_test_results(f"{split}_{name}", perplexity.compute())
         for name, perplexity in self.output_language_perplexities.items():
