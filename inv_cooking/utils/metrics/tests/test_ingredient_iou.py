@@ -40,7 +40,7 @@ def test_ingredient_extract_find_best_match():
     assert ingr == ['egg', 'low_fat_milk']
 
 
-def test_ingredient_extractor_realistic():
+def test_ingredient_extractor_longer_recipe():
     vocab = stub_vocabulary()
 
     recipe_words = recipe_to_words("""
@@ -61,3 +61,21 @@ def test_ingredient_extractor_realistic():
     preferred_ingredients = {vocab.word2idx["cayenne_pepper"]}
     _, ingr = extractor.viz_ingredients(recipe_words, preferred_ingredients=preferred_ingredients)
     assert ingr == ['cayenne_pepper', 'cream', 'egg', 'herb', 'low_fat_milk', 'mincemeat', 'salt']
+
+
+def test_ingredient_extractor_problematic_cases():
+    vocab = Vocabulary()
+    vocab.add_word_group(["soup_mix"])
+    vocab.add_word_group(["creamed_spinach", "spinach_dip"])
+    vocab.add_word_group(["frozen_spinach"])
+
+    extractor = TrieIngredientExtractor(vocab)
+    recipe_words = "spinach dip : mix all ingredients together".split(" ")
+
+    preferred_ingredients = {vocab.word2idx["frozen_spinach"]}
+    _, ingr = extractor.viz_ingredients(recipe_words, preferred_ingredients=preferred_ingredients)
+    assert ingr == ["creamed_spinach"]
+
+    preferred_ingredients = {vocab.word2idx["frozen_spinach"], vocab.word2idx["soup_mix"]}
+    _, ingr = extractor.viz_ingredients(recipe_words, preferred_ingredients=preferred_ingredients)
+    assert ingr == ["creamed_spinach", "soup_mix"]

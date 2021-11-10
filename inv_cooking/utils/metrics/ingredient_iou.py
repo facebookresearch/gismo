@@ -53,11 +53,11 @@ class TrieIngredientExtractor:
         self.ingr_keys = [self.ingr_keys[i] for i in sort_indices]
         self.ingr_ids = [self.ingr_ids[i] for i in sort_indices]
 
-    def _filter_recipe(self, words: List[str]):
+    def filter_recipe(self, words: List[str]):
         return [word for word in words if word in self.valid_words]
 
     def find_ingredients(self, recipe_words: List[str], preferred_ingredients: Set[int]):
-        recipe_words = self._filter_recipe(recipe_words)
+        recipe_words = self.filter_recipe(recipe_words)
 
         # To identify already found ingredients and already used words
         # this allows to eliminate imperfect match if a perfect match
