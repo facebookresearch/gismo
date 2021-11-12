@@ -1,11 +1,11 @@
 import copy
 import math
+import os
+import pickle
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union, Tuple, List
 
-import numpy as np
 import torch
-from PIL import Image
 
 from inv_cooking.datasets.recipe1m import Recipe1MDataModule
 from inv_cooking.datasets.vocabulary import Vocabulary
@@ -16,6 +16,7 @@ from inv_cooking.utils.visualisation.recipe_utils import (
     format_recipe,
     ingredients_to_text,
     recipe_to_text,
+    tensor_to_image,
 )
 
 
@@ -38,7 +39,27 @@ class VisualOutput:
     def __len__(self):
         return self.gt_image.size(0)
 
+    def export(self, i: int, full_display: bool = False):
+        """
+        Export the output for the GISMo module inputs
+        """
+        if not full_display:
+            self.display_image(self.gt_image[i])
+            print("GT_INGREDIENTS:\n", sorted(ingredients_to_text(self.gt_ingredients[i], self.ingr_vocab)))
+            print("PRED_INGREDIENTS:\n", sorted(ingredients_to_text(self.pred_ingredients[i], self.ingr_vocab)))
+        else:
+            self.show(i)
+
+        field = {
+            # "gt_ingredients": ingredients_to_text(self.gt_ingredients[i], self.ingr_vocab, full_list=True),
+            "ingredients": ingredients_to_text(self.pred_ingredients[i], self.ingr_vocab, full_list=True),
+        }
+        return field
+
     def show(self, i: int, language_model: Optional[PretrainedLanguageModel] = None):
+        """
+        Display the predictions of ingredients, recipes, all alongside the image
+        """
         iou = IngredientIoU(
             ingr_vocab=self.ingr_vocab,
             instr_vocab=self.instr_vocab,
@@ -91,12 +112,12 @@ class VisualOutput:
         import matplotlib.pyplot as plt
 
         if image_tensor.ndim == 3:
-            image = cls.tensor_to_image(image_tensor)
+            image = tensor_to_image(image_tensor)
             plt.imshow(image)
             plt.axis("off")
         elif image_tensor.ndim == 4:
             num_images = image_tensor.size(0)
-            images = [cls.tensor_to_image(t) for t in image_tensor]
+            images = [tensor_to_image(t) for t in image_tensor]
 
             num_columns = 2
             num_rows = int(math.ceil(num_images / num_columns))
@@ -109,21 +130,6 @@ class VisualOutput:
                 x, y = divmod(i, num_columns)
                 ax[x, y].imshow(images[i])
             plt.show()
-
-    @staticmethod
-    def tensor_to_image(tensor: torch.Tensor):
-        with torch.no_grad():
-            sigma = torch.as_tensor(
-                (0.229, 0.224, 0.225), dtype=tensor.dtype, device=tensor.device
-            ).view(-1, 1, 1)
-            mu = torch.as_tensor(
-                (0.485, 0.456, 0.406), dtype=tensor.dtype, device=tensor.device
-            ).view(-1, 1, 1)
-            tensor = (tensor * sigma) + mu
-            tensor = tensor.permute((1, 2, 0))
-            array = tensor.cpu().detach().numpy()
-            array = np.uint8(array * 255)
-            return Image.fromarray(array, mode="RGB")
 
     @classmethod
     def display_ingredients(cls, prediction: torch.Tensor, vocab: Vocabulary):
@@ -315,12 +321,12 @@ class Im2RecipeVisualiser:
         import matplotlib.pyplot as plt
 
         if image_tensor.ndim == 3:
-            image = cls.tensor_to_image(image_tensor)
+            image = tensor_to_image(image_tensor)
             plt.imshow(image)
             plt.axis("off")
         elif image_tensor.ndim == 4:
             num_images = image_tensor.size(0)
-            images = [cls.tensor_to_image(t) for t in image_tensor]
+            images = [tensor_to_image(t) for t in image_tensor]
 
             num_columns = 2
             num_rows = int(math.ceil(num_images / num_columns))
@@ -333,21 +339,6 @@ class Im2RecipeVisualiser:
                 x, y = divmod(i, num_columns)
                 ax[x, y].imshow(images[i])
             plt.show()
-
-    @staticmethod
-    def tensor_to_image(tensor: torch.Tensor):
-        with torch.no_grad():
-            sigma = torch.as_tensor(
-                (0.229, 0.224, 0.225), dtype=tensor.dtype, device=tensor.device
-            ).view(-1, 1, 1)
-            mu = torch.as_tensor(
-                (0.485, 0.456, 0.406), dtype=tensor.dtype, device=tensor.device
-            ).view(-1, 1, 1)
-            tensor = (tensor * sigma) + mu
-            tensor = tensor.permute((1, 2, 0))
-            array = tensor.cpu().detach().numpy()
-            array = np.uint8(array * 255)
-            return Image.fromarray(array, mode="RGB")
 
     @staticmethod
     def display_ingredients(prediction: torch.Tensor, vocab: Vocabulary):
@@ -364,6 +355,138 @@ class Im2RecipeVisualiser:
     @classmethod
     def display_recipe(cls, prediction: torch.Tensor, vocab: Vocabulary):
         text = recipe_to_text(prediction, vocab)
+        text = format_recipe(text)
+        for line in text.splitlines():
+            print(line)
+
+
+class InteractiveSubstitutions:
+    """
+    End-to-end interactions for substitutions
+    """
+    def __init__(self, model: ImageToRecipe, data_module: Recipe1MDataModule, use_pred_ingr: bool = True):
+        self.model = model
+        self.data_module = data_module
+        self.use_pred_ingr = use_pred_ingr
+        self.model.eval()
+        self.vocab_instr = data_module.dataset_test.instr_vocab
+        self.vocab_ingr = data_module.dataset_test.ingr_vocab
+        self.last_batch = None
+        self.last_ingredients = []
+        self.gismo_preprocess_folder = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/preprocessed_data2/"
+
+    def sample_recipe(self, recipe_id_or_index: Union[str, int, None]):
+        if isinstance(recipe_id_or_index, str):
+            recipe_id: str = recipe_id_or_index
+            batch = self.data_module.dataset_test.build_batch_from_recipe_ids([recipe_id])
+        elif isinstance(recipe_id_or_index, int):
+            recipe_idx = recipe_id_or_index
+            batch = self.data_module.dataset_test.build_batch_from_indices([recipe_idx])
+        else:
+            # TODO - sample a random ID in case none is provided
+            return
+
+        self.last_batch = batch
+        model_device = next(self.model.parameters()).device
+        losses, (ingredients, pred_recipes) = self.model(
+            image=batch["image"].to(model_device),
+            ingredients=batch["ingredients"].to(model_device),
+            recipe=batch["recipe"].to(model_device),
+            use_ingr_pred=self.use_pred_ingr,
+            compute_losses=True,
+            compute_predictions=True,
+        )
+        if not self.use_pred_ingr:
+            ingredients = batch["ingredients"]
+
+        # Display the image
+        self.display_image(batch["image"][0])
+
+        # Display the ground truth recipe
+        print("GROUND TRUTH RECIPE:")
+        print(sorted(ingredients_to_text(batch["ingredients"][0], self.vocab_ingr, full_list=False)))
+        self.display_recipe(batch["recipe"][0])
+
+        # Display the generated recipe
+        print("GENERATED RECIPE:")
+        print(sorted(ingredients_to_text(ingredients[0], self.vocab_ingr, full_list=False)))
+        self.display_recipe(pred_recipes.cpu()[0])
+
+        # Keep in memory what is useful for GISMO to run
+        self.last_ingredients = ingredients_to_text(ingredients[0], self.vocab_ingr, full_list=True)
+
+    def compute_substitution(self, old_ingredient: str) -> Tuple[str, str]:
+        return self.compute_substitutions([old_ingredient])[0]
+
+    def compute_substitutions(self, old_ingredients: List[str]) -> List[Tuple[str, str]]:
+        assert isinstance(old_ingredients, list)
+        self._export_to_gismo_format(old_ingredients)
+        self._run_gismo()
+        output_dir = "/private/home/qduval/baharef/out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False"
+        substitution = pickle.load(open(f"{output_dir}/val_ranks_out.pkl", "rb"))
+        return substitution
+
+    def _export_to_gismo_format(self, old_ingredients: List[str]):
+        exports = [
+            {
+                "id": "",
+                "text": 'I used $ XXX $ inside instead of $ ' + old_ingredient + ' $ , and everybody loved them !',
+                "subs": (old_ingredient, old_ingredient),
+                "ingredients": self.last_ingredients
+            }
+            for old_ingredient in old_ingredients
+        ]
+        for destination_file in ["val_comments_subs.pkl", "test_comments_subs.pkl"]:
+            destination_path = os.path.join(self.gismo_preprocess_folder, destination_file)
+            with open(destination_path, "wb") as f:
+                pickle.dump(exports, f)
+
+    def _run_gismo(self):
+        run_file_path = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model/run_full_inference.sh"
+        os.remove(run_file_path)
+        with open(run_file_path, "w") as f:
+            f.write("cd /private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model")
+            f.write("\n")
+            f.write("conda run -n inv_cooking_gismo ")
+            f.write("python train.py name=GIN_MLP setup=context-full max_context=43 lr=0.00005 w_decay=0.0001 hidden=300 emb_d=300 dropout=0.25 nr=400 nlayers=2 lambda_=0.0 i=1 init_emb=random with_titles=False with_set=True filter=False")
+            f.write("\n")
+            f.write("conda run -n inv_cooking_gismo ")
+            f.write("python to_val_output.py")
+            f.write("\n")
+        os.chmod(run_file_path, 777)
+        os.system(f"bash {run_file_path} > /dev/null 2>&1")
+
+    def substitute(self, old_ingredient: str, new_ingredient: str):
+        ingr_a = self.vocab_ingr.word2idx[old_ingredient]
+        ingr_b = self.vocab_ingr.word2idx[new_ingredient]
+        batch = self.last_batch
+        subs_ingredients = batch["ingredients"].clone()
+        subs_ingredients[subs_ingredients == ingr_a] = ingr_b
+        batch["substitution"] = subs_ingredients
+
+        model_device = next(self.model.parameters()).device
+        losses_from_subs, (_, recipe_from_subs) = self.model(
+            image=batch["image"].to(model_device),
+            ingredients=batch["substitution"].to(model_device),
+            recipe=batch["recipe"].to(model_device),
+            use_ingr_pred=False,
+            compute_losses=True,
+            compute_predictions=True,
+        )
+        recipe_from_subs = recipe_from_subs.cpu()
+        image_tensor = batch["image"][0]
+        recipe = recipe_from_subs.cpu()[0]
+        self.display_image(image_tensor)
+        self.display_recipe(recipe)
+
+    def display_image(self, image_tensor):
+        import matplotlib.pyplot as plt
+        image = tensor_to_image(image_tensor)
+        plt.imshow(image)
+        plt.axis("off")
+
+    def display_recipe(self, recipe):
+        text = recipe_to_text(recipe, self.vocab_instr)
         text = format_recipe(text)
         for line in text.splitlines():
             print(line)
