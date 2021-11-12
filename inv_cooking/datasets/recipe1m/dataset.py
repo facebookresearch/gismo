@@ -290,11 +290,6 @@ class Recipe1M(data.Dataset):
         old_ingredient, new_ingredient = self.dataset[index]["substitution"]
         old_ingredient = self.ingr_vocab(old_ingredient)
         new_ingredient = self.ingr_vocab(new_ingredient)
-
-        if self.ablations.alternate_substitution_set:
-            recipe_id = self.dataset[index]["id"]
-
-
         return old_ingredient, new_ingredient
 
     @staticmethod
