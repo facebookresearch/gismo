@@ -26,12 +26,12 @@ def main(cfg: RawConfig) -> None:
 
         config.dataset.ablation.with_substitutions = True
 
-        config.name = base_name + "ground_truth"
-        config.ingr_teachforce.test = IngredientTeacherForcingFlag.use_ground_truth
-        schedule_job(config, training_mode=TrainingMode.EVALUATE)
-
         config.name = base_name + "predictions"
         config.ingr_teachforce.test = IngredientTeacherForcingFlag.use_predictions
+        schedule_job(config, training_mode=TrainingMode.EVALUATE)
+
+        config.name = base_name + "ground_truth"
+        config.ingr_teachforce.test = IngredientTeacherForcingFlag.use_ground_truth
         schedule_job(config, training_mode=TrainingMode.EVALUATE)
 
         config.name = base_name + "gt_substitutions"
@@ -41,6 +41,11 @@ def main(cfg: RawConfig) -> None:
         for i in [1, 2, 3, 4, 5]:
             config.name = base_name + f"pred_substitutions_{i}"
             config.dataset.ablation.alternate_substitution_set = f"/checkpoint/qduval/inversecooking2.0/gist_output/val_output_{i}.pkl"
+            schedule_job(config, training_mode=TrainingMode.EVALUATE)
+
+        for i in [1, 2, 3, 4, 5]:
+            config.name = base_name + f"rand_substitution_{i}"
+            config.dataset.ablation.alternate_substitution_set = f"/checkpoint/qduval/inversecooking2.0/gist_output/val_output_rand_{i}.pkl"
             schedule_job(config, training_mode=TrainingMode.EVALUATE)
 
         '''
