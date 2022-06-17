@@ -372,6 +372,7 @@ class InteractiveSubstitutions:
         self.vocab_instr = data_module.dataset_test.instr_vocab
         self.vocab_ingr = data_module.dataset_test.ingr_vocab
         self.last_batch = None
+        self.last_ingredients_tensor: Optional[torch.Tensor] = None
         self.last_ingredients = []
         self.gismo_preprocess_folder = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/preprocessed_data2/"
 
@@ -383,7 +384,6 @@ class InteractiveSubstitutions:
             recipe_idx = recipe_id_or_index
             batch = self.data_module.dataset_test.build_batch_from_indices([recipe_idx])
         else:
-            # TODO - sample a random ID in case none is provided
             return
 
         self.last_batch = batch
@@ -404,26 +404,30 @@ class InteractiveSubstitutions:
 
         # Display the ground truth recipe
         print("GROUND TRUTH RECIPE:")
-        print(sorted(ingredients_to_text(batch["ingredients"][0], self.vocab_ingr, full_list=False)))
+        self.display_ingredients(ingredients_to_text(batch["ingredients"][0], self.vocab_ingr, full_list=False))
         self.display_recipe(batch["recipe"][0])
 
         # Display the generated recipe
         print("GENERATED RECIPE:")
-        print(sorted(ingredients_to_text(ingredients[0], self.vocab_ingr, full_list=False)))
+        self.display_ingredients(ingredients_to_text(ingredients[0], self.vocab_ingr, full_list=False))
         self.display_recipe(pred_recipes.cpu()[0])
 
         # Keep in memory what is useful for GISMO to run
+        self.last_ingredients_tensor = ingredients.cpu()
         self.last_ingredients = ingredients_to_text(ingredients[0], self.vocab_ingr, full_list=True)
 
-    def compute_substitution(self, old_ingredient: str) -> Tuple[str, str]:
-        return self.compute_substitutions([old_ingredient])[0]
+    def compute_substitution(self, old_ingredient: str, lookup: bool = False) -> List[str]:
+        return self.compute_substitutions([old_ingredient], lookup=lookup)[0]
 
-    def compute_substitutions(self, old_ingredients: List[str]) -> List[Tuple[str, str]]:
+    def compute_substitutions(self, old_ingredients: List[str], lookup: bool = False) -> List[List[str]]:
         assert isinstance(old_ingredients, list)
         self._export_to_gismo_format(old_ingredients)
-        self._run_gismo()
-        output_dir = "/private/home/qduval/baharef/out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False"
-        substitution = pickle.load(open(f"{output_dir}/val_ranks_out.pkl", "rb"))
+        if lookup:
+            output_dir = self._run_lookup_frequency()
+        else:
+            output_dir = self._run_gismo()
+        output_file = os.path.join(output_dir, "val_ranks_out.pkl")
+        substitution = pickle.load(open(output_file, "rb"))
         return substitution
 
     def _export_to_gismo_format(self, old_ingredients: List[str]):
@@ -441,9 +445,11 @@ class InteractiveSubstitutions:
             with open(destination_path, "wb") as f:
                 pickle.dump(exports, f)
 
-    def _run_gismo(self):
+    def _run_gismo(self) -> str:
         run_file_path = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model/run_full_inference.sh"
-        os.remove(run_file_path)
+        output_dir = "/private/home/qduval/baharef/out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False"
+        if os.path.exists(run_file_path):
+            os.remove(run_file_path)
         with open(run_file_path, "w") as f:
             f.write("cd /private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model")
             f.write("\n")
@@ -451,19 +457,44 @@ class InteractiveSubstitutions:
             f.write("python train.py name=GIN_MLP setup=context-full max_context=43 lr=0.00005 w_decay=0.0001 hidden=300 emb_d=300 dropout=0.25 nr=400 nlayers=2 lambda_=0.0 i=1 init_emb=random with_titles=False with_set=True filter=False")
             f.write("\n")
             f.write("conda run -n inv_cooking_gismo ")
-            f.write("python to_val_output.py")
+            f.write(f"python to_val_output.py -p {output_dir}")
             f.write("\n")
         os.chmod(run_file_path, 777)
         os.system(f"bash {run_file_path} > /dev/null 2>&1")
+        return output_dir
+
+    def _run_lookup_frequency(self) -> str:
+        run_file_path = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model/run_lookup.sh"
+        output_dir = "/private/home/qduval/baharef/out/lr_0.0001_w_decay_0.0005_hidden_200_emb_d_300_dropout-0.5_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_False_init_emb_random_lambda_0.0_i_0_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False/"
+        if os.path.exists(run_file_path):
+            os.remove(run_file_path)
+        with open(run_file_path, "w") as f:
+            f.write("cd /private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model")
+            f.write("\n")
+            f.write("conda run -n inv_cooking_gismo ")
+            f.write("python train.py name=LTFreq setup=context-free max_context=0")
+            # f.write("python train.py name=LT setup=context-free max_context=0")
+            f.write("\n")
+            f.write("conda run -n inv_cooking_gismo ")
+            f.write(f"python to_val_output.py -p {output_dir}")
+            f.write("\n")
+        os.chmod(run_file_path, 777)
+        os.system(f"bash {run_file_path} > /dev/null 2>&1")
+        return output_dir
 
     def substitute(self, old_ingredient: str, new_ingredient: str):
-        ingr_a = self.vocab_ingr.word2idx[old_ingredient]
-        ingr_b = self.vocab_ingr.word2idx[new_ingredient]
-        batch = self.last_batch
-        subs_ingredients = batch["ingredients"].clone()
-        subs_ingredients[subs_ingredients == ingr_a] = ingr_b
-        batch["substitution"] = subs_ingredients
+        self.substitute_all([(old_ingredient, new_ingredient)])
 
+    def substitute_all(self, pairs: List[Tuple[str, str]]):
+        subs_ingredients = self.last_ingredients_tensor.clone()
+        for old_ingredient, new_ingredient in pairs:
+            ingr_a = self.vocab_ingr.word2idx[old_ingredient]
+            ingr_b = self.vocab_ingr.word2idx[new_ingredient]
+            subs_ingredients[subs_ingredients == ingr_a] = ingr_b
+        self.display_ingredients(ingredients_to_text(subs_ingredients[0], self.vocab_ingr, full_list=False))
+
+        batch = self.last_batch
+        batch["substitution"] = subs_ingredients
         model_device = next(self.model.parameters()).device
         losses_from_subs, (_, recipe_from_subs) = self.model(
             image=batch["image"].to(model_device),
@@ -484,6 +515,10 @@ class InteractiveSubstitutions:
         image = tensor_to_image(image_tensor)
         plt.imshow(image)
         plt.axis("off")
+
+    def display_ingredients(self, ingredients: List[str]):
+        for ingr in sorted(ingredients):
+            print(f"- {ingr}")
 
     def display_recipe(self, recipe):
         text = recipe_to_text(recipe, self.vocab_instr)
