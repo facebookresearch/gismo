@@ -88,6 +88,7 @@ This command will look for the definition of the experiment "im2recipe" in the c
 file "conf/experiments/im2recipe.yaml" and run this experiment.
 
 Evaluation can be run as in the following example command:
+
     python eval.py task=im2recipe name=im2recipe
 
 ### Running on SLURM
@@ -96,7 +97,9 @@ Running on SLURM requires only to add the SLURM configuration to the command lin
 
     python train.py task=im2recipe name=im2recipe slurm=<SLURM_CONF>
 
-Where the definition of the SLURM configuration to be used will be fetched from `conf/slurm/<SLURM_CONF>.yaml`, for instance `conf/slurm/dev.yaml`.
+Existing SLURM configurations can be found in the folder `conf/slurm/<SLURM_CONF>.yaml`.
+Feel free to add configurations for your specific cluster.
+You can find an example with `conf/slurm/devlab.yaml`.
 
 ### Monitoring progress
 
@@ -138,6 +141,7 @@ TBD
 <br>
 
 ## Pre-trained models
+
 TBD
 
 <br>
