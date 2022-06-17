@@ -16,7 +16,9 @@ graph, train_dataset, val_dataset, test_dataset, ingrs, node_count2id, node_id2n
     0.5,
     False,
     device,
-    dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
+    # TODO(config)
+    dir_="/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph",
+    # dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
 )
 
 

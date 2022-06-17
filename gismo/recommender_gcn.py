@@ -208,8 +208,9 @@ class Trainer:
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
         # output_dir = create_output_dir(base_dir, cfg)
         output_dir = create_output_dir(
-                os.path.join("/private/home/qduval/baharef/out"),
-                cfg,
+            # TODO(config)
+            os.path.join("/private/home/qduval/baharef/out"),
+            cfg,
         )
         ranks_file_val = os.path.join(output_dir, "val_ranks.txt")
         ranks_file_test = os.path.join(output_dir, "test_ranks.txt")
@@ -338,7 +339,8 @@ class Trainer:
             cfg.p_augmentation,
             cfg.filter,
             device,
-            dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
+            # dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
+            dir_="/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph"
         )
 
         n_ingrs = len(ingrs)

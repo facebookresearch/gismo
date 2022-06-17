@@ -5,6 +5,10 @@ In this folder lies the code of GISMo, a graph based neural network which handle
 - [Reproducing Experiments](#Reproducing-experiments)
 - [Model ZOO](#Model-ZOO)
 
+## Install
+
+TODO
+
 ## Reproducing experiments
 
 ### Conda environment

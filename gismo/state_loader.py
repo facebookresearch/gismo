@@ -4,7 +4,7 @@ import os
 import torch
 
 
-def create_output_dir(base_dir, conf):
+def create_output_dir(base_dir: str, conf):
     """
     If an output dir is given, then make sure it exists. Otherwise, create one based on time stamp.
     """
@@ -35,7 +35,7 @@ def create_output_dir(base_dir, conf):
     return output_dir
 
 
-def load_saved_models(output_dir, model, opt):
+def load_saved_models(output_dir: str, model, opt):
     """
     Find the last saved model in the output_dir and load it.
     Load also the best_model

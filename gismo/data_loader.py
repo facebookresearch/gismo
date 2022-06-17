@@ -161,7 +161,9 @@ def load_data(nr, max_context, add_self_loop, neg_sampling, data_augmentation, p
     ) = load_graph(add_self_loop, dir_, device)
     ingr_vocabs = pickle.load(
         open(
-            "/private/home/baharef/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
+            # TODO(config)
+            # "/private/home/baharef/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
+            "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
             "rb",
         )
     )
@@ -478,4 +480,11 @@ if __name__ == "__main__":
         node_count2id,
         node_id2name,
         node_id2count,
-    ) = load_data(2, 43, False, "/private/home/baharef/inversecooking2.0/data/flavorgraph")
+    ) = load_data(
+        2,
+        43,
+        False,
+        # TODO(config)
+        "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph"
+        # "/private/home/baharef/inversecooking2.0/data/flavorgraph"
+    )
