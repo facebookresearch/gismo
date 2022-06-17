@@ -29,3 +29,10 @@ filter: False
 lr1: 0.001
 lr2: 0.001
 margin: 0.1
+
+# Where the outputs will be stored
+base_dir: "/private/home/qduval/baharef/out"
+
+# Path to input data
+flavorgraph_path: "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph"
+substitution_path: "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/substitutions"

@@ -149,7 +149,11 @@ def load_graph(add_self_loop, dir_, device):
         nnodes
     )
 
-def load_data(nr, max_context, add_self_loop, neg_sampling, data_augmentation, p_augmentation, filter, device, dir_):
+def load_data(
+    nr, max_context, add_self_loop, neg_sampling, data_augmentation, p_augmentation, filter, device,
+    flavor_graph_dir: str,
+    substitution_dir: str,
+):
     (
         graph,
         node_name2id,
@@ -158,12 +162,10 @@ def load_data(nr, max_context, add_self_loop, neg_sampling, data_augmentation, p
         node_count2id,
         node_id2name,
         nnodes
-    ) = load_graph(add_self_loop, dir_, device)
+    ) = load_graph(add_self_loop, flavor_graph_dir, device)
     ingr_vocabs = pickle.load(
         open(
-            # TODO(config)
-            # "/private/home/baharef/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
-            "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/substitutions/vocab_ingrs.pkl",
+            f"{substitution_dir}/vocab_ingrs.pkl",
             "rb",
         )
     )
@@ -171,8 +173,8 @@ def load_data(nr, max_context, add_self_loop, neg_sampling, data_augmentation, p
     recipe_counter = 0
     recipe_id2counter = {}
     filtered_ing = {}
-    
-    # subs_dir = "/private/home/baharef/inversecooking2.0/preprocessed_data2"
+
+    # TODO(config)
     subs_dir = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/preprocessed_data2"
     train_dataset = SubsData(
         subs_dir,
@@ -468,23 +470,3 @@ class SubsData(data.Dataset):
         )
         output = torch.cat((neg_batch, example[0, 2:].repeat(nr, 1)), 1)
         return output
-
-
-if __name__ == "__main__":
-    (
-        graph,
-        train_dataset,
-        val_dataset,
-        test_dataset,
-        x,
-        node_count2id,
-        node_id2name,
-        node_id2count,
-    ) = load_data(
-        2,
-        43,
-        False,
-        # TODO(config)
-        "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph"
-        # "/private/home/baharef/inversecooking2.0/data/flavorgraph"
-    )

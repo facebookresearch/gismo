@@ -447,9 +447,9 @@ class InteractiveSubstitutions:
 
     def _run_gismo(self) -> str:
         # TODO(config)
-        # base_dir = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model"
         base_dir = "/private/home/qduval/project/inversecooking2.0/gismo"
         run_file_path = f"{base_dir}/run_full_inference.sh"
+        # TODO(config)
         output_dir = "/private/home/qduval/baharef/out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False"
         if os.path.exists(run_file_path):
             os.remove(run_file_path)
@@ -460,7 +460,7 @@ class InteractiveSubstitutions:
             f.write("python train.py name=GIN_MLP setup=context-full max_context=43 lr=0.00005 w_decay=0.0001 hidden=300 emb_d=300 dropout=0.25 nr=400 nlayers=2 lambda_=0.0 i=1 init_emb=random with_titles=False with_set=True filter=False")
             f.write("\n")
             f.write("conda run -n inv_cooking_gismo ")
-            f.write(f"python to_val_output.py -p {output_dir}")
+            f.write(f"python to_val_output.py name=GIN_MLP setup=context-full max_context=43 lr=0.00005 w_decay=0.0001 hidden=300 emb_d=300 dropout=0.25 nr=400 nlayers=2 lambda_=0.0 i=1 init_emb=random with_titles=False with_set=True filter=False")
             f.write("\n")
         os.chmod(run_file_path, 777)
         os.system(f"bash {run_file_path} > /dev/null 2>&1")
@@ -468,9 +468,9 @@ class InteractiveSubstitutions:
 
     def _run_lookup_frequency(self) -> str:
         # TODO(config)
-        # base_dir = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/proposed_model"
         base_dir = "/private/home/qduval/project/inversecooking2.0/gismo"
         run_file_path = f"{base_dir}/run_lookup.sh"
+        # TODO(config)
         output_dir = "/private/home/qduval/baharef/out/lr_0.0001_w_decay_0.0005_hidden_200_emb_d_300_dropout-0.5_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_False_init_emb_random_lambda_0.0_i_0_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False/"
         if os.path.exists(run_file_path):
             os.remove(run_file_path)
@@ -482,7 +482,7 @@ class InteractiveSubstitutions:
             # f.write("python train.py name=LT setup=context-free max_context=0")
             f.write("\n")
             f.write("conda run -n inv_cooking_gismo ")
-            f.write(f"python to_val_output.py -p {output_dir}")
+            f.write(f"python to_val_output.py name=GIN_MLP setup=context-full max_context=43 lr=0.00005 w_decay=0.0001 hidden=300 emb_d=300 dropout=0.25 nr=400 nlayers=2 lambda_=0.0 i=1 init_emb=random with_titles=False with_set=True filter=False")
             f.write("\n")
         os.chmod(run_file_path, 777)
         os.system(f"bash {run_file_path} > /dev/null 2>&1")

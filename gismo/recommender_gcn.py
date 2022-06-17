@@ -9,6 +9,7 @@ from state_loader import create_output_dir, load_saved_models, save_model
 from torch.utils.data import DataLoader
 from models import *
 
+
 class Trainer:
     def __init__(self):
         super(Trainer, self).__init__()
@@ -202,16 +203,15 @@ class Trainer:
     def train_classification_gcn(
         self, adj, train_dataloader, val_dataloader, test_dataloader, n_ingrs, cfg, node_count2id, node_id2name, recipe_id2counter, device, ingrs, lookup_table
     ):
-        base_dir = os.path.join(
-            "/checkpoint/baharef", cfg.setup, cfg.name, "oct-26/checkpoints/"
-        )
+        """
+        Main training function:
+        - create the folder in which the checkpoint will be loaded
+        - look for existing checkpoints inside this folder
+        - pick up the training where it was left off
+        - once training is done, final eval on val and test sets
+        """
         context = 1 if cfg.setup == "context-full" or cfg.setup == "context_full" else 0
-        # output_dir = create_output_dir(base_dir, cfg)
-        output_dir = create_output_dir(
-            # TODO(config)
-            os.path.join("/private/home/qduval/baharef/out"),
-            cfg,
-        )
+        output_dir = create_output_dir(cfg)
         ranks_file_val = os.path.join(output_dir, "val_ranks.txt")
         ranks_file_test = os.path.join(output_dir, "test_ranks.txt")
 
@@ -248,7 +248,6 @@ class Trainer:
 
         opt = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.w_decay)
         best_val_mrr = 0
-        best_model = None
         model, opt, best_model = load_saved_models(output_dir, model, opt)
 
         if best_model:
@@ -310,21 +309,23 @@ class Trainer:
                         save_model(best_model, opt, output_dir, is_best_model=True)
 
         print("Training finished!")
-        "Val results:"
+
+        print("Val results:")
         with torch.no_grad():
             best_model.eval()
             val_mrr, val_hits = self.get_loss_test(
                 best_model, val_dataloader, n_ingrs, context, cfg.name, ranks_file_val, cfg.filter
             )
         print(val_mrr, val_hits)
-        "Test results:"
+
+        print("Test results:")
         with torch.no_grad():
             best_model.eval()
             test_mrr, test_hits = self.get_loss_test(
                 best_model, test_dataloader, n_ingrs, context, cfg.name, ranks_file_test, cfg.filter
             )
-
         print(test_mrr, test_hits)
+
         return best_val_mrr, test_mrr, test_hits
 
     def train_recommender_gcn(self, cfg):
@@ -339,8 +340,9 @@ class Trainer:
             cfg.p_augmentation,
             cfg.filter,
             device,
-            # dir_="/private/home/baharef/inversecooking2.0/data/flavorgraph",
-            dir_="/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph"
+            # TODO(config) - unify that
+            flavor_graph_dir=cfg.flavorgraph_path,
+            substitution_dir=cfg.substitution_path,
         )
 
         n_ingrs = len(ingrs)

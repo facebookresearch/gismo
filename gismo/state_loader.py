@@ -4,10 +4,11 @@ import os
 import torch
 
 
-def create_output_dir(base_dir: str, conf):
+def create_output_dir(conf):
     """
     If an output dir is given, then make sure it exists. Otherwise, create one based on time stamp.
     """
+    base_dir = conf.base_dir
     params = "lr_" + str(conf.lr)
     params += "_w_decay_" + str(conf.w_decay)
     params += "_hidden_" + str(conf.hidden)
