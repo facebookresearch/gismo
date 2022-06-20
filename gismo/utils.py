@@ -2,19 +2,14 @@ import json
 import os
 import pickle
 import warnings
-from pathlib import Path
 
-# import faiss
 import matplotlib.pyplot as plt
 import torch
 from hydra.experimental import compose, initialize
 from sklearn.manifold import TSNE
 from transformers import (
-    AutoConfig,
-    AutoModelWithLMHead,
     AutoTokenizer,
     BertModel,
-    BertTokenizer,
     logging,
 )
 
@@ -259,7 +254,6 @@ def compute_number_of_different_ingredients(xq_ing, neigh_ing):
 
 
 def intersection(lst1, lst2):
-    [value for value in lst1 if value in lst2]
     a = set(lst1)
     b = set(lst2)
     return a.intersection(b)
