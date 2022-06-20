@@ -242,7 +242,8 @@ class Trainer:
             node_count2id=node_count2id,
             init_emb=cfg.init_emb,
             context_emb_mode=cfg.context_emb_mode,
-            pool=cfg.pool
+            pool=cfg.pool,
+            cfg=cfg,
         ).to(device)
 
 

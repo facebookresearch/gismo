@@ -2,10 +2,21 @@ name: "GIN_MLP"
 setup: "context-full"
 neg_sampling: "regular"
 i: 0
+
 with_titles: False
+titles_paths:
+  embedding: ""
+  ids: ""
+
 with_set: False
 lambda_: 0.0
+
+# Can be "random", "food_bert", "food_bert2", "flavorgraph", "flavorgraph2"
 init_emb: "random"
+init_emb_paths:
+  food_bert: ""
+  flavorgraph: ""
+
 two_hops: False
 epochs: 500
 val_itr: 50

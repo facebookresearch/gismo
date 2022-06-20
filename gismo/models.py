@@ -1,143 +1,25 @@
 import torch
 import torch.nn.functional as F
-from layers import GCNConv
 from torch import nn
 import dgl.nn as dglnn
 import pickle
-import numpy as np
-import time
-
-class GAT(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device):
-        super(GAT, self).__init__()
-
-        self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
-        self.layers = nn.ModuleList()
-
-        num_heads = 2
-        self.layers.append(dglnn.GATConv(
-            in_feats=in_channels, out_feats=hidden_channels, num_heads=num_heads))
-        for _ in range(num_layers - 1):
-            self.layers.append(dglnn.GATConv(
-            in_feats=hidden_channels*num_heads, out_feats=hidden_channels*num_heads, num_heads=1))
-
-        self.dropout = dropout
-        self.adj = adj
-        self.adj.requires_grad = False
-
-        self.epoch = torch.nn.Parameter(
-            torch.tensor(0, dtype=torch.int32), requires_grad=False
-        ).to(device)
-        self.mrr = torch.nn.Parameter(
-            torch.tensor(0, dtype=torch.float64), requires_grad=False
-        ).to(device)
-
-    def forward(self):
-        x = self.ndata.weight
-        for i, conv in enumerate(self.layers[:-1]):
-            x = conv(self.adj, x)
-            x = x.view(-1, x.size(1) * x.size(2))
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.layers[-1](self.adj, x)
-        x = x.squeeze()
-        x[0] = torch.zeros(x.shape[1])
-        return x
-
-class GCN(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device):
-        super(GCN, self).__init__()
-
-        self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
-        self.layers = nn.ModuleList()
-        self.layers.append(GCNConv(in_channels, hidden_channels))
-        for _ in range(num_layers - 1):
-            self.layers.append(GCNConv(hidden_channels, hidden_channels))
-
-        self.dropout = dropout
-        self.adj = adj
-        print(self.adj)
-        self.adj.requires_grad = False
-
-        self.epoch = torch.nn.Parameter(
-            torch.tensor(0, dtype=torch.int32), requires_grad=False
-        ).to(device)
-        self.mrr = torch.nn.Parameter(
-            torch.tensor(0, dtype=torch.float64), requires_grad=False
-        ).to(device)
-
-    def forward(self):
-        x = self.ndata.weight
-        # print(x)
-        for i, conv in enumerate(self.layers[:-1]):
-            x = conv(x, self.adj)
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.layers[-1](x, self.adj)
-
-        x[0] = torch.zeros(x.shape[1])
-
-        return x
-
-class SAGE(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool):
-        super(SAGE, self).__init__()
-
-        self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
-        self.layers = nn.ModuleList()
-        self.layers.append(dglnn.SAGEConv(
-            in_feats=in_channels, out_feats=hidden_channels, aggregator_type='mean'))
-        for _ in range(num_layers - 1):
-            self.layers.append(dglnn.SAGEConv(
-            in_feats=hidden_channels, out_feats=hidden_channels, aggregator_type='mean'))
-
-        self.dropout = dropout
-        self.adj = adj
-        print(self.adj)
-        self.adj.requires_grad = False
-
-        self.epoch = torch.nn.Parameter(
-            torch.tensor(0, dtype=torch.int32), requires_grad=False
-        ).to(device)
-        self.mrr = torch.nn.Parameter(
-            torch.tensor(0, dtype=torch.float64), requires_grad=False
-        ).to(device)
-
-    def forward(self):
-        x = self.ndata.weight
-        for i, conv in enumerate(self.layers[:-1]):
-            x = conv(self.adj, x, self.adj.edata["w"])
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.layers[-1](self.adj, x, self.adj.edata["w"])
-
-        x[0] = torch.zeros(x.shape[1])
-        return x
-
 
 
 class GIN_MLP(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool, cfg):
         super(GIN_MLP, self).__init__()
 
         if init_emb == "random":
             self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
         elif init_emb == "food_bert":
-            self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/features/food_bert_emb.pkl', 'rb')).to(device)
+            self.ndata = pickle.load(open(cfg.init_emb_paths.food_bert, 'rb')).to(device)
         elif init_emb == "food_bert2":
             self.ndata1 = nn.Embedding(adj.num_nodes(), in_channels)
             nn.init.uniform_(self.ndata1.weight.data, 0.0, 0.001)
-            self.ndata2 = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/features/food_bert_emb.pkl', 'rb')).to(device)
-        elif init_emb == "random_walk":
-            from gensim.models import Word2Vec
-            model = Word2Vec.load("/private/home/baharef/inversecooking2.0/proposed_model/features/model_30_10.txt")
-            embs = model.wv.load_word2vec_format("/private/home/baharef/inversecooking2.0/proposed_model/features/embeddings_30_10.txt")
-            self.ndata = torch.zeros(adj.num_nodes(), in_channels).to(device)
-            for ind in range(adj.num_nodes()):
-                self.ndata[ind] = torch.tensor(embs[str(ind)]).to(device)
+            self.ndata2 = pickle.load(open(cfg.init_emb_paths.food_bert, 'rb')).to(device)
         elif init_emb == "flavorgraph":
             self.ndata = torch.zeros(adj.num_nodes(), in_channels).to(device)
-            features_file = open("/private/home/baharef/inversecooking2.0/proposed_model/features/flavorgraph_emb.pkl", "rb")
+            features_file = open(cfg.init_emb_paths.flavorgraph, "rb")
             flavorgraph_embs = pickle.load(features_file)
             for count in node_count2id:
                 id = node_count2id[count]
@@ -148,7 +30,7 @@ class GIN_MLP(nn.Module):
         elif init_emb == "flavorgraph2":
             self.ndata1 = nn.Embedding(adj.num_nodes(), in_channels)
             self.ndata2 = torch.zeros(adj.num_nodes(), in_channels).to(device)
-            features_file = open("/private/home/baharef/inversecooking2.0/proposed_model/features/flavorgraph_emb.pkl", "rb")
+            features_file = open(cfg.init_emb_paths.flavorgraph, "rb")
             flavorgraph_embs = pickle.load(features_file)
             for count in node_count2id:
                 id = node_count2id[count]
@@ -173,8 +55,8 @@ class GIN_MLP(nn.Module):
         self.adj.requires_grad = False
 
         if self.with_titles:
-            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_embeddings_CLIP.pkl', 'rb'))
-            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_recipe_ids.pkl', 'rb'))
+            embs = pickle.load(open(cfg.titles_paths.embedding, 'rb'))
+            ids = pickle.load(open(cfg.titles_paths.ids, 'rb'))
             emb_dim = len(embs[0])
             self.title_embeddings = torch.zeros((len(embs),emb_dim)).to(device)
             for id_ in recipe_id2counter:
@@ -345,16 +227,16 @@ class GIN_MLP(nn.Module):
         return y
 
 class GIN_MLP2(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, node_count2id, init_emb, context_emb_mode, pool):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, node_count2id, init_emb, context_emb_mode, pool, cfg):
         super(GIN_MLP2, self).__init__()
 
         if init_emb == "random":
             self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
         elif init_emb == "food_bert":
-            self.ndata = pickle.load(open('/private/home/baharef/inversecooking2.0/proposed_model/node2vec/food_bert_emb.pkl', 'rb')).to(device)
+            self.ndata = pickle.load(open(cfg.init_emb_paths.food_bert, 'rb')).to(device)
         elif init_emb == "flavorgraph":
             self.ndata = torch.zeros(adj.num_nodes(), in_channels).to(device)
-            features_file = open("/private/home/baharef/inversecooking2.0/proposed_model/features/flavorgraph_emb.pkl", "rb")
+            features_file = open(cfg.init_emb_paths.flavorgraph, "rb")
             flavorgraph_embs = pickle.load(features_file)
             for count in node_count2id:
                 id = node_count2id[count]
@@ -454,7 +336,7 @@ class GIN_MLP2(nn.Module):
         return sims
 
 class MLP_CAT(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool, cfg):
         super(MLP_CAT, self).__init__()
         self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
 
@@ -463,8 +345,8 @@ class MLP_CAT(nn.Module):
         self.with_set = with_set
 
         if self.with_titles:
-            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_embeddings_CLIP.pkl', 'rb'))
-            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_recipe_ids.pkl', 'rb'))
+            embs = pickle.load(open(cfg.titles_paths.embedding, 'rb'))
+            ids = pickle.load(open(cfg.titles_paths.ids, 'rb'))
             emb_dim = len(embs[0])
             self.title_embeddings = torch.zeros((len(embs),emb_dim)).to(device)
             for id_ in recipe_id2counter:
@@ -544,7 +426,7 @@ class MLP_CAT(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool, cfg):
         super(MLP, self).__init__()
         self.with_titles = with_titles
         self.with_set = with_set
@@ -554,8 +436,8 @@ class MLP(nn.Module):
         self.adj.requires_grad = False
 
         if self.with_titles:
-            embs = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_embeddings_CLIP.pkl', 'rb'))
-            ids = pickle.load(open('/private/home/baharef/inversecooking2.0/preprocessed_data/title_recipe_ids.pkl', 'rb'))
+            embs = pickle.load(open(cfg.titles_paths.embedding, 'rb'))
+            ids = pickle.load(open(cfg.titles_paths.ids, 'rb'))
             emb_dim = len(embs[0])
             self.title_embeddings = torch.zeros((len(embs),emb_dim)).to(device)
             for id_ in recipe_id2counter:
@@ -638,7 +520,7 @@ class MLP(nn.Module):
         return y
 
 class GIST(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool, cfg):
         super(GIST, self).__init__()
         self.gin = GIN(in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool)
         self.mlp = MLP(in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool)
@@ -656,7 +538,7 @@ class GIST(nn.Module):
 
 
 class GIN(nn.Module):
-    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool):
+    def __init__(self, in_channels, hidden_channels, num_layers, dropout, adj, device, recipe_id2counter, with_titles, with_set, node_count2id, init_emb, context_emb_mode, pool, cfg):
         super(GIN, self).__init__()
 
         self.ndata = nn.Embedding(adj.num_nodes(), in_channels)
