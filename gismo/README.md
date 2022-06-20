@@ -7,9 +7,30 @@ In this folder lies the code of GISMo, a graph based neural network which handle
 - [Reproducing Experiments](#Reproducing-experiments)
 - [Model ZOO](#Model-ZOO)
 
-## Install
+## Install using Conda
 
-The full dump of the conda environment used to run the experiments in our paper is available as `environmnent_gismo.yaml`.
+Create the conda environment:
+
+    conda create --name inverse_cooking_gismo python=3.8
+
+Install PyTorch dependencies:
+
+    conda install -c pytorch pytorch=1.7.1 torchvision cudatoolkit=10.2
+    conda install -c conda-forge -c fvcore -c iopath fvcore iopath
+
+Install Deep Graph Library:
+
+    conda install -c dglteam dgl-cuda10.2==0.7.0
+
+Install Inverse Cooking requirement:
+
+    cd ..  # Go up up one folder outside the "gismo folder"
+    pip install -e .
+    cd gismo
+
+Install the other dependencies:
+
+    pip install -r requirements.txt --upgrade
 
 
 ## Data preparation
