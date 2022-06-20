@@ -95,6 +95,7 @@ def load_nodes(dir_):
     node_id2count = {}
     node_count2id = {}
     counter = 1  # start with 1 to reserve 0 for padding
+    dir_ = os.path.expanduser(dir_)
     with open(os.path.join(dir_, "nodes_191120.csv"), "r") as nodes_file:
         csv_reader = csv.DictReader(nodes_file)
         for row in csv_reader:
@@ -129,6 +130,7 @@ def node_count2name(count, node_count2id, node_id2name):
 
 
 def load_graph(add_self_loop, dir_, device):
+    dir_ = os.path.expanduser(dir_)
     (
         node_id2count,
         node_count2id,
@@ -154,6 +156,8 @@ def load_data(
     flavor_graph_dir: str,
     substitution_dir: str,
 ):
+    flavor_graph_dir = os.path.expanduser(flavor_graph_dir)
+    substitution_dir = os.path.expanduser(substitution_dir)
     (
         graph,
         node_name2id,
