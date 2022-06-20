@@ -155,6 +155,7 @@ def load_data(
     nr, max_context, add_self_loop, neg_sampling, data_augmentation, p_augmentation, filter, device,
     flavor_graph_dir: str,
     substitution_dir: str,
+    subs_dir: str,
 ):
     flavor_graph_dir = os.path.expanduser(flavor_graph_dir)
     substitution_dir = os.path.expanduser(substitution_dir)
@@ -178,8 +179,6 @@ def load_data(
     recipe_id2counter = {}
     filtered_ing = {}
 
-    # TODO(config)
-    subs_dir = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/preprocessed_data2"
     train_dataset = SubsData(
         subs_dir,
         "train",

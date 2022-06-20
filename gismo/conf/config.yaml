@@ -36,3 +36,4 @@ base_dir: "~/baharef/out"
 # Path to input data
 flavorgraph_path: "~/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph"
 substitution_path: "~/baharef/inversecooking2.0/inversecooking2.0/data/substitutions"
+subs_dir: "~/baharef/inversecooking2.0/inversecooking2.0/preprocessed_data2"

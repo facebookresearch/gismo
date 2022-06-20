@@ -13,6 +13,7 @@ def main(cfg) -> None:
     cfg.base_dir = os.path.expanduser(cfg.base_dir)
     cfg.flavorgraph_path = os.path.expanduser(cfg.flavorgraph_path)
     cfg.substitution_path = os.path.expanduser(cfg.substitution_path)
+    cfg.subs_dir = os.path.expanduser(cfg.subs_dir)
     print(cfg)
 
     print("Trainer started...")

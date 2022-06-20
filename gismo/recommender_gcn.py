@@ -343,6 +343,7 @@ class Trainer:
             # TODO(config) - unify that
             flavor_graph_dir=cfg.flavorgraph_path,
             substitution_dir=cfg.substitution_path,
+            subs_dir=cfg.subs_dir,
         )
 
         n_ingrs = len(ingrs)
