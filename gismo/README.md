@@ -2,12 +2,12 @@
 
 In this folder lies the code of GISMo, a graph based neural network which handles ingredient substitution in recipes.
 
-- [Install](#Install)
+- [Installation](#Installation)
 - [Data Preparation](#Data-preparation)
 - [Reproducing Experiments](#Reproducing-experiments)
 - [Model ZOO](#Model-ZOO)
 
-## Install using Conda
+## Installation
 
 Create the conda environment:
 
@@ -46,13 +46,25 @@ TODO - reproduce the commands and check
 
 ## Reproducing experiments
 
+### Setup
+
+The code under the "gismo" folder organizes the experiments in the following way:
+
+- Experiments create a folder dedicated to a given set of hyper-parameters
+- Upon training with the same set of parameters, the same folder is used, and training is restarted where it left of
+
+The folder in which all experiments will be written to is configurable in `conf/config.yaml` under the field `base_dir`.
+
 ### Baselines
 
 To train the best performing baseline based on lookup-table with frequency, use the following command:
 
-```
-python train.py name=LTFreq setup=context-free max_context=0
-```
+    python train.py name=LTFreq setup=context-free max_context=0
+
+You can run the other baselines in a similar fashion (here shown for the Lookup table without the frequency):
+
+    python train.py name=LT setup=context-free max_context=0
+
 
 ### Training
 
@@ -72,8 +84,6 @@ This command will load the data, create a folder to hold checkpoints, run the tr
 Once the model has been trained, running the same command as for training will run inference on the validation and test set (the code will automatically look for the last checkpoint and skip training if training is already done).
 
 To run inference on your own dataset, you can replace the validation and test set to contain the data your are interested in (after making a copy of both to avoid having to run the data preparation step again).
-
-TODO - show how - or simplify the process
 
 ## Model ZOO
 
