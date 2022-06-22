@@ -37,35 +37,20 @@ im2ingr_resnext101_ff_bce:
     lr: 0.0001
     scale_lr_pretrained: 0.1
 
+# -----------------------------------------------------------------------------
+# Best configuration for the ResNet50 backbone image encoder
+# -----------------------------------------------------------------------------
+
 im2ingr_resnet50_ff_bce_cat:
   parent: im2ingr
   comment: 'best image-to-set results for resnet50 image backbone'
   ingr_predictor: ingr_predictor_ff_with_card_pred
   optimization:
+    seed: 0
     loss_weights:
       label_loss: 1.0
       cardinality_loss: 0.001
       eos_loss: 0.0
-
-im2ingr_resnet50_ff_bce_cat_seed_0:
-  parent: im2ingr_resnet50_ff_bce_cat
-  optimization:
-    seed: 0
-
-im2ingr_resnet50_ff_bce_cat_seed_1:
-  parent: im2ingr_resnet50_ff_bce_cat
-  optimization:
-    seed: 1
-
-im2ingr_resnet50_ff_bce_cat_seed_2:
-  parent: im2ingr_resnet50_ff_bce_cat
-  optimization:
-    seed: 2
-
-im2ingr_resnet50_ff_bce_cat_seed_3:
-  parent: im2ingr_resnet50_ff_bce_cat
-  optimization:
-    seed: 3
 
 im2ingr_resnext101_ff_bce_cat:
   parent: im2ingr_resnet50_ff_bce_cat
@@ -74,9 +59,8 @@ im2ingr_resnext101_ff_bce_cat:
   loading:
     batch_size: 6
 
-
 # -----------------------------------------------------------------------------
-# VIT based image encoders (vanilla)
+# Best configurations for the vanilla VIT based image encoders
 # -----------------------------------------------------------------------------
 
 im2ingr_vit_32_ff_bce_cat:
@@ -89,26 +73,8 @@ im2ingr_vit_32_ff_bce_cat:
      patch_size: 32
      n_cls_tokens: 1
      freeze: False
-
-im2ingr_vit_32_ff_bce_cat_seed_0:
-  parent: im2ingr_vit_32_ff_bce_cat
   optimization:
     seed: 0
-
-im2ingr_vit_32_ff_bce_cat_seed_1:
-  parent: im2ingr_vit_32_ff_bce_cat
-  optimization:
-    seed: 1
-
-im2ingr_vit_32_ff_bce_cat_seed_2:
-  parent: im2ingr_vit_32_ff_bce_cat
-  optimization:
-    seed: 2
-
-im2ingr_vit_32_ff_bce_cat_seed_3:
-  parent: im2ingr_vit_32_ff_bce_cat
-  optimization:
-    seed: 3
 
 im2ingr_vit_16_ff_bce_cat:
   parent: im2ingr_vit_32_ff_bce_cat
@@ -116,330 +82,28 @@ im2ingr_vit_16_ff_bce_cat:
     batch_size: 32
   image_encoder:
     patch_size: 16
-
-im2ingr_vit_16_ff_bce_cat_seed_0:
-  parent: im2ingr_vit_16_ff_bce_cat
   optimization:
     seed: 0
-
-im2ingr_vit_16_ff_bce_cat_seed_1:
-  parent: im2ingr_vit_16_ff_bce_cat
-  optimization:
-    seed: 1
-
-im2ingr_vit_16_ff_bce_cat_seed_2:
-  parent: im2ingr_vit_16_ff_bce_cat
-  optimization:
-    seed: 2
-
-im2ingr_vit_16_ff_bce_cat_seed_3:
-  parent: im2ingr_vit_16_ff_bce_cat
-  optimization:
-    seed: 3
 
 # -----------------------------------------------------------------------------
-# VIT based image encoders (multi level)
-# -----------------------------------------------------------------------------
-
-im2ingr_vit_32_ff_bce_cat_multi_level_4:
-  parent: im2ingr_vit_32_ff_bce_cat
-  comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
-  image_encoder:
-     additional_repr_levels: [1, 3, 5, 7, 9]
-     concatenate_repr_levels: False
-
-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_0:
-  parent: im2ingr_vit_32_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 0
-
-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_1:
-  parent: im2ingr_vit_32_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 1
-
-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_2:
-  parent: im2ingr_vit_32_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 2
-
-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_3:
-  parent: im2ingr_vit_32_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 3
-
-im2ingr_vit_16_ff_bce_cat_multi_level_4:
-  parent: im2ingr_vit_16_ff_bce_cat
-  comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
-  image_encoder:
-     additional_repr_levels: [1, 3, 5, 7, 9]
-     concatenate_repr_levels: False
-
-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_0:
-  parent: im2ingr_vit_16_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 0
-
-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_1:
-  parent: im2ingr_vit_16_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 1
-
-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_2:
-  parent: im2ingr_vit_16_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 2
-
-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_3:
-  parent: im2ingr_vit_16_ff_bce_cat_multi_level_4
-  optimization:
-    seed: 3
-
+# Best ViT based image encoders, leveraging the representations at multiple
+# levels of the class token of the ViT
 # -----------------------------------------------------------------------------
 
 im2ingr_vit_32_ff_bce_cat_multi_level:
   parent: im2ingr_vit_32_ff_bce_cat
   comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
   image_encoder:
-     additional_repr_levels: [1, 3, 6, 8, 10]
-     concatenate_repr_levels: True
-
-im2ingr_vit_32_ff_bce_cat_multi_level_2:
-  parent: im2ingr_vit_32_ff_bce_cat
-  comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
-  image_encoder:
-     additional_repr_levels: [1, 3, 6, 8, 10]
+     additional_repr_levels: [1, 3, 5, 7, 9]
      concatenate_repr_levels: False
-
-im2ingr_vit_32_ff_bce_cat_multi_level_3:
-  parent: im2ingr_vit_32_ff_bce_cat
-  comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
-  image_encoder:
-     additional_repr_levels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-     concatenate_repr_levels: False
+  optimization:
+    seed: 0
 
 im2ingr_vit_16_ff_bce_cat_multi_level:
   parent: im2ingr_vit_16_ff_bce_cat
   comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
   image_encoder:
-     additional_repr_levels: [1, 3, 6, 8, 10]
-     concatenate_repr_levels: True
-
-im2ingr_vit_16_ff_bce_cat_multi_level_2:
-  parent: im2ingr_vit_16_ff_bce_cat
-  comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
-  image_encoder:
-     additional_repr_levels: [1, 3, 6, 8, 10]
+     additional_repr_levels: [1, 3, 5, 7, 9]
      concatenate_repr_levels: False
-
-im2ingr_vit_16_ff_bce_cat_multi_level_3:
-  parent: im2ingr_vit_16_ff_bce_cat
-  comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
-  image_encoder:
-     additional_repr_levels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-     concatenate_repr_levels: False
-
-
-# -----------------------------------------------------------------------------
-# VIT based image encoders (others)
-# -----------------------------------------------------------------------------
-
-im2ingr_vit_32_no_class_ff_bce_cat:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'VIT/32 pretrained classification encoder with average pooling instead of class tokens'
-  loading:
-    batch_size: 32
-  image_encoder:
-    model: vit
-    pretrained: True
-    dropout: 0.1
-    patch_size: 32
-    n_cls_tokens: 0
-    freeze: False
-
-im2ingr_vit_32_no_class_ff_bce_cat_conv:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'VIT/32 pretrained classification encoder with average pooling instead of class tokens'
-  loading:
-    batch_size: 32
-  image_encoder:
-    model: vit
-    pretrained: True
-    dropout: 0.1
-    patch_size: 32
-    n_cls_tokens: 0
-    freeze: False
-    pooling_kernel_size: 3
-
-im2ingr_vit_32_no_class_ff_bce_cat_pool2:
-  parent: im2ingr_vit_32_no_class_ff_bce_cat_conv
-  comment: 'VIT/32 pretrained classification encoder with average pooling instead of class tokens'
-  image_encoder:
-    pooling_kernel_size: 2
-    pooling_kernel_dim: 2
-
-im2ingr_vit_16_no_class_ff_bce_cat:
-  parent: im2ingr_vit_32_no_class_ff_bce_cat
-  comment: 'VIT/16 pretrained classification encoder with average pooling instead of class tokens'
-  loading:
-    batch_size: 32
-  image_encoder:
-    patch_size: 16
   optimization:
-    patience: 20
-
-im2ingr_vit_16_ff_bce_cat_no_class_pool3:
-  parent: im2ingr_vit_16_no_class_ff_bce_cat
-  comment: 'VIT/16 pretrained model, with reduction of size of output sequence'
-  image_encoder:
-    pooling_kernel_size: 3
-    pooling_kernel_dim: 2
-
-im2ingr_vit_16_ff_bce_cat_no_class_pool4:
-  parent: im2ingr_vit_16_no_class_ff_bce_cat
-  comment: 'VIT/16 pretrained model, with reduction of size of output sequence'
-  image_encoder:
-    pooling_kernel_size: 4
-    pooling_kernel_dim: 2
-
-im2ingr_vit_32_multi_class_no_head_bipartite:
-  parent: im2ingr
-  comment: 'Try with a multi class token VIT, where each token is an ingredient'
-  loading:
-    batch_size: 16
-  image_encoder:
-     model: vit
-     pretrained: True
-     dropout: 0.1
-     patch_size: 32
-     n_cls_tokens: 21
-     freeze: False
-  ingr_predictor:
-    model: vit
-    layers: 0
-    embed_size: 2048
-    with_set_prediction: bipartite
-    dropout: 0.0
-  optimization:
-    loss_weights:
-      label_loss: 1.0
-      cardinality_loss: 0.0
-      eos_loss: 0.001
-
-im2ingr_vit_32_multi_class_no_head_pooled_set:
-  parent: im2ingr_vit_32_multi_class_no_head_bipartite
-  comment: 'Try with a multi class token VIT, where each token is an ingredient'
-  ingr_predictor:
-    with_set_prediction: pooled_bce
-
-im2ingr_vit_32_multi_class_no_head_chamfer_l2_set:
-  parent: im2ingr_vit_32_multi_class_no_head_bipartite
-  comment: 'Try with a multi class token VIT, where each token is an ingredient'
-  ingr_predictor:
-    with_set_prediction: chamfer_l2
-
-im2ingr_vit_32_multi_class_no_head_chamfer_ce_set:
-  parent: im2ingr_vit_32_multi_class_no_head_bipartite
-  comment: 'Try with a multi class token VIT, where each token is an ingredient'
-  ingr_predictor:
-    with_set_prediction: chamfer_ce
-
-im2ingr_vit_32_multi_class_no_head_chamfer_unilat_ce_set:
-  parent: im2ingr_vit_32_multi_class_no_head_bipartite
-  comment: 'Try with a multi class token VIT, where each token is an ingredient'
-  ingr_predictor:
-    with_set_prediction: chamfer_unilateral_ce
-
-im2ingr_vit_32_multi_class_no_head_list:
-  parent: im2ingr_vit_32_multi_class_no_head_bipartite
-  comment: 'Try with a multi class token VIT, where each token is an ingredient (but sensitive to order of ingredients)'
-  ingr_predictor:
-    with_set_prediction: none
-  optimization:
-    loss_weights:
-      label_loss: 1.0
-      cardinality_loss: 0.0
-      eos_loss: 0.0
-
-
-# -----------------------------------------------------------------------------
-# Ablations with title
-# -----------------------------------------------------------------------------
-
-im2ingr_resnet50_ff_bce_cat_pretrained_on_title:
-  parent: im2ingr_resnet50_ff_bce_cat
-  image_encoder:
-    model: resnet50
-    pretrained: True
-    pretrained_weights: "/checkpoint/qduval/inversecooking2.0/pretrained_title_best.torch"
-    dropout: 0.1
-    freeze: False
-
-im2ingr_resnet50_ff_bce_cat_frozen:
-  parent: im2ingr_resnet50_ff_bce_cat
-  image_encoder:
-    model: resnet50
-    pretrained: True
-    dropout: 0.1
-    freeze: True
-
-im2ingr_resnet50_ff_bce_cat_pretrained_on_title_frozen:
-  parent: im2ingr_resnet50_ff_bce_cat_pretrained_on_title
-  image_encoder:
-    freeze: True
-
-im2ingr_resnet50_ff_bce_cat_with_title:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'Try if title helps predicting ingredient'
-  title_encoder:
-    with_title: true
-    layers: 2
-
-im2ingr_resnet50_ff_bce_cat_with_title_search:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'Try if title helps predicting ingredient'
-  title_encoder:
-    with_title: true
-    layers: SEARCH[0,1,2,3,4,5]
-
-im2ingr_resnet50_ff_bce_cat_only_title:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'Try if title can predicting ingredient'
-  image_encoder: no_image_encoder
-  title_encoder:
-    with_title: true
-    layers: 2
-
-im2ingr_resnet50_ff_bce_cat_only_title_search:
-  parent: im2ingr_resnet50_ff_bce_cat_only_title
-  comment: 'Try if title can predicting ingredient'
-  title_encoder:
-    with_title: true
-    layers: SEARCH[0,1,2,3,4,5]
-
-
-# -----------------------------------------------------------------------------
-# CLIP based image encoders
-# -----------------------------------------------------------------------------
-
-im2ingr_clip_ff_bce_cat:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'try the CLIP pre-trained encoder for the images (with fine-tuning)'
-  image_encoder:
-    model: clip_RN50
-    pretrained: True
-    dropout: 0.1
-    freeze: False
-  optimization:
-    scale_lr_pretrained: SEARCH[0.1,1.0,0.01]
-
-im2ingr_clip_vit_ff_bce_cat:
-  parent: im2ingr_resnet50_ff_bce_cat
-  comment: 'try the CLIP pre-trained encoder for the images (with fine-tuning)'
-  image_encoder:
-    model: clip_ViT-B/32
-    pretrained: True
-    dropout: 0.1
-    freeze: False
-  optimization:
-    scale_lr_pretrained: 0.1
+    seed: 0

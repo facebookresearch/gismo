@@ -101,23 +101,17 @@ To train our best ViT-based model, follow the steps below:
 
 Train the image-to-ingredient model:
 
-    python train.py task=im2ingr name=im2ingr_vit_16_ff_bce_cat_multi_level_4
+    python train.py task=im2ingr name=im2ingr_vit_16_ff_bce_cat_multi_level
 
-Once finished training, find the path to the best checkpoint and use it to upate the image-to-recipe configuration pre-training checkpoint:
+Once the job is finished, note the name of the folder in which it has been trained, for instance:
 
-    im2recipe_vit16_multi_level_4:
-      comment: 'evaluation of the performance of vision transformers'
-      parent: im2recipe_vit16
-      image_encoder:
-        additional_repr_levels: [1, 3, 5, 7, 9]
-        concatenate_repr_levels: False
-      pretrained_im2ingr:
-        freeze: True
-        load_pretrained_from: '/path/to/im2ingr/checkpoint/best.ckpt'
+    PATH=/path/to/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level
 
-Then train the image-to-recipe model with the above configuration:
+Then train the image-to-recipe model using the checkpoint of the image-to-ingredient model to initialize the image encoder:
 
-    python train.py task=im2recipe name=im2recipe_vit16_multi_level_4
+    python train.py task=im2recipe \
+        name=im2recipe_vit16_multi_level \
+        experiments.im2recipe.im2recipe_vit16_multi_level.pretrained_im2ingr.load_pretrained_from=PATH
 
 Now, you can evaluate the end-to-end pipeline from image to predicted ingredients and generated recipe like so:
 

@@ -27,12 +27,9 @@ im2recipe:
     val: True
     test: use_predictions
 
-search_example_im2recipe:
-  comment: 'example of hyper-parameter search for im2recipe'
-  parent: im2recipe
-  optimization:
-    seed: SEARCH[11,12]
 
+# -----------------------------------------------------------------------------
+# Inverse cooking 1.0 (reproducing results)
 # -----------------------------------------------------------------------------
 
 im2recipe_invcooking1.0:
@@ -40,41 +37,18 @@ im2recipe_invcooking1.0:
   parent: im2recipe
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48204083/im2ingr-im2ingr_resnet50_ff_bce_cat
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnet50_ff_bce_cat"
 
 im2recipe_invcooking1.0_weight_decay:
+  comment: 'inverse cooking 1.0 model - tuned with better weight decay'
   parent: im2recipe_invcooking1.0
   optimization:
+    seed: 0
     lr: 0.001
     weight_decay: 0.00001
-
-im2recipe_invcooking1_from_seed_0:
-  parent: im2recipe_invcooking1.0_weight_decay
   pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030217/im2ingr-im2ingr_resnet50_ff_bce_cat_seed_0
-  optimization:
-    seed: 0
-
-im2recipe_invcooking1_from_seed_1:
-  parent: im2recipe_invcooking1.0_weight_decay
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030232/im2ingr-im2ingr_resnet50_ff_bce_cat_seed_1
-  optimization:
-    seed: 1
-
-im2recipe_invcooking1_from_seed_2:
-  parent: im2recipe_invcooking1.0_weight_decay
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138267/im2ingr-im2ingr_resnet50_ff_bce_cat_seed_2"
-  optimization:
-    seed: 2
-
-im2recipe_invcooking1_from_seed_3:
-  parent: im2recipe_invcooking1.0_weight_decay
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138269/im2ingr-im2ingr_resnet50_ff_bce_cat_seed_3"
-  optimization:
-    seed: 3
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnet50_ff_bce_cat_seed_0"
 
 im2recipe_invcooking1.0_concat_gelu:
   comment: 'inverse cooking 1.0 model'
@@ -82,7 +56,7 @@ im2recipe_invcooking1.0_concat_gelu:
   recipe_gen: recipe_gen_tf_gelu
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48204083/im2ingr-im2ingr_resnet50_ff_bce_cat
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnet50_ff_bce_cat"
 
 im2recipe_resnext101:
   comment: 'inverse cooking 1.0 with resnet101'
@@ -90,10 +64,10 @@ im2recipe_resnext101:
   image_encoder: resnext101_32x8d_encoder
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48204084/im2ingr-im2ingr_resnext101_ff_bce_cat
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnext101_ff_bce_cat"
 
 # -----------------------------------------------------------------------------
-# Basic VITs
+# Best configurations for the vanilla VIT based image encoders
 # -----------------------------------------------------------------------------
 
 im2recipe_vit32:
@@ -108,38 +82,11 @@ im2recipe_vit32:
     freeze: False
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48204090/im2ingr-im2ingr_vit_32_ff_bce_cat
-  optimization:
-    lr: 0.001
-    weight_decay: 0.00001
-
-im2recipe_vit32_from_seed_0:
-  parent: im2recipe_vit32
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030234/im2ingr-im2ingr_vit_32_ff_bce_cat_seed_0
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_32_ff_bce_cat_seed_0"
   optimization:
     seed: 0
-
-im2recipe_vit32_from_seed_1:
-  parent: im2recipe_vit32
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030252/im2ingr-im2ingr_vit_32_ff_bce_cat_seed_1
-  optimization:
-    seed: 1
-
-im2recipe_vit32_from_seed_2:
-  parent: im2recipe_vit32
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138264/im2ingr-im2ingr_vit_32_ff_bce_cat_seed_2"
-  optimization:
-    seed: 2
-
-im2recipe_vit32_from_seed_3:
-  parent: im2recipe_vit32
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138266/im2ingr-im2ingr_vit_32_ff_bce_cat_seed_3"
-  optimization:
-    seed: 3
+    lr: 0.001
+    weight_decay: 0.00001
 
 im2recipe_vit16:
   comment: 'evaluation of the performance of vision transformers patch 16'
@@ -153,235 +100,40 @@ im2recipe_vit16:
     freeze: False
   pretrained_im2ingr:
     freeze: True
-    # Trained with batch size 32
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48547833/im2ingr-im2ingr_vit_16_ff_bce_cat
-    # Trained with batch size 8
-    # load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48204117/im2ingr-im2ingr_vit_16_ff_bce_cat
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_16_ff_bce_cat_seed_0"
   optimization:
+    seed: 0
     lr: 0.001
     weight_decay: 0.00001
 
-im2recipe_vit16_from_seed_0:
-  parent: im2recipe_vit16
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030253/im2ingr-im2ingr_vit_16_ff_bce_cat_seed_0
-  optimization:
-    seed: 0
-
-im2recipe_vit16_from_seed_1:
-  parent: im2recipe_vit16
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030282/im2ingr-im2ingr_vit_16_ff_bce_cat_seed_1
-  optimization:
-    seed: 1
-
-im2recipe_vit16_from_seed_2:
-  parent: im2recipe_vit16
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138262/im2ingr-im2ingr_vit_16_ff_bce_cat_seed_2"
-  optimization:
-    seed: 2
-
-im2recipe_vit16_from_seed_3:
-  parent: im2recipe_vit16
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138263/im2ingr-im2ingr_vit_16_ff_bce_cat_seed_3"
-  optimization:
-    seed: 3
-
 # -----------------------------------------------------------------------------
-# Flavors of ViTs (no class token)
-# -----------------------------------------------------------------------------
-
-im2recipe_vit32_no_class:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit32
-  image_encoder:
-    n_cls_tokens: 0
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47277525/im2ingr-im2ingr_vit_32_no_class_ff_bce_cat/
-
-im2recipe_vit32_no_class_conv:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit32_no_class
-  image_encoder:
-    pooling_kernel_size: 3
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47308826/im2ingr-im2ingr_vit_32_no_class_ff_bce_cat_conv/
-
-im2recipe_vit_32_no_class_ff_bce_cat_pool2:
-  comment: "Trying to reduce the length of the sequence"
-  parent: im2recipe_vit32_no_class
-  image_encoder:
-    pooling_kernel_size: 2
-    pooling_kernel_dim: 2
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47940684/im2ingr-im2ingr_vit_32_no_class_ff_bce_cat_pool2
-
-im2recipe_vit16_no_class:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit16
-  image_encoder:
-    n_cls_tokens: 0
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47518179/im2ingr-im2ingr_vit_16_no_class_ff_bce_cat/
-
-im2recipe_vit_16_no_class_ff_bce_cat_pool4:
-  comment: "Trying to reduce the length of the sequence"
-  parent: im2recipe_vit16_no_class
-  image_encoder:
-    pooling_kernel_size: 4
-    pooling_kernel_dim: 2
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47940687/im2ingr-im2ingr_vit_16_ff_bce_cat_no_class_pool4
-
-# -----------------------------------------------------------------------------
-# Flavors of ViTs (multiple level of class token)
+# Best ViT based image encoders, leveraging the representations at multiple
+# levels of the class token of the ViT
 # -----------------------------------------------------------------------------
 
 im2recipe_vit32_multi_level:
   comment: 'evaluation of the performance of vision transformers'
   parent: im2recipe_vit32
   image_encoder:
-    additional_repr_levels: [1, 3, 6, 8, 10]
-    concatenate_repr_levels: True
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47552754/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level/
-
-im2recipe_vit32_multi_level_2:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit32
-  image_encoder:
-    additional_repr_levels: [1, 3, 6, 8, 10]
-    concatenate_repr_levels: False
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47552760/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_2/
-
-im2recipe_vit32_multi_level_3:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit32
-  image_encoder:
-    additional_repr_levels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    concatenate_repr_levels: False
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48543363/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_3
-
-im2recipe_vit32_multi_level_4:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit32
-  image_encoder:
     additional_repr_levels: [1, 3, 5, 7, 9]
     concatenate_repr_levels: False
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48543407/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_4
-
-im2recipe_vit32_multi_level_4_from_seed_0:
-  parent: im2recipe_vit32_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030289/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_0
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level"
   optimization:
     seed: 0
-
-im2recipe_vit32_multi_level_4_from_seed_1:
-  parent: im2recipe_vit32_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030293/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_1
-  optimization:
-    seed: 1
-
-im2recipe_vit32_multi_level_4_from_seed_2:
-  parent: im2recipe_vit32_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138259/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_2"
-  optimization:
-    seed: 2
-
-im2recipe_vit32_multi_level_4_from_seed_3:
-  parent: im2recipe_vit32_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138260/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level_4_seed_3"
-  optimization:
-    seed: 3
 
 im2recipe_vit16_multi_level:
   comment: 'evaluation of the performance of vision transformers'
   parent: im2recipe_vit16
   image_encoder:
-    additional_repr_levels: [1, 3, 6, 8, 10]
-    concatenate_repr_levels: True
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47681666/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level/
-
-im2recipe_vit16_multi_level_2:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit16_multi_level
-  image_encoder:
-    additional_repr_levels: [1, 3, 6, 8, 10]
-    concatenate_repr_levels: False
-  pretrained_im2ingr:
-    freeze: True
-    # Trained with batch 32
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48547838/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_2
-    # Trained with batch 8
-    # load_pretrained_from: /checkpoint/qduval/inversecooking2.0/47681740/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_2
-
-im2recipe_vit16_multi_level_3:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit16
-  image_encoder:
-    additional_repr_levels: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    concatenate_repr_levels: False
-  pretrained_im2ingr:
-    freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48547834/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_3
-
-im2recipe_vit16_multi_level_4:
-  comment: 'evaluation of the performance of vision transformers'
-  parent: im2recipe_vit16
-  image_encoder:
     additional_repr_levels: [1, 3, 5, 7, 9]
     concatenate_repr_levels: False
   pretrained_im2ingr:
     freeze: True
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/48547836/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_4
-
-im2recipe_vit16_multi_level_4_from_seed_0:
-  parent: im2recipe_vit16_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030311/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_0
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level"
   optimization:
     seed: 0
-
-im2recipe_vit16_multi_level_4_from_seed_1:
-  parent: im2recipe_vit16_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: /checkpoint/qduval/inversecooking2.0/49030314/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_1
-  optimization:
-    seed: 1
-
-im2recipe_vit16_multi_level_4_from_seed_2:
-  parent: im2recipe_vit16_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138076/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_2"
-  optimization:
-    seed: 2
-
-im2recipe_vit16_multi_level_4_from_seed_3:
-  parent: im2recipe_vit16_multi_level_4
-  pretrained_im2ingr:
-    load_pretrained_from: "/checkpoint/qduval/inversecooking2.0/49138170/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level_4_seed_3"
-  optimization:
-    seed: 3
 
 
 # -----------------------------------------------------------------------------
