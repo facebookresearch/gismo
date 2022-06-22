@@ -8,39 +8,29 @@ Code for inversecooking2.0: merges image-to-set prediction with previous inverse
 
 This code uses Python 3.8.5 (Anaconda), PyTorch 1.7, Torchvision 0.8.1 and CUDA version 10.1.
 
-- Installing pytorch:
+Install PyTorch:
 
-```bash
-conda install -c pytorch pytorch=1.7.1 torchvision cudatoolkit=10.2
-conda install -c conda-forge -c fvcore -c iopath fvcore iopath
-conda install pytorch3d -c pytorch3d
-```
+    conda install -c pytorch pytorch=1.7.1 torchvision cudatoolkit=10.2
+    conda install -c conda-forge -c fvcore -c iopath fvcore iopath
+    conda install pytorch3d -c pytorch3d
 
-- Install dependencies
+Install dependencies:
 
-```bash
-pip install -r requirements.txt --upgrade
-```
+    pip install -r requirements.txt --upgrade
 
-- Additional dependencies for developers (optional)
+Additional dependencies for developers (optional):
 
-```bash
-pip install -r requirements_dev.txt --upgrade
-pip install -e ".[dev]"
-```
+    pip install -r requirements_dev.txt --upgrade
+    pip install -e ".[dev]"
 
-- Install NLTK punkt (for pre-processing of datasets)
+Seting up NLTK punkt and Spacy (for pre-processing of datasets):
 
-```bash
-python -c "import nltk; nltk.download('punkt')"
-python3 -m spacy download en_core_web_lg
-```
+    python -c "import nltk; nltk.download('punkt')"
+    python3 -m spacy download en_core_web_lg
 
-- Verify that the install worked
+Verify that the install worked:
 
-```bash
-python -c "import spacy; spacy.load('en_core_web_lg')"
-```
+    python -c "import spacy; spacy.load('en_core_web_lg')"
 
 <br>
 
@@ -48,9 +38,9 @@ python -c "import spacy; spacy.load('en_core_web_lg')"
 
 #### Recipe1M
 
-- Download [Recipe1M](http://im2recipe.csail.mit.edu/dataset/download) (registration required) and extract under ```/path/to/recipe1m/```.
+Download [Recipe1M](http://im2recipe.csail.mit.edu/dataset/download) (registration required) and extract under ```/path/to/recipe1m/```.
 
-- The contents of ```/path/to/recipe1m/``` should be the following:
+The contents of ```/path/to/recipe1m/``` should be the following:
 
 ```
 det_ingrs.json
@@ -62,17 +52,13 @@ images/val
 images/test
 ```
 
-- Link the dataset to your current folder (the other option is to modify "path" in the configuration of the dataset)
+Link the dataset to your current folder (the other option is to modify "path" in the configuration of the dataset)
 
-```
-ln -s /path/to/recipe1m/ data/recipe1m
-```
+    ln -s /path/to/recipe1m/ data/recipe1m
 
-- Pre-process the dataset with:
+Pre-process the dataset with:
 
-```
-python preprocess.py dataset=recipe1m
-```
+    python preprocess.py dataset=recipe1m
 
 <br>
 
@@ -111,32 +97,59 @@ Check training progress with Tensorboard from the folder in which the checkpoint
 
 ## Reproducing experiments
 
-To reproduce the experiments in inversecooking1.0, train the image-to-ingredient model as follows on 2 gpus:
+To train our best ViT-based model, follow the steps below:
 
-    python train.py task=im2ingr name=im2ingr_resnet50_ff_bce_cat
+Train the image-to-ingredient model:
 
-Once trained, update the im2recipe.yaml file with the following entry (or edit the existing one):
-```
- im2recipe_invcooking1.0:
-   comment: 'inverse cooking 1.0 model'
-   parent: im2recipe
-   pretrained_im2ingr:
-     freeze: True
-     load_pretrained_from: /path/to/im2ingr-im2ingr_resnet50_ff_bce_cat/best.ckpt
-```
-Then, train the image-to-recipe model as follows on 1 node and 8 gpus:
+    python train.py task=im2ingr name=im2ingr_vit_16_ff_bce_cat_multi_level_4
 
-    python train.py task=im2recipe name=im2recipe_invcooking1.0
+Once finished training, find the path to the best checkpoint and use it to upate the image-to-recipe configuration pre-training checkpoint:
 
-Finally, you can evaluate your model as follows:
+    im2recipe_vit16_multi_level_4:
+      comment: 'evaluation of the performance of vision transformers'
+      parent: im2recipe_vit16
+      image_encoder:
+        additional_repr_levels: [1, 3, 5, 7, 9]
+        concatenate_repr_levels: False
+      pretrained_im2ingr:
+        freeze: True
+        load_pretrained_from: '/path/to/im2ingr/checkpoint/best.ckpt'
 
-    python eval.py task=im2recipe name=im2recipe_invcooking1.0 eval_checkpoint_dir=/directory/of/the/checkpoint
+Then train the image-to-recipe model with the above configuration:
 
-Note that models will be evaluated on the val_all data split of Recipe1M without using teacher forcing by default. If you would like to change the evaluation set, please change the flag eval_split under the recipe1m config. Possible eval_split choices are: train, val (subset of 5k samples from val_all), val_all, and test. If you would like to use teacher forcing in the evaluation, please set the flag ingr_teachforce.test to True (see the im2recipe.yaml file).
+    python train.py task=im2recipe name=im2recipe_vit16_multi_level_4
 
-## Evaluation
+Now, you can evaluate the end-to-end pipeline from image to predicted ingredients and generated recipe like so:
 
-TBD
+    python eval.py task=im2recipe \
+        dataset.eval_split=val_all \
+        name=im2recipe_vit16_multi_level_4 \
+        eval_checkpoint_dir=/path/to/im2recipe_vit16_multi_level_4/best.ckpt
+
+* Evaluate on `val_all` (full validation set)
+* Using the checkpoint provided as parameter to initialize the model
+
+You can customize the evaluation like so:
+
+* Change evaluation set by changing the flag `eval_split` to one of: `train`, `val` (subset of 5k samples from val_all), `val_all`, and `test`.
+* Use teacher forcing in the evaluation (for the ingredients) by setting `ingr_teachforce.test` to `True`
+
+<br>
+
+## Interacting with GISMo
+
+[GISMo](./gismo/README.md) model allows to provide substitution suggestion. For each of the validation inputs, this model will write potential substitutions.
+
+To evaluate the impact of substitutions generated by [GISMo](./gismo/README.md) on the image-to-recipe pipeline, you can run this command:
+
+    python eval.py task=im2recipe \
+        dataset.eval_split=val_all \
+        name=im2recipe_vit16_multi_level_4 \
+        eval_checkpoint_dir=/path/to/im2recipe_vit16_multi_level_4/best.ckpt \
+        dataset.ablation.with_substitutions=True \
+        dataset.ablation.alternate_substitution_set=/path/to/gismo_output/val_output.pkl
+
+The last line will load the substitution of [GISMo](./gismo/README.md) and evaluate the perplexity and other metrics on the subset of the validation set that has substitutions.
 
 <br>
 
