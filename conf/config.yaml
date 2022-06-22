@@ -15,6 +15,6 @@ defaults:
 
 task: im2recipe
 name: ""
-debug_mode: true
+debug_mode: false
 eval_on_test: false
 eval_checkpoint_dir: ""
