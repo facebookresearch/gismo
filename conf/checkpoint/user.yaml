@@ -1,0 +1,5 @@
+# @package _group_
+
+dir: '/path/to/artifact/inversecooking2/${slurm_job_id:}'
+log_folder: '/path/to/log_folder'
+tensorboard_folder: '/path/to/tb_folder/'

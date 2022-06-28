@@ -5,7 +5,7 @@ hydra:
 defaults:
   - dataset: recipe1m
   - slurm: local
-  - checkpoint: qduval
+  - checkpoint: user
   - experiments@experiments.common: common
   - experiments@experiments.im2ingr: im2ingr
   - experiments@experiments.im2recipe: im2recipe
