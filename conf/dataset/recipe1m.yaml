@@ -1,7 +1,7 @@
 # @package _group_
 
 name: "recipe1m"
-path: "data/recipe1m"
+path: "~/datasets/recipe1m"
 splits_path: "data/splits/recipe1m"
 eval_split: "val_all"
 
@@ -25,7 +25,7 @@ ablation:
   alternate_substitution_set: ""
 
 pre_processing:
-  save_path: "data/recipe1m/preprocessed_flavorgraph"  #  012319/preprocessed# 'data/recipe1m/preprocessed_new'
+  save_path: "~/recipe1m/preprocessed_flavorgraph_substitutions_fixed_3"
   threshold_ingrs: 10  # minimum ingr count threshold
   threshold_words: 10  # minimum word count threshold
   threshold_title: 10  # minimum word count threshold for title
