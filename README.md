@@ -125,16 +125,15 @@ Now, we can evaluate the model, first on the recipe generation alone (using grou
 
     python eval.py task=im2recipe \
         dataset.eval_split=val_all \
-        name=eval_im2recipe_vit16_multi_level \
+        name=eval_im2recipe_vit16_multi_level_recipe_inference \
         eval_checkpoint_dir=<<PATH_2>>
 
 The the end-to-end pipeline from image to predicted ingredients and generated recipe:
 
     python eval.py task=im2recipe \
         dataset.eval_split=val_all \
-        name=eval_im2recipe_vit16_multi_level \
-        eval_checkpoint_dir=<<PATH_2>> \
-        experiments.im2recipe.eval_im2recipe_vit16_multi_level.ingr_teachforce.test=use_predictions
+        name=eval_im2recipe_vit16_multi_level_full_inference \
+        eval_checkpoint_dir=<<PATH_2>>
 
 You can also customize the evaluation to use a different evaluation split.
 To do so, change the flag `eval_split` in the command line to one of:
@@ -149,16 +148,15 @@ First, measure the perplexity of recipes with no substitutions (this command sub
 
     python eval.py task=im2recipe \
         dataset.eval_split=val_all \
-        name=im2recipe_vit16_multi_level_4 \
+        name=eval_im2recipe_vit16_multi_level_recipe_inference \
         dataset.ablation.with_substitutions=True \
-        eval_checkpoint_dir=<<PATH_2>> \
-        experiments.im2recipe.eval_im2recipe_vit16_multi_level.ingr_teachforce.test=use_ground_truth
+        eval_checkpoint_dir=<<PATH_2>>
 
 Then, measure the perplexity of recipes with ground truth substitutions (on the same sub-set of the validation set):
 
     python eval.py task=im2recipe \
         dataset.eval_split=val_all \
-        name=im2recipe_vit16_multi_level_4 \
+        name=eval_im2recipe_vit16_multi_level_recipe_inference \
         dataset.ablation.with_substitutions=True \
         eval_checkpoint_dir=<<PATH_2>> \
         experiments.im2recipe.eval_im2recipe_vit16_multi_level.ingr_teachforce.test=use_substitutions
@@ -167,7 +165,7 @@ Finally, measure the perplexity of recipes with GISMO substitutions (on the same
 
     python eval.py task=im2recipe \
         dataset.eval_split=val_all \
-        name=eval_im2recipe_vit16_multi_level \
+        name=eval_im2recipe_vit16_multi_level_recipe_inference \
         dataset.ablation.with_substitutions=True \
         eval_checkpoint_dir=<<PATH_2>> \
         experiments.im2recipe.eval_im2recipe_vit16_multi_level.ingr_teachforce.test=use_substitutions \
