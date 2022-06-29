@@ -25,7 +25,7 @@ ablation:
   alternate_substitution_set: ""
 
 pre_processing:
-  save_path: "~/recipe1m/preprocessed_flavorgraph_substitutions_fixed_3"
+  save_path: "~/datasets/recipe1m/preprocessed_flavorgraph_substitutions_fixed_3"
   threshold_ingrs: 10  # minimum ingr count threshold
   threshold_words: 10  # minimum word count threshold
   threshold_title: 10  # minimum word count threshold for title
