@@ -57,8 +57,8 @@ class Recipe1M(data.Dataset):
         use_lmdb: bool = False,
         selected_indices: np.ndarray = None,
     ):
-        self.image_dir = os.path.join(data_dir, "images", split)
-        self.pre_processed_dir = preprocessed_folder
+        self.image_dir = os.path.join(os.path.expanduser(data_dir), "images", split)
+        self.pre_processed_dir = os.path.expanduser(preprocessed_folder)
         self.split = split
         self.max_num_images = filtering.max_num_images
         self.max_num_labels = filtering.max_num_labels

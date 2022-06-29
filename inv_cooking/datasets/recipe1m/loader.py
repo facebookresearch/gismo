@@ -31,19 +31,20 @@ class Recipe1MDataModule(pl.LightningDataModule):
         self.checkpoint = checkpoint
 
     def prepare_data(self):
-        if not os.path.isdir(self.dataset_config.pre_processing.save_path):
+        save_path = os.path.expanduser(self.dataset_config.pre_processing.save_path)
+        if not os.path.isdir(save_path):
             print("Pre-processing Recipe1M dataset.")
             vocab_ingrs, dataset = run_dataset_pre_processing(
                 self.dataset_config.path, self.dataset_config.pre_processing
             )
             train_subs, val_subs, test_subs = run_comment_pre_processing(
                 self.dataset_config.path,
-                self.dataset_config.pre_processing.save_path,
+                save_path,
                 vocab_ingrs,
                 dataset,
             )
             create_pre_processed_recipesubs_data(
-                self.dataset_config.pre_processing.save_path,
+                save_path,
                 dataset,
                 {"train": train_subs, "val": val_subs, "test": test_subs},
             )
@@ -118,8 +119,10 @@ class Recipe1MDataModule(pl.LightningDataModule):
         else:
             selected_indices = None
 
+        dataset_path = os.path.expanduser(self.dataset_config.path)
+        preprocessed_folder = os.path.expanduser(self.dataset_config.pre_processing.save_path)
         dataset = Recipe1M(
-            self.dataset_config.path,
+            dataset_path,
             stage,
             filtering=self.dataset_config.filtering,
             ablations=self.dataset_config.ablation,
@@ -127,7 +130,7 @@ class Recipe1MDataModule(pl.LightningDataModule):
             use_lmdb=False,  # TODO - check if necessary
             selected_indices=selected_indices,
             loading=self.loading_options,
-            preprocessed_folder=self.dataset_config.pre_processing.save_path,
+            preprocessed_folder=preprocessed_folder,
         )
         return dataset
 

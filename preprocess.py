@@ -26,7 +26,7 @@ def main(cfg: RawConfig) -> None:
     print("Start running: run_comment_pre_processing...")
     train_subs, val_subs, test_subs = run_comment_pre_processing(
         cfg.dataset.path,
-        cfg.dataset.pre_processing.save_path,
+        os.path.expanduser(cfg.dataset.pre_processing.save_path),
         vocab_ingrs,
         dataset
     )

@@ -347,11 +347,12 @@ def save_vocabulary(folder: str, file: str, vocab: Vocabulary):
 
 def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
 
-    train_split_path = Path(os.path.join(config.save_path, "final_recipe1m_train.pkl"))
-    val_split_path = Path(os.path.join(config.save_path, "final_recipe1m_val.pkl"))
-    test_split_path = Path(os.path.join(config.save_path, "final_recipe1m_test.pkl"))
+    save_path = os.path.expanduser(config.save_path)
+    train_split_path = Path(os.path.join(save_path, "final_recipe1m_train.pkl"))
+    val_split_path = Path(os.path.join(save_path, "final_recipe1m_val.pkl"))
+    test_split_path = Path(os.path.join(save_path, "final_recipe1m_test.pkl"))
     vocab_ingrs_path = Path(
-        os.path.join(config.save_path, "final_recipe1m_vocab_ingrs.pkl")
+        os.path.join(save_path, "final_recipe1m_vocab_ingrs.pkl")
     )
 
     if (
@@ -371,8 +372,8 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
             vocab_ingrs = pickle.load(handle)
         return vocab_ingrs, dataset
 
-    if not os.path.exists(config.save_path):
-        os.mkdir(config.save_path)
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
 
     # Load the data files of Recipe1M
     dets, layer1, layer2 = load_unprocessed_dataset(recipe1m_path)
@@ -387,14 +388,14 @@ def run_dataset_pre_processing(recipe1m_path: str, config: DictConfig):
     )
 
     # Save the vocabularies
-    save_vocabulary(config.save_path, "final_recipe1m_vocab_ingrs.pkl", vocab_ingrs)
-    save_vocabulary(config.save_path, "final_recipe1m_vocab_toks.pkl", vocab_toks)
-    save_vocabulary(config.save_path, "final_recipe1m_vocab_title.pkl", vocab_title)
+    save_vocabulary(save_path, "final_recipe1m_vocab_ingrs.pkl", vocab_ingrs)
+    save_vocabulary(save_path, "final_recipe1m_vocab_toks.pkl", vocab_toks)
+    save_vocabulary(save_path, "final_recipe1m_vocab_title.pkl", vocab_title)
 
     # Save the dataset
     for split in dataset.keys():
         split_file_name = "final_recipe1m_" + split + ".pkl"
-        split_file_name = os.path.join(config.save_path, split_file_name)
+        split_file_name = os.path.join(save_path, split_file_name)
         with open(split_file_name, "wb") as f:
             pickle.dump(dataset[split], f)
 
