@@ -362,9 +362,25 @@ class Im2RecipeVisualiser:
 
 class InteractiveSubstitutions:
     """
-    End-to-end interactions for substitutions
+    Utility class for notebook in order to visualise recipes and
+    have human-in-the-loop interactions for substitutions
+
+    Args:
+        model: the ImageToRecipe model to evaluate
+        data_module: the Lightning data model to load the data
+        use_pred_ingr: use ground truth ingredients or predicted ingredients
+        gismo_code_path: the path to GISMO code
+        gismo_preprocess_folder: the GISMO folder where data is pre-processed
     """
-    def __init__(self, model: ImageToRecipe, data_module: Recipe1MDataModule, use_pred_ingr: bool = True):
+    def __init__(
+        self,
+        model: ImageToRecipe,
+        data_module: Recipe1MDataModule,
+        use_pred_ingr: bool,
+        gismo_code_path: str,
+        gismo_preprocess_folder: str,
+        gismo_output_folder: str,
+    ):
         self.model = model
         self.data_module = data_module
         self.use_pred_ingr = use_pred_ingr
@@ -374,7 +390,9 @@ class InteractiveSubstitutions:
         self.last_batch = None
         self.last_ingredients_tensor: Optional[torch.Tensor] = None
         self.last_ingredients = []
-        self.gismo_preprocess_folder = "/private/home/qduval/baharef/inversecooking2.0/inversecooking2.0/preprocessed_data2/"
+        self.gismo_code_path = os.path.expanduser(gismo_code_path)
+        self.gismo_preprocess_folder = os.path.expanduser(gismo_preprocess_folder)
+        self.gismo_output_folder = os.path.expanduser(gismo_output_folder)
 
     def sample_recipe(self, recipe_id_or_index: Union[str, int, None]):
         if isinstance(recipe_id_or_index, str):
@@ -446,11 +464,9 @@ class InteractiveSubstitutions:
                 pickle.dump(exports, f)
 
     def _run_gismo(self) -> str:
-        # TODO(config)
-        base_dir = "/private/home/qduval/project/inversecooking2.0/gismo"
+        base_dir = self.gismo_code_path
         run_file_path = f"{base_dir}/run_full_inference.sh"
-        # TODO(config)
-        output_dir = "/private/home/qduval/baharef/out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False"
+        output_dir = f"{self.gismo_output_folder}/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False"
         if os.path.exists(run_file_path):
             os.remove(run_file_path)
         with open(run_file_path, "w") as f:
@@ -467,11 +483,9 @@ class InteractiveSubstitutions:
         return output_dir
 
     def _run_lookup_frequency(self) -> str:
-        # TODO(config)
-        base_dir = "/private/home/qduval/project/inversecooking2.0/gismo"
+        base_dir = self.gismo_code_path
         run_file_path = f"{base_dir}/run_lookup.sh"
-        # TODO(config)
-        output_dir = "/private/home/qduval/baharef/out/lr_0.0001_w_decay_0.0005_hidden_200_emb_d_300_dropout-0.5_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_False_init_emb_random_lambda_0.0_i_0_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False/"
+        output_dir = f"{self.gismo_output_folder}/lr_0.0001_w_decay_0.0005_hidden_200_emb_d_300_dropout-0.5_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_False_init_emb_random_lambda_0.0_i_0_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False/"
         if os.path.exists(run_file_path):
             os.remove(run_file_path)
         with open(run_file_path, "w") as f:

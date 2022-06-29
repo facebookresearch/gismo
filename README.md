@@ -173,6 +173,20 @@ Finally, measure the perplexity of recipes with GISMO substitutions (on the same
 
 <br>
 
+### Visualisation with GISMo
+
+The following command line with run some basic visualisation and export the model to a format with which interactive interaction with GISMo will be possible:
+
+    python visualize.py task=im2recipe \
+        dataset.ablation.with_substitutions=True \
+        name=eval_im2recipe_vit16_multi_level_recipe_inference \
+        eval_checkpoint_dir=<<PATH_2>>
+
+After this command has completely, you should have a new `model_and_module.torch` file under the `PATH_2` folder.
+
+Now, run `jupyter lab` and go to `notebooks/InteractiveGismo.ipynb` and use this path to interact with GISMo!
+
+
 ## Pre-trained models
 
 TBD
