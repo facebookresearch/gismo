@@ -159,7 +159,7 @@ Then, measure the perplexity of recipes with ground truth substitutions (on the 
         name=eval_im2recipe_vit16_multi_level_recipe_inference \
         dataset.ablation.with_substitutions=True \
         eval_checkpoint_dir=<<PATH_2>> \
-        experiments.im2recipe.eval_im2recipe_vit16_multi_level.ingr_teachforce.test=use_substitutions
+        experiments.im2recipe.eval_im2recipe_vit16_multi_level_recipe_inference.ingr_teachforce.test=use_substitutions
 
 Finally, measure the perplexity of recipes with GISMO substitutions (on the same sub-set of the validation set):
 
@@ -168,7 +168,7 @@ Finally, measure the perplexity of recipes with GISMO substitutions (on the same
         name=eval_im2recipe_vit16_multi_level_recipe_inference \
         dataset.ablation.with_substitutions=True \
         eval_checkpoint_dir=<<PATH_2>> \
-        experiments.im2recipe.eval_im2recipe_vit16_multi_level.ingr_teachforce.test=use_substitutions \
+        experiments.im2recipe.eval_im2recipe_vit16_multi_level_recipe_inference.ingr_teachforce.test=use_substitutions \
         dataset.ablation.alternate_substitution_set=/path/to/gismo_output/val_output.pkl
 
 <br>
