@@ -511,6 +511,8 @@ class InteractiveSubstitutions:
             ingr_a = self.vocab_ingr.word2idx[old_ingredient]
             ingr_b = self.vocab_ingr.word2idx[new_ingredient]
             subs_ingredients[subs_ingredients == ingr_a] = ingr_b
+
+        print("INGREDIENTS:")
         self.display_ingredients(ingredients_to_text(subs_ingredients[0], self.vocab_ingr, full_list=False))
 
         batch = self.last_batch
@@ -527,6 +529,8 @@ class InteractiveSubstitutions:
         recipe_from_subs = recipe_from_subs.cpu()
         image_tensor = batch["image"][0]
         recipe = recipe_from_subs.cpu()[0]
+
+        print("RECIPE:")
         self.display_image(image_tensor)
         self.display_recipe(recipe)
 
