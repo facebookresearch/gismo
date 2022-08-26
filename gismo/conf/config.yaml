@@ -42,9 +42,9 @@ lr2: 0.001
 margin: 0.1
 
 # Where the outputs will be stored
-base_dir: "~/baharef/out"
+base_dir: "~/project/gismo/out"
 
 # Path to input data
-flavorgraph_path: "~/baharef/inversecooking2.0/inversecooking2.0/data/flavorgraph"
-substitution_path: "~/baharef/inversecooking2.0/inversecooking2.0/data/substitutions"
-subs_dir: "~/baharef/inversecooking2.0/inversecooking2.0/preprocessed_data2"
+flavorgraph_path: "~/project/gismo/inversecooking2.0/inversecooking2.0/data/flavorgraph"
+substitution_path: "~/project/gismo/inversecooking2.0/inversecooking2.0/data/substitutions"
+subs_dir: "~/project/gismo/inversecooking2.0/inversecooking2.0/preprocessed_data2"

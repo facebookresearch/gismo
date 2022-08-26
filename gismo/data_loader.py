@@ -321,7 +321,7 @@ class SubsData(data.Dataset):
                 self.recipe_id2counter[id_] = self.recipe_counter
                 self.recipe_counter += 1
             context = example["ingredients"][:max_context]
-            example["text"]
+            # example["text"]
             r_name1 = vocabs.idx2word[vocabs.word2idx[subs[0]]][0]
             r_name2 = vocabs.idx2word[vocabs.word2idx[subs[1]]][0]
 

@@ -452,7 +452,6 @@ class InteractiveSubstitutions:
         exports = [
             {
                 "id": "",
-                "text": 'I used $ XXX $ inside instead of $ ' + old_ingredient + ' $ , and everybody loved them !',
                 "subs": (old_ingredient, old_ingredient),
                 "ingredients": self.last_ingredients
             }
@@ -460,6 +459,7 @@ class InteractiveSubstitutions:
         ]
         for destination_file in ["val_comments_subs.pkl", "test_comments_subs.pkl"]:
             destination_path = os.path.join(self.gismo_preprocess_folder, destination_file)
+            print(destination_path)
             with open(destination_path, "wb") as f:
                 pickle.dump(exports, f)
 
