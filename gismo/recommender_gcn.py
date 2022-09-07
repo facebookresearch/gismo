@@ -341,10 +341,7 @@ class Trainer:
             cfg.p_augmentation,
             cfg.filter,
             device,
-            # TODO(config) - unify that
-            flavor_graph_dir=cfg.flavorgraph_path,
-            substitution_dir=cfg.substitution_path,
-            subs_dir=cfg.subs_dir,
+            data_path=os.path.expanduser(cfg.data_path),
         )
 
         n_ingrs = len(ingrs)

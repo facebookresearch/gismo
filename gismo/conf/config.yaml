@@ -44,7 +44,5 @@ margin: 0.1
 # Where the outputs will be stored
 base_dir: "~/project/gismo/out"
 
-# Path to input data
-flavorgraph_path: "~/project/gismo/inversecooking2.0/inversecooking2.0/data/flavorgraph"
-substitution_path: "~/project/gismo/inversecooking2.0/inversecooking2.0/data/substitutions"
-subs_dir: "~/project/gismo/inversecooking2.0/inversecooking2.0/preprocessed_data2"
+# Path to dataset
+data_path: "/checkpoint/qduval/gismo/data"

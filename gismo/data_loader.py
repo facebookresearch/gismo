@@ -152,13 +152,19 @@ def load_graph(add_self_loop, dir_, device):
     )
 
 def load_data(
-    nr, max_context, add_self_loop, neg_sampling, data_augmentation, p_augmentation, filter, device,
-    flavor_graph_dir: str,
-    substitution_dir: str,
-    subs_dir: str,
+    nr,
+    max_context,
+    add_self_loop,
+    neg_sampling,
+    data_augmentation,
+    p_augmentation,
+    filter,
+    device,
+    data_path: str,
 ):
-    flavor_graph_dir = os.path.expanduser(flavor_graph_dir)
-    substitution_dir = os.path.expanduser(substitution_dir)
+    data_path = os.path.expanduser(data_path)
+    flavor_graph_dir = os.path.join(data_path, "graph")
+    substitution_dir = data_path
     (
         graph,
         node_name2id,
@@ -180,7 +186,7 @@ def load_data(
     filtered_ing = {}
 
     train_dataset = SubsData(
-        subs_dir,
+        substitution_dir,
         "train",
         node_name2id,
         node_id2count,
@@ -199,7 +205,7 @@ def load_data(
     )
 
     val_dataset = SubsData(
-        subs_dir,
+        substitution_dir,
         "val",
         node_name2id,
         node_id2count,
@@ -218,7 +224,7 @@ def load_data(
     )
 
     test_dataset = SubsData(
-        subs_dir,
+        substitution_dir,
         "test",
         node_name2id,
         node_id2count,

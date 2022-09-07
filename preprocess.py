@@ -17,24 +17,11 @@ def main(cfg: RawConfig) -> None:
     """
 
     print("Start running: run_dataset_pre_processing...")
-    vocab_ingrs, dataset = run_dataset_pre_processing(
+    run_dataset_pre_processing(
         cfg.dataset.path,
         cfg.dataset.pre_processing
     )
     print("Done running: run_dataset_pre_processing!")
-
-    print("Start running: run_comment_pre_processing...")
-    train_subs, val_subs, test_subs = run_comment_pre_processing(
-        cfg.dataset.path,
-        os.path.expanduser(cfg.dataset.pre_processing.save_path),
-        vocab_ingrs,
-        dataset
-    )
-    print("Done running: run_comment_pre_processing!")
-
-    print("Start running: create_pre_processed_recipesubs_data...")
-    create_pre_processed_recipesubs_data(cfg.dataset.pre_processing.save_path, dataset, {"train": train_subs, "val": val_subs, "test": test_subs})
-    print("Done running: create_pre_processed_recipesubs_data!")
 
 
 if __name__ == "__main__":

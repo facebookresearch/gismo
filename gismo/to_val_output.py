@@ -24,10 +24,7 @@ def to_val_output(cfg) -> None:
         cfg.p_augmentation,
         cfg.filter,
         device,
-        # TODO(config) - unify that
-        flavor_graph_dir=os.path.expanduser(cfg.flavorgraph_path),
-        substitution_dir=os.path.expanduser(cfg.substitution_path),
-        subs_dir=os.path.expanduser(cfg.subs_dir),
+        data_path=os.path.expanduser(cfg.data_path),
     )
     output_dir = create_output_dir(cfg)
     rank_path = os.path.join(output_dir, "test_ranks_full.txt")
