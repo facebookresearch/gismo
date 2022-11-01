@@ -207,4 +207,4 @@ The following commands should be used prior to submitting a fix:
 
 ## License
 
-TBD
+The majority of ingredient-substitution is licensed under CC-BY-NC, however portions of the project are available under separate license terms: dglteam, mltk, pytorch lightning, transformers, tokenizers, and timm are licensed under the Apache 2.0 license; hydra, inversecooking, tqdm, and spacy are licensed under the MIT License; pandas, scipy, and scikit-learn are licensed under the BSD 3-Clause New or Revised License.
