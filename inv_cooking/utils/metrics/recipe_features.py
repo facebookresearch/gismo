@@ -1,7 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# All rights reserved.
 #
-# This source code is licensed under the MIT license found in the
+# This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
+
 from typing import Tuple, List
 
 import numpy as np

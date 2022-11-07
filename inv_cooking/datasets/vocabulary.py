@@ -1,3 +1,4 @@
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # Code adapted from https://github.com/facebookresearch/inversecooking

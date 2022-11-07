@@ -1,4 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# All rights reserved.
+# Code adapted from inversecooking
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+
 import os
 from typing import Dict, Optional, Tuple
 

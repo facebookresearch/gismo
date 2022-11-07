@@ -1,3 +1,6 @@
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# All rights reserved.
+# Code adapted from inversecooking
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #
 # Code adapted from https://github.com/pytorch/fairseq

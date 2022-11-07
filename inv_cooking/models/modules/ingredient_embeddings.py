@@ -1,3 +1,6 @@
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# All rights reserved.
+# Code adapted inversecooking
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import torch

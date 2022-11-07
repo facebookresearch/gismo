@@ -1,6 +1,6 @@
-# InverseCooking 2.0
+# InverseCooking 2.0: Graph-based Ingredient Substitution Module (GISMo)
 
-Code for inversecooking2.0: merges image-to-set prediction with previous inversecooking and adds functionalities to move towards multi-modal generation.
+Code to reproduce the experiments of  [Learning to Substitute Ingredients in Recipes](). The code merges [image-to-set prediction](https://github.com/facebookresearch/image-to-set) with the previous [inversecooking](https://github.com/facebookresearch/inversecooking) codebase and adds functionalities to request ingredient substitutions.
 
 <br>
 
@@ -62,7 +62,10 @@ Pre-process the dataset with:
 
 <br>
 
-## Training
+## Training ingredient substitution module
+Please follow the instructions [here](./gismo/README.md).
+
+## Training image-to-recipe
 
 ### Running experiments
 
@@ -76,6 +79,7 @@ file "conf/experiments/im2recipe.yaml" and run this experiment.
 Evaluation can be run as in the following example command:
 
     python eval.py task=im2recipe name=im2recipe
+
 
 ### Running on SLURM
 
@@ -194,6 +198,7 @@ TBD
 <br>
 
 ## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Developer tools
 
@@ -207,4 +212,4 @@ The following commands should be used prior to submitting a fix:
 
 ## License
 
-The majority of ingredient-substitution is licensed under CC-BY-NC, however portions of the project are available under separate license terms: dglteam, mltk, pytorch lightning, transformers, tokenizers, and timm are licensed under the Apache 2.0 license; hydra, inversecooking, tqdm, and spacy are licensed under the MIT License; pandas, scipy, and scikit-learn are licensed under the BSD 3-Clause New or Revised License.
+The majority of ingredient-substitution is licensed under CC-BY-NC, see [LICENSE](LICENSE.md) for details. However, portions of the project are available under separate license terms: dglteam, mltk, pytorch lightning, transformers, tokenizers, and timm are licensed under the Apache 2.0 license; hydra, inversecooking, tqdm, and spacy are licensed under the MIT License; pandas, scipy, and scikit-learn are licensed under the BSD 3-Clause New or Revised License.

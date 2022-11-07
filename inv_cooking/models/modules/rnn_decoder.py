@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# All rights reserved.
+# Code adapted from inversecooking
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # Code partially based on https://github.com/ruotianluo/ImageCaptioning.pytorch/blob/master/models/AttModel.py
