@@ -28,12 +28,12 @@ def get_requirements_dev():
 
 setup(
     name="Inverse Cooking 2.0",
-    description="Inverse Cooking 2.0",
+    description="Inverse Cooking 2.0: Graph-based Ingredient Substitution Module",
     version="0.1",
     author="Facebook AI Research",
     author_email="",
-    license="MIT",
-    url="https://github.com/fairinternal/inversecooking2.0",
+    license="CC BY-NC 4.0",
+    url="https://github.com/facebookresearch/gismo",
     packages=["inv_cooking"],
     install_requires=get_requirements(),
     python_requires=">=3.7",

@@ -42,7 +42,7 @@ Install the other dependencies:
 python preprocess.py
 ```
 
-TODO - reproduce the commands and check
+TODO - reproduce the commands and check (Bahare -- check dataset files, are they ok?)
 
 ## Reproducing experiments
 
@@ -81,10 +81,12 @@ This command will load the data, create a folder to hold checkpoints, run the tr
 
 ### Inference
 
-Once the model has been trained, running the same command as for training will run inference on the validation and test set (the code will automatically look for the last checkpoint and skip training if training is already done).
+Once the model has been trained, running the same command as for training will run inference on the validation and test set (the code will automatically look for the last checkpoint and skip training if training is already done).  
+
+TODO: Bahare - where are the output files saved? can we put them somewhere easily accessible by the notebook?
 
 To run inference on your own dataset, you can replace the validation and test set to contain the data your are interested in (after making a copy of both to avoid having to run the data preparation step again).
 
 ## Model ZOO
 
-TODO
+
