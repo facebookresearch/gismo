@@ -193,9 +193,10 @@ Now, run `jupyter lab` and go to `notebooks/InteractiveGismo.ipynb` and use this
 
 ## Pre-trained models
 
-TBD
+[Inverse cooking model](https://dl.fbaipublicfiles.com/gismo/best.ckpt)
 
-<br>
+[GisMO model](https://dl.fbaipublicfiles.com/gismo/best_model.chkpnt)
+
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md).
