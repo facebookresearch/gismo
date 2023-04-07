@@ -35,14 +35,9 @@ Install the other dependencies:
 
 ## Data preparation
 
-- Go to the root folder of the project
-- Run the command
+1. Download ```nodes_191120.csv``` and ```edges_191120.csv``` from [FlavorGraph](https://github.com/lamypark/FlavorGraph/tree/master/input) into ```./checkpoints/graph```.
 
-```
-python preprocess.py
-```
-
-TODO - reproduce the commands and check (Bahare -- check dataset files, are they ok?)
+2. Download subsitution data: train, valid, test, vocabulary in ```./checkpoints```
 
 ## Reproducing experiments
 
@@ -83,10 +78,10 @@ This command will load the data, create a folder to hold checkpoints, run the tr
 
 Once the model has been trained, running the same command as for training will run inference on the validation and test set (the code will automatically look for the last checkpoint and skip training if training is already done).  
 
-TODO: Bahare - where are the output files saved? can we put them somewhere easily accessible by the notebook?
-
 To run inference on your own dataset, you can replace the validation and test set to contain the data your are interested in (after making a copy of both to avoid having to run the data preparation step again).
 
 ## Model ZOO
+
+You can find the best GisMO model [here](). To run inference, save the model to ```./out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False/```
 
 
