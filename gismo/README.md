@@ -35,14 +35,9 @@ Install the other dependencies:
 
 ## Data preparation
 
-1. Download ```nodes_191120.csv``` and ```edges_191120.csv``` from [FlavorGraph](https://github.com/lamypark/FlavorGraph/tree/master/input) into ```./checkpoints/graph```.
-
-2. Download subsitution data: train, valid, test, vocabulary in ```./checkpoints```
-
-## Dataset
 
 1. Download ```nodes_191120.csv``` and ```edges_191120.csv``` from [FlavorGraph](https://github.com/lamypark/FlavorGraph/tree/master/input) into ```./checkpoints/graph```.
-2. Download subtitution data: [train](s3://dl.fbaipublicfiles.com/gismo/train_comments_subs.pkl), [valid](s3://dl.fbaipublicfiles.com/gismo/val_comments_subs.pkl), [test](s3://dl.fbaipublicfiles.com/gismo/test_comments_subs.pkl), [vocab](3://dl.fbaipublicfiles.com/gismo/vocab_ingrs.pkl) into ```./checkpoints```
+2. Download subtitution data: [train](https://dl.fbaipublicfiles.com/gismo/train_comments_subs.pkl), [valid](https://dl.fbaipublicfiles.com/gismo/val_comments_subs.pkl), [test](https://dl.fbaipublicfiles.com/gismo/test_comments_subs.pkl), [vocab](https://dl.fbaipublicfiles.com/gismo/vocab_ingrs.pkl) into ```./checkpoints```
 
 
 ## Reproducing experiments
@@ -88,7 +83,6 @@ To run inference on your own dataset, you can replace the validation and test se
 
 ## Model ZOO
 
-You can find the best GisMO model [here](
-s3://dl.fbaipublicfiles.com/gismo/best_model.chkpnt). To run inference, save the model to ```./out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False/```
+You can find the best GisMO model [here](https://dl.fbaipublicfiles.com/gismo/best_model.chkpnt). To run inference, save the model to ```./out/lr_5e-05_w_decay_0.0001_hidden_300_emb_d_300_dropout-0.25_nlayers_2_nr_400_neg_sampling_regular_with_titels_False_with_set_True_init_emb_random_lambda_0.0_i_1_data_augmentation_False_context_emb_mode_avg_pool_avg_p_augmentation_0.5_filter_False/```
 
 
