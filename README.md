@@ -193,9 +193,9 @@ Now, run `jupyter lab` and go to `notebooks/InteractiveGismo.ipynb` and use this
 
 ## Pre-trained models
 
-[Inverse cooking model](https://dl.fbaipublicfiles.com/gismo/best.ckpt)
+- Inverse Cooking: [model](https://dl.fbaipublicfiles.com/gismo/best.ckpt), [ingredients vocabulary](https://dl.fbaipublicfiles.com/gismo/final_recipe1m_vocab_ingrs.pkl), [recipes vocabulary](https://dl.fbaipublicfiles.com/gismo/final_recipe1m_vocab_toks.pkl), [titles vocabulary](https://dl.fbaipublicfiles.com/gismo/final_recipe1m_vocab_title.pkl)
 
-[GisMO model](https://dl.fbaipublicfiles.com/gismo/best_model.chkpnt)
+- GisMO: [model](https://dl.fbaipublicfiles.com/gismo/best_model.chkpnt)
 
 
 ## Contributing
