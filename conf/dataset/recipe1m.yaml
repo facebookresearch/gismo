@@ -1,0 +1,37 @@
+# @package _group_
+
+name: "recipe1m"
+path: "~/datasets/recipe1m"
+splits_path: "data/splits/recipe1m"
+eval_split: "val_all"
+
+image_resize: 448
+image_crop_size: 448
+
+loading:
+  batch_size: 32
+  num_workers: 8
+
+filtering:
+  max_num_images: 5
+  max_num_labels: 20
+  max_num_instructions: 10
+  max_instruction_length: 15
+  max_title_seq_len: 20
+
+ablation:
+  gray_images: false
+  with_substitutions: false
+  alternate_substitution_set: ""
+
+pre_processing:
+  save_path: "~/datasets/recipe1m/preprocessed_flavorgraph_substitutions_fixed_3"
+  threshold_ingrs: 10  # minimum ingr count threshold
+  threshold_words: 10  # minimum word count threshold
+  threshold_title: 10  # minimum word count threshold for title
+  maxnuminstrs: 20  # max number of instructions (sentences)
+  maxnumingrs: 20  # max number of ingredients
+  minnuminstrs: 2  # min number of instructions (sentences)
+  minnumingrs: 2  # min number of ingredients
+  minnumwords: 20  # minimum number of characters in recipe
+  flavor_graph: True

@@ -1,0 +1,12 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+checkpoints/
+inv_cooking/.vscode
+outputs/
+launch.json
+settings.json
+.idea/
+.DS_Store
+*.egg-info/

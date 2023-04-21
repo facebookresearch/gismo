@@ -1,0 +1,160 @@
+# @package _group_
+
+im2recipe:
+  comment: 'default configuration for im2recipe'
+  image_encoder: resnet50_encoder
+  ingr_predictor: ingr_predictor_ff_with_card_pred
+  pretrained_im2ingr:
+    freeze: False 
+    load_pretrained_from: None
+  recipe_gen: recipe_gen_tf
+  optimization:
+    seed: 1235
+    lr: 0.001
+    scale_lr_pretrained: 0.01
+    lr_decay_rate: 0.99
+    lr_decay_every: 1
+    weight_decay: 0.0
+    max_epochs: 400
+    patience: 20
+    loss_weights:
+      label_loss: 0.0
+      cardinality_loss: 0.0
+      eos_loss: 0.0
+      recipe_loss: 1.0
+  ingr_teachforce:
+    train: True
+    val: True
+    test: use_predictions
+
+
+# -----------------------------------------------------------------------------
+# Inverse cooking 1.0 (reproducing results)
+# -----------------------------------------------------------------------------
+
+im2recipe_invcooking1.0:
+  comment: 'inverse cooking 1.0 model'
+  parent: im2recipe
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnet50_ff_bce_cat"
+
+im2recipe_invcooking1.0_weight_decay:
+  comment: 'inverse cooking 1.0 model - tuned with better weight decay'
+  parent: im2recipe_invcooking1.0
+  optimization:
+    seed: 0
+    lr: 0.001
+    weight_decay: 0.00001
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnet50_ff_bce_cat_seed_0"
+
+im2recipe_invcooking1.0_concat_gelu:
+  comment: 'inverse cooking 1.0 model'
+  parent: im2recipe
+  recipe_gen: recipe_gen_tf_gelu
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnet50_ff_bce_cat"
+
+im2recipe_resnext101:
+  comment: 'inverse cooking 1.0 with resnet101'
+  parent: im2recipe
+  image_encoder: resnext101_32x8d_encoder
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_resnext101_ff_bce_cat"
+
+# -----------------------------------------------------------------------------
+# Best configurations for the vanilla VIT based image encoders
+# -----------------------------------------------------------------------------
+
+im2recipe_vit32:
+  comment: 'Vanilla ViT-32 based recipe generator and ingredient predictor'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 32
+    n_cls_tokens: 1
+    freeze: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_32_ff_bce_cat_seed_0"
+  optimization:
+    seed: 0
+    lr: 0.001
+    weight_decay: 0.00001
+
+im2recipe_vit16:
+  comment: 'Vanilla ViT-16 based recipe generator and ingredient predictor'
+  parent: im2recipe
+  image_encoder:
+    model: vit
+    pretrained: True
+    dropout: 0.1
+    patch_size: 16
+    n_cls_tokens: 1
+    freeze: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_16_ff_bce_cat_seed_0"
+  optimization:
+    seed: 0
+    lr: 0.001
+    weight_decay: 0.00001
+
+# -----------------------------------------------------------------------------
+# Best ViT based image encoders, leveraging the representations at multiple
+# levels of the class token of the ViT
+# -----------------------------------------------------------------------------
+
+im2recipe_vit32_multi_level:
+  comment: 'Best performing ViT-32 variant on overall ingredient prediction and recipe perplexity'
+  parent: im2recipe_vit32
+  image_encoder:
+    additional_repr_levels: [1, 3, 5, 7, 9]
+    concatenate_repr_levels: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_32_ff_bce_cat_multi_level"
+  optimization:
+    seed: 0
+
+im2recipe_vit16_multi_level:
+  comment: 'Best performing ViT-16 variant on overall ingredient prediction and recipe perplexity'
+  parent: im2recipe_vit16
+  image_encoder:
+    additional_repr_levels: [1, 3, 5, 7, 9]
+    concatenate_repr_levels: False
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "/path/to/im2ingr-im2ingr_vit_16_ff_bce_cat_multi_level"
+  optimization:
+    seed: 0
+
+
+# -----------------------------------------------------------------------------
+# Evaluate impact of ingredient substitutions on the quality of the recipes
+# -----------------------------------------------------------------------------
+
+eval_im2recipe_vit16_multi_level_recipe_inference:
+  comment: "Evaluation of the best ViT-16 MLS model (inference of recipe from ground truth ingredients)"
+  parent: im2recipe_vit16_multi_level
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "None"
+  ingr_teachforce:
+    test: use_ground_truth
+
+eval_im2recipe_vit16_multi_level_full_inference:
+  comment: "Evaluation of the best ViT-16 MLS model (inference of ingredients and recipe)"
+  parent: im2recipe_vit16_multi_level
+  pretrained_im2ingr:
+    freeze: True
+    load_pretrained_from: "None"
+  ingr_teachforce:
+    test: use_predictions
+

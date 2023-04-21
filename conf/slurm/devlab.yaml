@@ -1,0 +1,9 @@
+# @package _group_
+
+partition: devlab
+nodes: 1
+cpus_per_task: 8
+gpus_per_node: 8
+mem_by_gpu: 60
+timeout_min: 180  # 3 hours
+gpu_type: volta32gb

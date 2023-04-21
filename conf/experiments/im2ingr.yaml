@@ -1,0 +1,109 @@
+# @package _group_
+
+im2ingr:
+  comment: 'default configuration for im2ingr'
+  image_encoder: resnet50_encoder
+  ingr_predictor: ingr_predictor_ff
+  recipe_gen: recipe_gen_tf
+  optimization:
+    seed: 1235
+    lr: 0.001
+    scale_lr_pretrained: 0.01
+    lr_decay_rate: 0.99
+    lr_decay_every: 1
+    weight_decay: 0.0
+    max_epochs: 400
+    patience: 10
+    loss_weights:
+      label_loss: 1.0
+      cardinality_loss: 0.0
+      eos_loss: 0.0
+
+im2ingr_card_pred:
+  parent: im2ingr
+  ingr_predictor: ingr_predictor_ff_with_card_pred
+
+im2ingr_tf:
+  parent: im2ingr
+  ingr_predictor: ingr_predictor_tf
+
+im2ingr_resnext101_ff_bce:
+  parent: im2ingr
+  comment: 'best image-to-set results for resnext101 image backbone'
+  image_encoder: resnext101_32x8d_encoder
+  loading:
+    batch_size: 8
+  optimization:
+    lr: 0.0001
+    scale_lr_pretrained: 0.1
+
+# -----------------------------------------------------------------------------
+# Best configuration for the ResNet50 backbone image encoder
+# -----------------------------------------------------------------------------
+
+im2ingr_resnet50_ff_bce_cat:
+  parent: im2ingr
+  comment: 'best image-to-set results for resnet50 image backbone'
+  ingr_predictor: ingr_predictor_ff_with_card_pred
+  optimization:
+    seed: 0
+    loss_weights:
+      label_loss: 1.0
+      cardinality_loss: 0.001
+      eos_loss: 0.0
+
+im2ingr_resnext101_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'searching for ResNet101 CAT'
+  image_encoder: resnext101_32x8d_encoder
+  loading:
+    batch_size: 6
+
+# -----------------------------------------------------------------------------
+# Best configurations for the vanilla VIT based image encoders
+# -----------------------------------------------------------------------------
+
+im2ingr_vit_32_ff_bce_cat:
+  parent: im2ingr_resnet50_ff_bce_cat
+  comment: 'Try a VIT pretrained classification encoder'
+  image_encoder:
+     model: vit
+     pretrained: True
+     dropout: 0.1
+     patch_size: 32
+     n_cls_tokens: 1
+     freeze: False
+  optimization:
+    seed: 0
+
+im2ingr_vit_16_ff_bce_cat:
+  parent: im2ingr_vit_32_ff_bce_cat
+  loading:
+    batch_size: 32
+  image_encoder:
+    patch_size: 16
+  optimization:
+    seed: 0
+
+# -----------------------------------------------------------------------------
+# Best ViT based image encoders, leveraging the representations at multiple
+# levels of the class token of the ViT
+# -----------------------------------------------------------------------------
+
+im2ingr_vit_32_ff_bce_cat_multi_level:
+  parent: im2ingr_vit_32_ff_bce_cat
+  comment: 'VIT/32 pretrained model, with representation taken from multiple levels'
+  image_encoder:
+     additional_repr_levels: [1, 3, 5, 7, 9]
+     concatenate_repr_levels: False
+  optimization:
+    seed: 0
+
+im2ingr_vit_16_ff_bce_cat_multi_level:
+  parent: im2ingr_vit_16_ff_bce_cat
+  comment: 'VIT/16 pretrained model, with representation taken from multiple levels'
+  image_encoder:
+     additional_repr_levels: [1, 3, 5, 7, 9]
+     concatenate_repr_levels: False
+  optimization:
+    seed: 0

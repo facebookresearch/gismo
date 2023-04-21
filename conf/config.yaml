@@ -1,0 +1,20 @@
+hydra:
+  run:
+    dir: ${checkpoint.dir}/${task}-${name}/${now:%Y-%m-%d_%H-%M-%S}
+
+defaults:
+  - dataset: recipe1m
+  - slurm: local
+  - checkpoint: user
+  - experiments@experiments.common: common
+  - experiments@experiments.im2ingr: im2ingr
+  - experiments@experiments.im2recipe: im2recipe
+  - experiments@experiments.ingr2recipe: ingr2recipe
+  - experiments@experiments.im2title: im2title
+  - experiments@experiments.ingrsubs: ingrsubs
+
+task: im2recipe
+name: ""
+debug_mode: false
+eval_on_test: false
+eval_checkpoint_dir: ""

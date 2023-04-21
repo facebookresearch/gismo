@@ -1,0 +1,48 @@
+name: "GIN_MLP"
+setup: "context-full"
+neg_sampling: "regular"
+i: 0
+
+with_titles: False
+titles_paths:
+  embedding: ""
+  ids: ""
+
+with_set: False
+lambda_: 0.0
+
+# Can be "random", "food_bert", "food_bert2", "flavorgraph", "flavorgraph2"
+init_emb: "random"
+init_emb_paths:
+  food_bert: ""
+  flavorgraph: ""
+
+two_hops: False
+epochs: 500
+val_itr: 50
+ntrials: 1
+train_batch_size: 500
+val_test_batch_size: 50
+max_context: 43
+lr: 0.0001
+w_decay: 0.0005
+hidden: 200
+emb_d: 300
+dropout: 0.5
+nlayers: 2
+nr: 400
+add_self_loop: False
+data_augmentation: False
+p_augmentation: 0.5
+context_emb_mode: "avg"
+pool: "avg"
+filter: False
+lr1: 0.001
+lr2: 0.001
+margin: 0.1
+
+# Where the outputs will be stored
+base_dir: "~/project/gismo/out"
+
+# Path to dataset
+data_path: "/path/to/data"

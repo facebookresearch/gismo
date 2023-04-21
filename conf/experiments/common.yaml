@@ -1,0 +1,102 @@
+# @package _group_
+
+no_image_encoder:
+  with_image_encoder: False
+  model: resnet50
+  pretrained: True
+  dropout: 0.1
+  freeze: False
+
+resnet50_encoder:
+  model: resnet50
+  pretrained: True
+  dropout: 0.1
+  freeze: False
+
+resnet101_encoder:
+  model: resnet101
+  pretrained: True
+  dropout: 0.0
+  freeze: False
+
+resnext101_32x8d_encoder:
+  model: resnext101_32x8d
+  pretrained: True
+  dropout: 0.0
+  freeze: False
+
+ingr_predictor_ff:
+  model: ff
+  embed_size: 2048
+  layers: 3
+  dropout: 0.0
+  criterion: bce
+  cardinality_pred: none
+
+ingr_predictor_ff_with_card_pred:
+  model: ff
+  embed_size: 2048
+  layers: 3
+  dropout: 0.1
+  criterion: bce
+  cardinality_pred: categorical
+
+ingr_predictor_lstm:
+  model: lstm
+  embed_size: 2048
+  with_set_prediction: pooled_bce
+  dropout: 0.1
+
+ingr_predictor_tf:
+  model: tf
+  layers: 1
+  embed_size: 2048
+  with_set_prediction: none
+  n_att: 8
+  dropout: 0.3
+  activation: "relu"
+
+recipe_gen_tf:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: concat
+  tf_enc_layers: 0
+
+recipe_gen_tf_gelu:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "gelu"
+  encoder_attn: concat
+  tf_enc_layers: 0
+
+recipe_gen_tf_seq_img_first:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: seq_img_first
+  tf_enc_layers: 0
+
+recipe_gen_tf_seq_ingr_first:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: seq_ingr_first
+  tf_enc_layers: 0
+
+recipe_gen_tf_concat_tf:
+  dropout: 0.3
+  embed_size: 512
+  n_att_heads: 8
+  tf_dec_layers: 16
+  activation: "relu"
+  encoder_attn: concat_tf
+  tf_enc_layers: 2
