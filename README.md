@@ -1,6 +1,6 @@
 # InverseCooking 2.0: Graph-based Ingredient Substitution Module (GISMo)
 
-Code to reproduce the experiments of  [Learning to Substitute Ingredients in Recipes](). The code merges [image-to-set prediction](https://github.com/facebookresearch/image-to-set) with the previous [inversecooking](https://github.com/facebookresearch/inversecooking) codebase and adds functionalities to request ingredient substitutions.
+Code to reproduce the experiments of  [Learning to Substitute Ingredients in Recipes](https://arxiv.org/abs/2302.07960). 
 
 <br>
 
