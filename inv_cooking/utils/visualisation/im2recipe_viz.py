@@ -1,6 +1,6 @@
-# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# Copyright (c) Meta Platforms, Inc. and affiliates 
 # All rights reserved.
-#
+# 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -451,6 +451,8 @@ class InteractiveSubstitutions:
         else:
             output_dir = self._run_gismo()
         output_file = os.path.join(output_dir, "val_ranks_out.pkl")
+        
+        f.seek(0)
         substitution = pickle.load(open(output_file, "rb"))
         return substitution
 

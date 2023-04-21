@@ -1,6 +1,6 @@
-# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# Copyright (c) Meta Platforms, Inc. and affiliates 
 # All rights reserved.
-#
+# 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -33,7 +33,7 @@ def to_val_output(cfg) -> None:
         data_path=os.path.expanduser(cfg.data_path),
     )
     output_dir = create_output_dir(cfg)
-    rank_path = os.path.join(output_dir, "test_ranks_full.txt")
+    rank_path = os.path.join(output_dir, "val_ranks.txt")
 
     replacements = []
     with open(rank_path, "r") as f:

@@ -1,7 +1,14 @@
-# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+# Copyright (c) Meta Platforms, Inc. and affiliates 
 # All rights reserved.
-# Code adapted from image-to-set
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+# 
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+#
+#
+# Code adapted from https://github.com/facebookresearch/image-to-set
+# This source code is licensed under the MIT license found in the
+# LICENSE file in https://github.com/facebookresearch/image-to-set
+
 from typing import Dict, Optional, Tuple
 
 import torch
