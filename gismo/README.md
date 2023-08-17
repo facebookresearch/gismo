@@ -37,7 +37,8 @@ Install the other dependencies:
 
 
 1. Download ```nodes_191120.csv``` and ```edges_191120.csv``` from [FlavorGraph](https://github.com/lamypark/FlavorGraph/tree/master/input) into ```./checkpoints/graph```.
-2. Download subtitution data: [train](https://dl.fbaipublicfiles.com/gismo/train_comments_subs.pkl), [valid](https://dl.fbaipublicfiles.com/gismo/val_comments_subs.pkl), [test](https://dl.fbaipublicfiles.com/gismo/test_comments_subs.pkl), [vocab](https://dl.fbaipublicfiles.com/gismo/vocab_ingrs.pkl) into ```./checkpoints```
+2. Download subtitution data: [train](https://dl.fbaipublicfiles.com/gismo/train_comments_subs.pkl), [valid](https://dl.fbaipublicfiles.com/gismo/val_comments_subs.pkl), [test](https://dl.fbaipublicfiles.com/gismo/test_comments_subs.pkl), [vocab](https://dl.fbaipublicfiles.com/gismo/vocab_ingrs.pkl) into ```./checkpoints```.
+3. Download [merged dictionary](https://dl.fbaipublicfiles.com/gismo/merge_dict.pkl) into ```/path/to/recipe1m/```.
 
 
 ## Reproducing experiments
